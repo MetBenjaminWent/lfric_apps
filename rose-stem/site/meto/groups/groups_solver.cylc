@@ -8,20 +8,40 @@
 {# Spice Groups #}
 {% do site_groups.update({
     "solver_spice_developer": [
+        "solver_bicgstab-C24_spice_gnu_fast-debug-64bit",
+        "solver_bicgstab-C24_spice_intel_fast-debug-64bit",
+        "solver_cg-C24_spice_gnu_fast-debug-64bit",
         "solver_cg-C24_spice_intel_fast-debug-64bit",
+        "solver_fgmres-C24_spice_gnu_fast-debug-64bit",
+        "solver_fgmres-C24_spice_intel_fast-debug-64bit",
+        "solver_gcr-C24_spice_gnu_fast-debug-64bit",
+        "solver_gcr-C24_spice_intel_fast-debug-64bit",
+        "solver_gmres-C24_spice_gnu_fast-debug-64bit",
+        "solver_gmres-C24_spice_intel_fast-debug-64bit",
+        "solver_jacobi-C24_spice_gnu_fast-debug-64bit",
+        "solver_jacobi-C24_spice_intel_fast-debug-64bit",
+        "solver_prec_only-C24_spice_gnu_fast-debug-64bit",
+        "solver_prec_only-C24_spice_intel_fast-debug-64bit",
     ],
     "solver_spice": [
         "solver_spice_developer",
     ],
     "solver_spice_build": [
         "build_solver_spice_intel_fast-debug-64bit",
+        "build_solver_spice_gnu_fast-debug-64bit",
     ],
     }) %}
 
 {# XC40 Groups #}
 {% do site_groups.update({
     "solver_xc40_developer": [
+        "solver_bicgstab-C24_xc40_intel_fast-debug-64bit",
         "solver_cg-C24_xc40_intel_fast-debug-64bit",
+        "solver_fgmres-C24_xc40_intel_fast-debug-64bit",
+        "solver_gcr-C24_xc40_intel_fast-debug-64bit",
+        "solver_gmres-C24_xc40_intel_fast-debug-64bit",
+        "solver_jacobi-C24_xc40_intel_fast-debug-64bit",
+        "solver_prec_only-C24_xc40_intel_fast-debug-64bit",
     ],
     "solver_xc40": [
         "solver_xc40_developer",
