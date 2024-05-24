@@ -134,6 +134,12 @@
   <field id="monoterpene" name="monoterpene" long_name="mass_fraction_of_monoterpene_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
   <field id="secondary_organic" name="secondary_organic" long_name="mass_fraction_of_secondary_organic_aerosols_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
   <field id="h2o2_limit" name="h2o2_limit" long_name="Upper_limit_for_mass_fraction_of_hydrogen_peroxide_in_air" unit="1" grid_ref="full_level_face_grid" />
+  <field id="co2" name="co2" long_name="mass_fraction_of_carbon_dioxide_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="h2o" name="h2o" long_name="mass_fraction_of_water_vapour_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="hcn" name="hcn" long_name="mass_fraction_of_hydrogen_cyanide_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="he" name="he" long_name="mass_fraction_of_helium_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="n2" name="n2" long_name="mass_fraction_of_nitrogen_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="o2" name="o2" long_name="mass_fraction_of_oxygen_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
   <!-- aerosol fields -->
   <field id="emiss_bc_biofuel" name="emiss_bc_biofuel" long_name="tendency_of_atmosphere_mass_content_of_black_carbon_dry_aerosol_due_to_emission_from_biofuel_burning" unit="kg m-2 s-1" domain_ref="face" />
   <field id="emiss_bc_fossil" name="emiss_bc_fossil" long_name="tendency_of_atmosphere_mass_content_of_black_carbon_dry_aerosol_due_to_emission_from_fossil_fuel_burning" unit="kg m-2 s-1" domain_ref="face" />

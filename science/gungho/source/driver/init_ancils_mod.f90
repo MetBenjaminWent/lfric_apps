@@ -31,6 +31,7 @@ module init_ancils_mod
   use jules_surface_types_mod,        only : npft
   use dust_parameters_mod,            only : ndiv
   use initialization_config_mod,      only : ancil_option,          &
+                                             ancil_option_idealised,&
                                              ancil_option_updating, &
                                              sst_source,            &
                                              sst_source_start_dump, &
@@ -62,10 +63,23 @@ module init_ancils_mod
                                              chem_scheme_strattrop,            &
                                              chem_scheme_strat_test,           &
                                              chem_scheme_offline_ox
+  use radiative_gases_config_mod,     only : &
+    ch4_rad_opt, ch4_rad_opt_ancil, &
+    co_rad_opt, co_rad_opt_ancil, &
+    co2_rad_opt, co2_rad_opt_ancil, &
+    h2_rad_opt, h2_rad_opt_ancil, &
+    h2o_rad_opt, h2o_rad_opt_ancil, &
+    hcn_rad_opt, hcn_rad_opt_ancil, &
+    he_rad_opt, he_rad_opt_ancil, &
+    n2_rad_opt, n2_rad_opt_ancil, &
+    nh3_rad_opt, nh3_rad_opt_ancil, &
+    o2_rad_opt, o2_rad_opt_ancil, &
+    so2_rad_opt, so2_rad_opt_ancil
 
   implicit none
 
-  public   :: create_fd_ancils,         &
+  public   :: create_fd_ancils,           &
+              create_fd_ancils_idealised, &
               setup_ancil_field
 
 contains
@@ -835,6 +849,85 @@ contains
     endif  ! if chem_scheme_strattrop/ strat_test
 
   end subroutine create_fd_ancils
+
+
+  !> @details Organises fields to be read from ancils into ancil_fields
+  !           collection then reads them in an idealised setup.
+  !> @param[in,out] depository The depository field collection
+  !> @param[out] ancil_fields Collection for ancillary fields
+  !> @param[in] mesh      The current 3d mesh
+  !> @param[in] twod_mesh The current 2d mesh
+  subroutine create_fd_ancils_idealised( depository, ancil_fields, &
+                                         mesh, twod_mesh )
+
+    implicit none
+
+    type( field_collection_type ), intent( inout ) :: depository
+    type( field_collection_type ), intent( out )   :: ancil_fields
+
+    type( mesh_type ), intent(in), pointer :: mesh
+    type( mesh_type ), intent(in), pointer :: twod_mesh
+
+    ! Set up ancil_fields collection
+    write(log_scratch_space,'(A,A)') "Create ancil fields: "// &
+          "Setting up ancil field collection"
+    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+    call ancil_fields%initialise(name='ancil_fields', table_len=100)
+
+    ! Here ancil fields are set up with a call to setup_ancil_field.
+    if ( ancil_option == ancil_option_idealised ) then
+      call log_event("setting up idealised ancils - start", LOG_LEVEL_INFO)
+      if (ch4_rad_opt == ch4_rad_opt_ancil) then
+        call setup_ancil_field("ch4", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (co_rad_opt == co_rad_opt_ancil) then
+        call setup_ancil_field("co", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (co2_rad_opt == co2_rad_opt_ancil) then
+        call setup_ancil_field("co2", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (h2_rad_opt == h2_rad_opt_ancil) then
+        call setup_ancil_field("h2", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (h2o_rad_opt == h2o_rad_opt_ancil) then
+        call setup_ancil_field("h2o", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (hcn_rad_opt == hcn_rad_opt_ancil) then
+        call setup_ancil_field("hcn", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (he_rad_opt == he_rad_opt_ancil) then
+        call setup_ancil_field("he", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (n2_rad_opt == n2_rad_opt_ancil) then
+        call setup_ancil_field("n2", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (nh3_rad_opt == nh3_rad_opt_ancil) then
+        call setup_ancil_field("nh3", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (o2_rad_opt == o2_rad_opt_ancil) then
+        call setup_ancil_field("o2", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (so2_rad_opt == so2_rad_opt_ancil) then
+        call setup_ancil_field("so2", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      call log_event("setting up idealised ancils - done", LOG_LEVEL_INFO)
+    endif
+
+    ! Now the field collection is set up, the fields will be initialised in
+    ! gungho_model_data_mod
+
+  end subroutine create_fd_ancils_idealised
 
   !> @details Adds fields to the ancil collection, sets up their read and write
   !>      behaviour and creates them in the depository if they do not yet exist

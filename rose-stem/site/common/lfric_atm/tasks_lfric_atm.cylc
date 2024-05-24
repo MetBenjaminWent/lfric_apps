@@ -397,6 +397,19 @@
         "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR",
     }) %}
 
+{% elif task_ns.conf_name == "camembert_case3_gj1214b-C12" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["camembert_case3_gj1214b"],
+        "resolution": "C12",
+        "DT": 1800,
+        "tsteps": 24,
+        "crun": 2,
+        "crun_compare": false,
+        "mpi_parts": 6,
+        "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR",
+    }) %}
+
 {% elif task_ns.conf_name == "thai_ben1-C48_MG" %}
 
     {% do task_dict.update({

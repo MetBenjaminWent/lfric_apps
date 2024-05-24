@@ -30,6 +30,7 @@
     <file_definition src="./file_def_diags_idealised.xml"/>
     <file_definition src="./file_def_diags_ave.xml"/>
     <file_definition src="./file_def_initial_diags.xml"/>
+    <file_definition src="./file_def_ancil_idealised.xml"/>
 
     <!-- Local file definitions -->
     <file_definition type="one_file" time_counter="none">

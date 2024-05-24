@@ -46,6 +46,7 @@ module gungho_init_fields_mod
                                                  ancil_option_none,           &
                                                  ancil_option_start_dump,     &
                                                  ancil_option_fixed,          &
+                                                 ancil_option_idealised,      &
                                                  ancil_option_updating,       &
                                                  lbc_option,                  &
                                                  lbc_option_none,             &
@@ -87,7 +88,8 @@ module gungho_init_fields_mod
   use reference_element_mod,            only : T
 #ifdef UM_PHYSICS
   use create_fd_prognostics_mod,          only : create_fd_prognostics
-  use init_ancils_mod,                    only : create_fd_ancils
+  use init_ancils_mod,                    only : create_fd_ancils, &
+                                                 create_fd_ancils_idealised
   use process_inputs_alg_mod,             only : process_inputs_alg
   use update_tstar_alg_mod,               only : update_tstar_alg
   use variable_fields_mod,                only : init_variable_fields
@@ -424,6 +426,10 @@ subroutine create_model_data( modeldb,      &
                                  aerosol_mesh,                    &
                                  aerosol_twod_mesh,               &
                                  model_axes%ancil_times_list )
+        case ( ancil_option_idealised )
+          call create_fd_ancils_idealised( depository, &
+                                           modeldb%model_data%ancil_fields, &
+                                           mesh, twod_mesh )
       end select
 #endif
     end if
@@ -655,8 +661,9 @@ subroutine create_model_data( modeldb,      &
           if (.not. checkpoint_read) then
             ! These parts only need to happen on a new run
             call log_event( "Gungho: Reading ancillaries from file ", LOG_LEVEL_INFO )
-            if (init_option == init_option_fd_start_dump) &
+            if (init_option == init_option_fd_start_dump) then
                  call read_state( modeldb%model_data%ancil_fields )
+            end if
             call process_inputs_alg( modeldb%model_data%ancil_fields,   &
                                      modeldb%model_data%fd_fields,      &
                                      modeldb%model_data%surface_fields, &
@@ -696,6 +703,16 @@ subroutine create_model_data( modeldb,      &
             call depository%remove_field("land_tile_fraction")
             call modeldb%model_data%ancil_fields%remove_field("stdev_topog_index")
             call depository%remove_field("stdev_topog_index")
+          end if
+
+        case ( ancil_option_idealised )
+          call init_variable_fields( model_axes%ancil_times_list,         &
+                                     modeldb%clock,                       &
+                                     modeldb%model_data%ancil_fields,     &
+                                     regrid_operation )
+          if (.not. checkpoint_read) then
+            call log_event( "Gungho: Reading ancillaries from file ", LOG_LEVEL_INFO )
+            call read_state( modeldb%model_data%ancil_fields )
           end if
 #endif
         case default

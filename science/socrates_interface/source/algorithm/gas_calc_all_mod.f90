@@ -1,70 +1,130 @@
 module gas_calc_all_mod
 
-  use constants_mod,       only: i_def, r_def, r_um
-  use gas_calc_mod,        only: gas_calc
-  use rad_input_mod,       only: co2_mmr
-  use well_mixed_gases_config_mod, only: clim_fcg_years_ch4,      &
-                                         clim_fcg_nyears_ch4,     &
-                                         clim_fcg_levls_ch4,      &
-                                         clim_fcg_rates_ch4,      &
-                                         clim_fcg_years_co2,      &
-                                         clim_fcg_nyears_co2,     &
-                                         clim_fcg_levls_co2,      &
-                                         clim_fcg_rates_co2,      &
-                                         clim_fcg_years_n2o,      &
-                                         clim_fcg_nyears_n2o,     &
-                                         clim_fcg_levls_n2o,      &
-                                         clim_fcg_rates_n2o,      &
-                                         clim_fcg_years_cfc11,    &
-                                         clim_fcg_nyears_cfc11,   &
-                                         clim_fcg_levls_cfc11,    &
-                                         clim_fcg_rates_cfc11,    &
-                                         clim_fcg_years_cfc12,    &
-                                         clim_fcg_nyears_cfc12,   &
-                                         clim_fcg_levls_cfc12,    &
-                                         clim_fcg_rates_cfc12,    &
-                                         clim_fcg_years_cfc113,   &
-                                         clim_fcg_nyears_cfc113,  &
-                                         clim_fcg_levls_cfc113,   &
-                                         clim_fcg_rates_cfc113,   &
-                                         clim_fcg_years_hcfc22,   &
-                                         clim_fcg_nyears_hcfc22,  &
-                                         clim_fcg_levls_hcfc22,   &
-                                         clim_fcg_rates_hcfc22,   &
-                                         clim_fcg_years_hfc134a,  &
-                                         clim_fcg_nyears_hfc134a, &
-                                         clim_fcg_levls_hfc134a,  &
-                                         clim_fcg_rates_hfc134a,  &
-                                         cfc113_mix_ratio,        &
-                                         cfc11_mix_ratio,         &
-                                         cfc12_mix_ratio,         &
-                                         ch4_mix_ratio,           &
-                                         co2_mix_ratio,           &
-                                         hcfc22_mix_ratio,        &
-                                         hfc134a_mix_ratio,       &
-                                         n2_mix_ratio,            &
-                                         n2o_mix_ratio,           &
-                                         so2_mix_ratio,           &
-                                         l_time_varying_co2,      &
-                                         l_time_varying_ch4,      &
-                                         l_time_varying_n2o,      &
-                                         l_time_varying_cfc11,    &
-                                         l_time_varying_cfc12,    &
-                                         l_time_varying_hcfc22,   &
-                                         l_time_varying_hfc134a,  &
-                                         l_time_varying_cfc113
+  use constants_mod, only: i_def, l_def, r_def, r_um
+  use gas_calc_mod, only: gas_calc
+  use radiative_gases_config_mod, only : &
+    cfc11_clim_fcg_levls, cfc11_clim_fcg_nyears, &
+    cfc11_clim_fcg_years, cfc11_clim_fcg_rates, &
+    cfc11_mix_ratio, cfc11_rad_opt, cfc11_rad_opt_off, &
+    cfc11_rad_opt_constant, cfc11_rad_opt_time_varying, &
+    cfc113_clim_fcg_levls, cfc113_clim_fcg_nyears, &
+    cfc113_clim_fcg_years, cfc113_clim_fcg_rates, &
+    cfc113_mix_ratio, cfc113_rad_opt, cfc113_rad_opt_off, &
+    cfc113_rad_opt_constant, cfc113_rad_opt_time_varying, &
+    cfc12_clim_fcg_levls, cfc12_clim_fcg_nyears, &
+    cfc12_clim_fcg_years, cfc12_clim_fcg_rates, &
+    cfc12_mix_ratio, cfc12_rad_opt, cfc12_rad_opt_off, &
+    cfc12_rad_opt_constant, cfc12_rad_opt_time_varying, &
+    ch4_clim_fcg_levls, ch4_clim_fcg_nyears, &
+    ch4_clim_fcg_years, ch4_clim_fcg_rates, &
+    ch4_mix_ratio, ch4_rad_opt, ch4_rad_opt_off, &
+    ch4_rad_opt_constant, ch4_rad_opt_time_varying, &
+    ch4_rad_opt_prognostic, ch4_rad_opt_ancil, &
+    co_clim_fcg_levls, co_clim_fcg_nyears, &
+    co_clim_fcg_years, co_clim_fcg_rates, &
+    co_mix_ratio, co_rad_opt, co_rad_opt_off, &
+    co_rad_opt_constant, co_rad_opt_time_varying, &
+    co_rad_opt_prognostic, co_rad_opt_ancil, &
+    co2_clim_fcg_levls, co2_clim_fcg_nyears, &
+    co2_clim_fcg_years, co2_clim_fcg_rates, &
+    co2_mix_ratio, co2_rad_opt, co2_rad_opt_off, &
+    co2_rad_opt_constant, co2_rad_opt_time_varying, &
+    co2_rad_opt_prognostic, co2_rad_opt_ancil, &
+    h2_clim_fcg_levls, h2_clim_fcg_nyears, &
+    h2_clim_fcg_years, h2_clim_fcg_rates, &
+    h2_mix_ratio, h2_rad_opt, h2_rad_opt_off, &
+    h2_rad_opt_constant, h2_rad_opt_time_varying, &
+    h2_rad_opt_prognostic, h2_rad_opt_ancil, &
+    h2o_clim_fcg_levls, h2o_clim_fcg_nyears, &
+    h2o_clim_fcg_years, h2o_clim_fcg_rates, &
+    h2o_mix_ratio, h2o_rad_opt, h2o_rad_opt_off, &
+    h2o_rad_opt_constant, h2o_rad_opt_time_varying, &
+    h2o_rad_opt_prognostic, h2o_rad_opt_ancil, &
+    hcfc22_clim_fcg_levls, hcfc22_clim_fcg_nyears, &
+    hcfc22_clim_fcg_years, hcfc22_clim_fcg_rates, &
+    hcfc22_mix_ratio, hcfc22_rad_opt, hcfc22_rad_opt_off, &
+    hcfc22_rad_opt_constant, hcfc22_rad_opt_time_varying, &
+    hcn_clim_fcg_levls, hcn_clim_fcg_nyears, &
+    hcn_clim_fcg_years, hcn_clim_fcg_rates, &
+    hcn_mix_ratio, hcn_rad_opt, hcn_rad_opt_off, &
+    hcn_rad_opt_constant, hcn_rad_opt_time_varying, &
+    hcn_rad_opt_prognostic, hcn_rad_opt_ancil, &
+    he_clim_fcg_levls, he_clim_fcg_nyears, &
+    he_clim_fcg_years, he_clim_fcg_rates, &
+    he_mix_ratio, he_rad_opt, he_rad_opt_off, &
+    he_rad_opt_constant, he_rad_opt_time_varying, &
+    he_rad_opt_prognostic, he_rad_opt_ancil, &
+    hfc134a_clim_fcg_levls, hfc134a_clim_fcg_nyears, &
+    hfc134a_clim_fcg_years, hfc134a_clim_fcg_rates, &
+    hfc134a_mix_ratio, hfc134a_rad_opt, hfc134a_rad_opt_off, &
+    hfc134a_rad_opt_constant, hfc134a_rad_opt_time_varying, &
+    n2_clim_fcg_levls, n2_clim_fcg_nyears, &
+    n2_clim_fcg_years, n2_clim_fcg_rates, &
+    n2_mix_ratio, n2_rad_opt, n2_rad_opt_off, &
+    n2_rad_opt_constant, n2_rad_opt_time_varying, &
+    n2_rad_opt_prognostic, n2_rad_opt_ancil, &
+    n2o_clim_fcg_levls, n2o_clim_fcg_nyears, &
+    n2o_clim_fcg_years, n2o_clim_fcg_rates, &
+    n2o_mix_ratio, n2o_rad_opt, n2o_rad_opt_off, &
+    n2o_rad_opt_constant, n2o_rad_opt_time_varying, &
+    n2o_rad_opt_prognostic, n2o_rad_opt_ancil, &
+    nh3_clim_fcg_levls, nh3_clim_fcg_nyears, &
+    nh3_clim_fcg_years, nh3_clim_fcg_rates, &
+    nh3_mix_ratio, nh3_rad_opt, nh3_rad_opt_off, &
+    nh3_rad_opt_constant, nh3_rad_opt_time_varying, &
+    nh3_rad_opt_prognostic, nh3_rad_opt_ancil, &
+    o2_clim_fcg_levls, o2_clim_fcg_nyears, &
+    o2_clim_fcg_years, o2_clim_fcg_rates, &
+    o2_mix_ratio, o2_rad_opt, o2_rad_opt_off, &
+    o2_rad_opt_constant, o2_rad_opt_time_varying, &
+    o2_rad_opt_prognostic, o2_rad_opt_ancil, &
+    o3_clim_fcg_levls, o3_clim_fcg_nyears, &
+    o3_clim_fcg_years, o3_clim_fcg_rates, &
+    o3_mix_ratio, o3_rad_opt, o3_rad_opt_off, &
+    o3_rad_opt_constant, o3_rad_opt_time_varying, &
+    o3_rad_opt_prognostic, o3_rad_opt_ancil, &
+    so2_clim_fcg_levls, so2_clim_fcg_nyears, &
+    so2_clim_fcg_years, so2_clim_fcg_rates, &
+    so2_mix_ratio, so2_rad_opt, so2_rad_opt_off, &
+    so2_rad_opt_constant, so2_rad_opt_time_varying, &
+    so2_rad_opt_prognostic, so2_rad_opt_ancil
 
   implicit none
 
-  ! latest updated gas mixing ratios
-  real(r_def), public :: co2_mix_ratio_now
-  real(r_def), public :: n2o_mix_ratio_now
-  real(r_def), public :: ch4_mix_ratio_now
+  ! Flags for treating gas mixing ratios as well-mixed
+  logical(l_def), public :: ch4_well_mixed
+  logical(l_def), public :: co_well_mixed
+  logical(l_def), public :: co2_well_mixed
+  logical(l_def), public :: h2_well_mixed
+  logical(l_def), public :: h2o_well_mixed
+  logical(l_def), public :: hcn_well_mixed
+  logical(l_def), public :: he_well_mixed
+  logical(l_def), public :: n2_well_mixed
+  logical(l_def), public :: n2o_well_mixed
+  logical(l_def), public :: nh3_well_mixed
+  logical(l_def), public :: o2_well_mixed
+  logical(l_def), public :: o3_well_mixed
+  logical(l_def), public :: so2_well_mixed
+
+  ! Well-mixed gas mixing ratios
   real(r_def), public :: cfc11_mix_ratio_now
-  real(r_def), public :: cfc12_mix_ratio_now
   real(r_def), public :: cfc113_mix_ratio_now
+  real(r_def), public :: cfc12_mix_ratio_now
+  real(r_def), public :: ch4_mix_ratio_now
+  real(r_def), public :: co_mix_ratio_now
+  real(r_def), public :: co2_mix_ratio_now
+  real(r_def), public :: h2_mix_ratio_now
+  real(r_def), public :: h2o_mix_ratio_now
   real(r_def), public :: hcfc22_mix_ratio_now
+  real(r_def), public :: hcn_mix_ratio_now
+  real(r_def), public :: he_mix_ratio_now
   real(r_def), public :: hfc134a_mix_ratio_now
+  real(r_def), public :: n2_mix_ratio_now
+  real(r_def), public :: n2o_mix_ratio_now
+  real(r_def), public :: nh3_mix_ratio_now
+  real(r_def), public :: o2_mix_ratio_now
+  real(r_def), public :: o3_mix_ratio_now
+  real(r_def), public :: so2_mix_ratio_now
 
 contains
 
@@ -72,95 +132,321 @@ contains
 
     implicit none
 
-    ! Update C02
-    if ( l_time_varying_co2 ) then
-      call gas_calc( co2_mix_ratio_now,    &
-                     clim_fcg_nyears_co2,  &
-                     clim_fcg_years_co2,   &
-                     clim_fcg_levls_co2,   &
-                     clim_fcg_rates_co2 )
-    else
-      co2_mix_ratio_now = co2_mix_ratio
-    end if
-    ! CO2 value needed by JULES - contained stored in rad_input
-    co2_mmr = real(co2_mix_ratio_now, r_um)
-
-    ! Update N2O
-    if ( l_time_varying_n2o ) then
-      call gas_calc( n2o_mix_ratio_now,    &
-                     clim_fcg_nyears_n2o,  &
-                     clim_fcg_years_n2o,   &
-                     clim_fcg_levls_n2o,   &
-                     clim_fcg_rates_n2o )
-    else
-      n2o_mix_ratio_now = n2o_mix_ratio
-    end if
-
-    ! Update CH4
-    if ( l_time_varying_ch4 ) then
-      call gas_calc( ch4_mix_ratio_now,    &
-                     clim_fcg_nyears_ch4,  &
-                     clim_fcg_years_ch4,   &
-                     clim_fcg_levls_ch4,   &
-                     clim_fcg_rates_ch4 )
-    else
-      ch4_mix_ratio_now = ch4_mix_ratio
-    end if
-
-    ! Update CFC11
-    if ( l_time_varying_cfc11 ) then
-      call gas_calc( cfc11_mix_ratio_now,    &
-                     clim_fcg_nyears_cfc11,  &
-                     clim_fcg_years_cfc11,   &
-                     clim_fcg_levls_cfc11,   &
-                     clim_fcg_rates_cfc11 )
-    else
+    ! Set MMR for CFC11
+    select case ( cfc11_rad_opt )
+    case ( cfc11_rad_opt_off )
+      cfc11_mix_ratio_now = 0.0_r_def
+    case ( cfc11_rad_opt_constant )
       cfc11_mix_ratio_now = cfc11_mix_ratio
-    end if
+    case ( cfc11_rad_opt_time_varying )
+      call gas_calc( cfc11_mix_ratio_now,    &
+                     cfc11_clim_fcg_nyears,  &
+                     cfc11_clim_fcg_years,   &
+                     cfc11_clim_fcg_levls,   &
+                     cfc11_clim_fcg_rates )
+    end select
 
-    ! Update CFC12
-    if ( l_time_varying_cfc12 ) then
-      call gas_calc( cfc12_mix_ratio_now,    &
-                     clim_fcg_nyears_cfc12,  &
-                     clim_fcg_years_cfc12,   &
-                     clim_fcg_levls_cfc12,   &
-                     clim_fcg_rates_cfc12 )
-    else
-      cfc12_mix_ratio_now = cfc12_mix_ratio
-    end if
-
-    ! Update CFC113
-    if ( l_time_varying_cfc113 ) then
-      call gas_calc( cfc113_mix_ratio_now,    &
-                     clim_fcg_nyears_cfc113,  &
-                     clim_fcg_years_cfc113,   &
-                     clim_fcg_levls_cfc113,   &
-                     clim_fcg_rates_cfc113 )
-    else
+    ! Set MMR for CFC113
+    select case ( cfc113_rad_opt )
+    case ( cfc113_rad_opt_off )
+      cfc113_mix_ratio_now = 0.0_r_def
+    case ( cfc113_rad_opt_constant )
       cfc113_mix_ratio_now = cfc113_mix_ratio
-    end if
+    case ( cfc113_rad_opt_time_varying )
+      call gas_calc( cfc113_mix_ratio_now,    &
+                     cfc113_clim_fcg_nyears,  &
+                     cfc113_clim_fcg_years,   &
+                     cfc113_clim_fcg_levls,   &
+                     cfc113_clim_fcg_rates )
+    end select
 
-    ! Update HCFC22
-    if ( l_time_varying_hcfc22 ) then
-      call gas_calc( hcfc22_mix_ratio_now,    &
-                     clim_fcg_nyears_hcfc22,  &
-                     clim_fcg_years_hcfc22,   &
-                     clim_fcg_levls_hcfc22,   &
-                     clim_fcg_rates_hcfc22 )
-    else
+    ! Set MMR for CFC12
+    select case ( cfc12_rad_opt )
+    case ( cfc12_rad_opt_off )
+      cfc12_mix_ratio_now = 0.0_r_def
+    case ( cfc12_rad_opt_constant )
+      cfc12_mix_ratio_now = cfc12_mix_ratio
+    case ( cfc12_rad_opt_time_varying )
+      call gas_calc( cfc12_mix_ratio_now,    &
+                     cfc12_clim_fcg_nyears,  &
+                     cfc12_clim_fcg_years,   &
+                     cfc12_clim_fcg_levls,   &
+                     cfc12_clim_fcg_rates )
+    end select
+
+    ! Set MMR for CH4
+    select case ( ch4_rad_opt )
+    case ( ch4_rad_opt_off )
+      ch4_mix_ratio_now = 0.0_r_def
+      ch4_well_mixed = .true.
+    case ( ch4_rad_opt_constant )
+      ch4_mix_ratio_now = ch4_mix_ratio
+      ch4_well_mixed = .true.
+    case ( ch4_rad_opt_time_varying )
+      call gas_calc( ch4_mix_ratio_now,    &
+                     ch4_clim_fcg_nyears,  &
+                     ch4_clim_fcg_years,   &
+                     ch4_clim_fcg_levls,   &
+                     ch4_clim_fcg_rates )
+      ch4_well_mixed = .true.
+    case ( ch4_rad_opt_prognostic, ch4_rad_opt_ancil )
+      ch4_well_mixed = .false.
+    end select
+
+    ! Set MMR for CO
+    select case ( co_rad_opt )
+    case ( co_rad_opt_off )
+      co_mix_ratio_now = 0.0_r_def
+      co_well_mixed = .true.
+    case ( co_rad_opt_constant )
+      co_mix_ratio_now = co_mix_ratio
+      co_well_mixed = .true.
+    case ( co_rad_opt_time_varying )
+      call gas_calc( co_mix_ratio_now,    &
+                     co_clim_fcg_nyears,  &
+                     co_clim_fcg_years,   &
+                     co_clim_fcg_levls,   &
+                     co_clim_fcg_rates )
+      co_well_mixed = .true.
+    case ( co_rad_opt_prognostic, co_rad_opt_ancil )
+      co_well_mixed = .false.
+    end select
+
+    ! Set MMR for CO2
+    select case ( co2_rad_opt )
+    case ( co2_rad_opt_off )
+      co2_mix_ratio_now = 0.0_r_def
+      co2_well_mixed = .true.
+    case ( co2_rad_opt_constant )
+      co2_mix_ratio_now = co2_mix_ratio
+      co2_well_mixed = .true.
+    case ( co2_rad_opt_time_varying )
+      call gas_calc( co2_mix_ratio_now,    &
+                     co2_clim_fcg_nyears,  &
+                     co2_clim_fcg_years,   &
+                     co2_clim_fcg_levls,   &
+                     co2_clim_fcg_rates )
+      co2_well_mixed = .true.
+    case ( co2_rad_opt_prognostic, co2_rad_opt_ancil )
+      co2_mix_ratio_now = 0.0_r_def
+      co2_well_mixed = .false.
+    end select
+
+    ! Set MMR for H2
+    select case ( h2_rad_opt )
+    case ( h2_rad_opt_off )
+      h2_mix_ratio_now = 0.0_r_def
+      h2_well_mixed = .true.
+    case ( h2_rad_opt_constant )
+      h2_mix_ratio_now = h2_mix_ratio
+      h2_well_mixed = .true.
+    case ( h2_rad_opt_time_varying )
+      call gas_calc( h2_mix_ratio_now,    &
+                     h2_clim_fcg_nyears,  &
+                     h2_clim_fcg_years,   &
+                     h2_clim_fcg_levls,   &
+                     h2_clim_fcg_rates )
+      h2_well_mixed = .true.
+    case ( h2_rad_opt_prognostic, h2_rad_opt_ancil )
+      h2_well_mixed = .false.
+    end select
+
+    ! Set MMR for H2O
+    select case ( h2o_rad_opt )
+    case ( h2o_rad_opt_off )
+      h2o_mix_ratio_now = 0.0_r_def
+      h2o_well_mixed = .true.
+    case ( h2o_rad_opt_constant )
+      h2o_mix_ratio_now = h2o_mix_ratio
+      h2o_well_mixed = .true.
+    case ( h2o_rad_opt_time_varying )
+      call gas_calc( h2o_mix_ratio_now,    &
+                     h2o_clim_fcg_nyears,  &
+                     h2o_clim_fcg_years,   &
+                     h2o_clim_fcg_levls,   &
+                     h2o_clim_fcg_rates )
+      h2o_well_mixed = .true.
+    case ( h2o_rad_opt_prognostic, h2o_rad_opt_ancil )
+      h2o_well_mixed = .false.
+    end select
+
+    ! Set MMR for HCFC22
+    select case ( hcfc22_rad_opt )
+    case ( hcfc22_rad_opt_off )
+      hcfc22_mix_ratio_now = 0.0_r_def
+    case ( hcfc22_rad_opt_constant )
       hcfc22_mix_ratio_now = hcfc22_mix_ratio
-    end if
+    case ( hcfc22_rad_opt_time_varying )
+      call gas_calc( hcfc22_mix_ratio_now,    &
+                     hcfc22_clim_fcg_nyears,  &
+                     hcfc22_clim_fcg_years,   &
+                     hcfc22_clim_fcg_levls,   &
+                     hcfc22_clim_fcg_rates )
+    end select
 
-    ! Update HFC134A
-    if ( l_time_varying_hfc134a ) then
-      call gas_calc( hfc134a_mix_ratio_now,    &
-                     clim_fcg_nyears_hfc134a,  &
-                     clim_fcg_years_hfc134a,   &
-                     clim_fcg_levls_hfc134a,   &
-                     clim_fcg_rates_hfc134a )
-    else
+    ! Set MMR for HCN
+    select case ( hcn_rad_opt )
+    case ( hcn_rad_opt_off )
+      hcn_mix_ratio_now = 0.0_r_def
+    case ( hcn_rad_opt_constant )
+      hcn_mix_ratio_now = hcn_mix_ratio
+    case ( hcn_rad_opt_time_varying )
+      call gas_calc( hcn_mix_ratio_now,    &
+                     hcn_clim_fcg_nyears,  &
+                     hcn_clim_fcg_years,   &
+                     hcn_clim_fcg_levls,   &
+                     hcn_clim_fcg_rates )
+      hcn_well_mixed = .true.
+    case ( hcn_rad_opt_prognostic, hcn_rad_opt_ancil )
+      hcn_well_mixed = .false.
+    end select
+
+    ! Set MMR for HE
+    select case ( he_rad_opt )
+    case ( he_rad_opt_off )
+      he_mix_ratio_now = 0.0_r_def
+      he_well_mixed = .true.
+    case ( he_rad_opt_constant )
+      he_mix_ratio_now = he_mix_ratio
+      he_well_mixed = .true.
+    case ( he_rad_opt_time_varying )
+      call gas_calc( he_mix_ratio_now,    &
+                     he_clim_fcg_nyears,  &
+                     he_clim_fcg_years,   &
+                     he_clim_fcg_levls,   &
+                     he_clim_fcg_rates )
+      he_well_mixed = .true.
+    case ( he_rad_opt_prognostic, he_rad_opt_ancil )
+      he_well_mixed = .false.
+    end select
+
+    ! Set MMR for HFC134A
+    select case ( hfc134a_rad_opt )
+    case ( hfc134a_rad_opt_off )
+      hfc134a_mix_ratio_now = 0.0_r_def
+    case ( hfc134a_rad_opt_constant )
       hfc134a_mix_ratio_now = hfc134a_mix_ratio
-    end if
+    case ( hfc134a_rad_opt_time_varying )
+      call gas_calc( hfc134a_mix_ratio_now,    &
+                     hfc134a_clim_fcg_nyears,  &
+                     hfc134a_clim_fcg_years,   &
+                     hfc134a_clim_fcg_levls,   &
+                     hfc134a_clim_fcg_rates )
+    end select
+
+    ! Set MMR for N2
+    select case ( n2_rad_opt )
+    case ( n2_rad_opt_off )
+      n2_mix_ratio_now = 0.0_r_def
+      n2_well_mixed = .true.
+    case ( n2_rad_opt_constant )
+      n2_mix_ratio_now = n2_mix_ratio
+      n2_well_mixed = .true.
+    case ( n2_rad_opt_time_varying )
+      call gas_calc( n2_mix_ratio_now,    &
+                     n2_clim_fcg_nyears,  &
+                     n2_clim_fcg_years,   &
+                     n2_clim_fcg_levls,   &
+                     n2_clim_fcg_rates )
+      n2_well_mixed = .true.
+    case ( n2_rad_opt_prognostic, n2_rad_opt_ancil )
+      n2_well_mixed = .false.
+    end select
+
+    ! Set MMR for N2O
+    select case ( n2o_rad_opt )
+    case ( n2o_rad_opt_off )
+      n2o_mix_ratio_now = 0.0_r_def
+      n2o_well_mixed = .true.
+    case ( n2o_rad_opt_constant )
+      n2o_mix_ratio_now = n2o_mix_ratio
+      n2o_well_mixed = .true.
+    case ( n2o_rad_opt_time_varying )
+      call gas_calc( n2o_mix_ratio_now,    &
+                     n2o_clim_fcg_nyears,  &
+                     n2o_clim_fcg_years,   &
+                     n2o_clim_fcg_levls,   &
+                     n2o_clim_fcg_rates )
+      n2o_well_mixed = .true.
+    case ( n2o_rad_opt_prognostic, n2o_rad_opt_ancil )
+      n2o_well_mixed = .false.
+    end select
+
+    ! Set MMR for NH3
+    select case ( nh3_rad_opt )
+    case ( nh3_rad_opt_off )
+      nh3_mix_ratio_now = 0.0_r_def
+      nh3_well_mixed = .true.
+    case ( nh3_rad_opt_constant )
+      nh3_mix_ratio_now = nh3_mix_ratio
+      nh3_well_mixed = .true.
+    case ( nh3_rad_opt_time_varying )
+      call gas_calc( nh3_mix_ratio_now,    &
+                     nh3_clim_fcg_nyears,  &
+                     nh3_clim_fcg_years,   &
+                     nh3_clim_fcg_levls,   &
+                     nh3_clim_fcg_rates )
+      nh3_well_mixed = .true.
+    case ( nh3_rad_opt_prognostic, nh3_rad_opt_ancil )
+      nh3_well_mixed = .false.
+    end select
+
+    ! Set MMR for O2
+    select case ( o2_rad_opt )
+    case ( o2_rad_opt_off )
+      o2_mix_ratio_now = 0.0_r_def
+      o2_well_mixed = .true.
+    case ( o2_rad_opt_constant )
+      o2_mix_ratio_now = o2_mix_ratio
+      o2_well_mixed = .true.
+    case ( o2_rad_opt_time_varying )
+      call gas_calc( o2_mix_ratio_now,    &
+                     o2_clim_fcg_nyears,  &
+                     o2_clim_fcg_years,   &
+                     o2_clim_fcg_levls,   &
+                     o2_clim_fcg_rates )
+      o2_well_mixed = .true.
+    case ( o2_rad_opt_prognostic, o2_rad_opt_ancil )
+      o2_well_mixed = .false.
+    end select
+
+    ! Set MMR for O3
+    select case ( o3_rad_opt )
+    case ( o3_rad_opt_off )
+      o3_mix_ratio_now = 0.0_r_def
+      o3_well_mixed = .true.
+    case ( o3_rad_opt_constant )
+      o3_mix_ratio_now = o3_mix_ratio
+      o3_well_mixed = .true.
+    case ( o3_rad_opt_time_varying )
+      call gas_calc( o3_mix_ratio_now,    &
+                     o3_clim_fcg_nyears,  &
+                     o3_clim_fcg_years,   &
+                     o3_clim_fcg_levls,   &
+                     o3_clim_fcg_rates )
+      o3_well_mixed = .true.
+    case ( o3_rad_opt_prognostic, o3_rad_opt_ancil )
+      o3_well_mixed = .false.
+    end select
+
+    ! Set MMR for SO2
+    select case ( so2_rad_opt )
+    case ( so2_rad_opt_off )
+      so2_mix_ratio_now = 0.0_r_def
+      so2_well_mixed = .true.
+    case ( so2_rad_opt_constant )
+      so2_mix_ratio_now = so2_mix_ratio
+      so2_well_mixed = .true.
+    case ( so2_rad_opt_time_varying )
+      call gas_calc( so2_mix_ratio_now,    &
+                     so2_clim_fcg_nyears,  &
+                     so2_clim_fcg_years,   &
+                     so2_clim_fcg_levls,   &
+                     so2_clim_fcg_rates )
+      so2_well_mixed = .true.
+    case ( so2_rad_opt_prognostic, so2_rad_opt_ancil )
+      so2_well_mixed = .false.
+    end select
 
   end subroutine gas_calc_all
 

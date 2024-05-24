@@ -32,7 +32,8 @@ contains
     use chemistry_config_mod, only: chem_scheme,             &
                                     chem_scheme_offline_ox,  &
                                     chem_scheme_strattrop,   &
-                                    chem_scheme_strat_test
+                                    chem_scheme_strat_test,  &
+                                    chem_scheme_flexchem
 
     implicit none
 
@@ -130,6 +131,12 @@ contains
     type( field_type ), pointer :: dmso => null()
     type( field_type ), pointer :: monoterpene => null()
     type( field_type ), pointer :: secondary_organic => null()
+    type( field_type ), pointer :: co2 => null()
+    type( field_type ), pointer :: hcn => null()
+    type( field_type ), pointer :: he => null()
+    type( field_type ), pointer :: n2 => null()
+    type( field_type ), pointer :: o2 => null()
+    type( field_type ), pointer :: h2o => null()
 
     call chemistry_fields%get_field('o3p',o3p)
     call chemistry_fields%get_field('o1d',o1d)
@@ -220,6 +227,30 @@ contains
     call chemistry_fields%get_field('dmso', dmso)
     call chemistry_fields%get_field('monoterpene', monoterpene)
     call chemistry_fields%get_field('secondary_organic', secondary_organic)
+    call chemistry_fields%get_field('co2', co2)
+    call chemistry_fields%get_field('hcn', hcn)
+    call chemistry_fields%get_field('he', he)
+    call chemistry_fields%get_field('n2', n2)
+    call chemistry_fields%get_field('o2', o2)
+    call chemistry_fields%get_field('h2o', h2o)
+
+    ! Flexible/idealised chemistry scheme
+    ! (These gases are also can be used as 3D fields in radiation.)
+    if ( chem_scheme == chem_scheme_flexchem ) then
+      call invoke ( setval_c(ch4, 0.0_r_def), &
+                    setval_c(co,  0.0_r_def), &
+                    setval_c(h2o, 0.0_r_def), &
+                    setval_c(co2, 0.0_r_def), &
+                    setval_c(h2,  0.0_r_def), &
+                    setval_c(hcn, 0.0_r_def), &
+                    setval_c(he,  0.0_r_def), &
+                    setval_c(n2,  0.0_r_def), &
+                    setval_c(n2o, 0.0_r_def), &
+                    setval_c(nh3, 0.0_r_def), &
+                    setval_c(o2,  0.0_r_def), &
+                    setval_c(o3,  0.0_r_def), &
+                    setval_c(so2, 0.0_r_def) )
+    end if
 
     ! Set UKCA chemistry fields to fixed values for use in SCM testing
     ! or when no values are provided by the initial dump (or by ancil files

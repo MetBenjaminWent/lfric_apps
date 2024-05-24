@@ -29,6 +29,7 @@ module init_physics_prognostics_alg_mod
   use aerosol_config_mod,        only: glomap_mode,               &
                                        glomap_mode_dust_and_clim, &
                                        glomap_mode_ukca
+  use chemistry_config_mod,      only: chem_scheme, chem_scheme_flexchem
 #endif
   use log_mod,                        only : log_event,         &
                                              LOG_LEVEL_INFO
@@ -106,9 +107,10 @@ contains
       call init_soil_fields_alg(soil_fields)
       call init_snow_fields_alg(snow_fields)
     end if
-    if ( aerosol == aerosol_um .and.            &
+    if ( ( aerosol == aerosol_um .and.          &
          ( glomap_mode == glomap_mode_ukca .or. &
-           glomap_mode == glomap_mode_dust_and_clim ) ) then
+           glomap_mode == glomap_mode_dust_and_clim ) ) .or. &
+         ( chem_scheme == chem_scheme_flexchem ) ) then
       call init_chemistry_fields_alg(chemistry_fields)
     end if
     call init_aerosol_fields_alg(aerosol_fields)

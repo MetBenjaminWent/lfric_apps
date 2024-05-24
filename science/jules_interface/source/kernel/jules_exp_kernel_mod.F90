@@ -445,6 +445,7 @@ contains
     !---------------------------------------
     ! LFRic modules
     !---------------------------------------
+    use gas_calc_all_mod, only: co2_mix_ratio_now
     use jules_control_init_mod, only: n_land_tile, n_sea_ice_tile, &
          first_sea_tile, first_sea_ice_tile, n_surf_tile
 
@@ -1256,6 +1257,7 @@ contains
     end do
 
     ! Carbon dioxide
+    co2_mmr = real(co2_mix_ratio_now, r_um)
     co2 = co2_mmr
 
     do l = 1, land_field

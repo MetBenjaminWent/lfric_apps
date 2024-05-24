@@ -626,7 +626,8 @@ contains
       call radiation_alg( dtheta_rad, theta, exner, mr_n, moist_dyn,           &
                           pressure_in_wth, temperature_in_wth,                 &
                           derived_fields, radiation_fields, cloud_fields,      &
-                          microphysics_fields, aerosol_fields, surface_fields, &
+                          microphysics_fields, aerosol_fields,                 &
+                          chemistry_fields, surface_fields,                    &
                           rad_this_tstep, rad_inc_this_tstep,                  &
                           tile_sw_direct_albedo, tile_sw_diffuse_albedo,       &
                           tile_swinc_direct_albedo, tile_swinc_diffuse_albedo, &

@@ -31,6 +31,7 @@ module gungho_setup_io_mod
                                        emiss_bc_biomass_ancil_path,&
                                        emiss_bc_biomass_hi_ancil_path,&
                                        emiss_bc_biomass_lo_ancil_path,&
+                                       gas_mmr_ancil_path,         &
                                        emiss_dms_land_ancil_path,  &
                                        dms_conc_ocean_ancil_path,  &
                                        emiss_monoterp_ancil_path,  &
@@ -95,6 +96,7 @@ module gungho_setup_io_mod
                                        ancil_option,              &
                                        ancil_option_start_dump,   &
                                        ancil_option_fixed,        &
+                                       ancil_option_idealised,    &
                                        ancil_option_updating,     &
                                        lbc_option,                &
                                        lbc_option_gungho_file,    &
@@ -692,6 +694,14 @@ module gungho_setup_io_mod
            xios_id="easy_extinction_lw_ancil", io_mode=FILE_MODE_READ ) )
    endif
 
+    ! Radiatively active gases
+    if ( ancil_option == ancil_option_idealised ) then
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(gas_mmr_ancil_path)
+      call files_list%insert_item( lfric_xios_file_type( ancil_fname, &
+                                                         xios_id="gas_mmr_ancil", &
+                                                         io_mode=FILE_MODE_READ ) )
+    end if
 #endif
 
     ! Setup orography ancillary file

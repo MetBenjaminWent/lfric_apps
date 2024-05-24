@@ -35,6 +35,7 @@ module um_ukca_init_mod
   use chemistry_config_mod,      only: chem_scheme, chem_scheme_offline_ox,    &
                                        chem_scheme_strattrop, chem_scheme_none,&
                                        chem_scheme_strat_test,                 &
+                                       chem_scheme_flexchem,                   &
                                        l_ukca_ro2_ntp
 
   ! UM modules used
@@ -503,7 +504,9 @@ contains
 
     else if ( ( aerosol == aerosol_um .and.                                    &
                 glomap_mode == glomap_mode_ukca ) .or.                         &
-              chem_scheme /= chem_scheme_none ) then
+              ( chem_scheme == chem_scheme_offline_ox .or.                     &
+                chem_scheme == chem_scheme_strat_test .or.                     &
+                chem_scheme == chem_scheme_strattrop ) ) then
 
         call ukca_init( row_length, rows, model_levels, bl_levels,             &
                         ntype, npft, brd_leaf, ndl_leaf, c3_grass, c4_grass,   &
@@ -618,7 +621,7 @@ contains
     else if ( chem_scheme == chem_scheme_offline_ox .or.  &
               chem_scheme == chem_scheme_strat_test ) then
        i_tmp_ukca_chem = ukca_chem_offline
-    else     ! chem_scheme_none
+    else     ! chem_scheme_none or chem_scheme_flexchem
       call log_event('No Chemical scheme chosen for UKCA', LOG_LEVEL_INFO)
       return
     end if
