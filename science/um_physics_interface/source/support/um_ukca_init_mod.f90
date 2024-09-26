@@ -700,6 +700,7 @@ contains
            l_ukca_scale_soa_yield_isop=.false.,                                &
            soa_yield_scaling_isop=1.0_r_um,                                    &
            l_support_ems_vertprof=.true.,                                      &
+           i_primss_method=2,                                                  &
            ! UKCA environmental driver configuration options
            l_param_conv=l_param_conv,                                          &
            l_ctile=.true.,                                                     &
