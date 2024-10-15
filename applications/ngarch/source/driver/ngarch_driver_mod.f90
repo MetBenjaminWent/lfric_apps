@@ -57,6 +57,8 @@ contains
     type( field_type )                     :: dmr_mphys(nummr), dcfl, dcff, dbcf
     type( field_array_type ),      pointer :: mr
 
+    type(mesh_type),               pointer :: mesh
+
     collection => modeldb%fields%get_field_collection( "moisture_fields" )
     call collection%get_field( "mr", mr )
     call clone_bundle( mr%bundle, dmr_mphys, nummr )
@@ -67,10 +69,16 @@ contains
     collection => modeldb%fields%get_field_collection( "depository" )
     call collection%get_field( "theta", theta )
     call collection%get_field( "rho", rho )
+    mesh => theta%get_mesh()
 
     ! Call an algorithm
     call log_event( program_name//": Running CASIM", LOG_LEVEL_INFO )
-    call casim_alg( mr%bundle, theta, rho, modeldb%model_data%derived_fields, modeldb%model_data%microphysics_fields, modeldb%model_data%cloud_fields, modeldb%model_data%aerosol_fields, dmr_mphys, dtheta_mphys, dcfl, dcff, dbcf )
+    call casim_alg( mr%bundle, theta, rho, modeldb%model_data%derived_fields, &
+                    modeldb%model_data%microphysics_fields,                   &
+                    modeldb%model_data%cloud_fields,                          &
+                    modeldb%model_data%aerosol_fields,                        &
+                    modeldb%model_data%turbulence_fields, mesh,               &
+                    dmr_mphys, dtheta_mphys, dcfl, dcff, dbcf )
     call log_event( program_name//": CASIM completed", LOG_LEVEL_INFO )
 
   end subroutine step

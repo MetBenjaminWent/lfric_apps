@@ -23,12 +23,14 @@ private
 !-------------------------------------------------------------------------------
 type, public, extends(kernel_type) :: mphys_turb_gen_kernel_type
   private
-  type(arg_type) :: meta_args(20) = (/           &
+  type(arg_type) :: meta_args(22) = (/           &
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! theta
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! mr_v
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! mr_cl
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! mr_ci
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! mr_s
+       arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! ns_mphys
+       arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! ni_mphys
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! cfl
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! cff
        arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! bcf
@@ -60,6 +62,8 @@ contains
 !> @param[in]     mr_cl      Liquid mixing ratio (kg/kg)
 !> @param[in]     mr_ci      Ice mixing ratio (kg/kg)
 !> @param[in]     mr_s       Snow mixing ratio (kg/kg)
+!> @param[in]     ns_mphys   Cloud ice number mixing ratio in wth
+!> @param[in]     ni_mphys   Snow number mixing ratio in wth
 !> @param[in]     cfl        Liquid cloud fraction
 !> @param[in]     cff        Frozen cloud fraction
 !> @param[in]     bcf        Total cloud fraction
@@ -86,6 +90,8 @@ contains
                                   mr_cl,     &
                                   mr_ci,     &
                                   mr_s,      &
+                                  ns_mphys,  &
+                                  ni_mphys,  &
                                   cfl,       &
                                   cff,       &
                                   bcf,       &
@@ -109,6 +115,7 @@ contains
     use mphys_turb_gen_mixed_phase_mod, only: mphys_turb_gen_mixed_phase
     use nlsizes_namelist_mod, only: bl_levels
     use planet_constants_mod, only: p_zero, kappa
+    use microphysics_config_mod, only: microphysics_casim
 
     implicit none
 
@@ -121,6 +128,8 @@ contains
     real(r_def), intent(in), dimension(undf_wth) :: mr_cl
     real(r_def), intent(in), dimension(undf_wth) :: mr_ci
     real(r_def), intent(in), dimension(undf_wth) :: mr_s
+    real(r_def), intent(in), dimension(undf_wth) :: ns_mphys
+    real(r_def), intent(in), dimension(undf_wth) :: ni_mphys
     real(r_def), intent(in), dimension(undf_wth) :: cfl
     real(r_def), intent(in), dimension(undf_wth) :: cff
     real(r_def), intent(in), dimension(undf_wth) :: bcf
@@ -149,9 +158,29 @@ contains
 
     real(r_um), dimension(seg_len,1,0:nlayers) :: &
                                         q_n, cfl_n, cf_n, press_wth, &
-                                        q_inc, qcl_inc, cfl_inc, cf_inc
+                                        q_inc, qcl_inc, cfl_inc, cf_inc, &
+                                        icenumber, snownumber
 
     integer(i_um) :: i, j, k
+
+    if (microphysics_casim) then
+      do i = 1, seg_len
+        do k = 1, nlayers
+          ! Set ice and snow number, and qcf/qcf2 the right way around
+          snownumber(i,1,k) = ns_mphys(map_wth(1,i) + k)
+          icenumber(i,1,k) = ni_mphys(map_wth(1,i) + k)
+          qcf2_work(i,1,k) = mr_ci(map_wth(1,i) + k) + dmr_ci(map_wth(1,i) + k)
+          qcf_work(i,1,k) = mr_s(map_wth(1,i) + k) + dmr_s(map_wth(1,i) + k)
+        end do
+      end do
+    else
+      do i = 1, seg_len
+        do k = 1, nlayers
+          ! Only single ice, no numbers required
+          qcf_work(i,1,k) = mr_ci(map_wth(1,i) + k) + dmr_ci(map_wth(1,i) + k)
+        end do
+      end do
+    end if
 
     j = 1
     do i = 1, seg_len
@@ -169,8 +198,6 @@ contains
                     exner(map_wth(1,i) + k)
         q_work(i,j,k) = mr_v(map_wth(1,i) + k) + dmr_v(map_wth(1,i) + k)
         qcl_work(i,j,k) = mr_cl(map_wth(1,i) + k) + dmr_cl(map_wth(1,i) + k)
-        qcf_work(i,j,k) = mr_ci(map_wth(1,i) + k) + dmr_ci(map_wth(1,i) + k)
-        qcf2_work(i,j,k) = mr_s(map_wth(1,i) + k) + dmr_s(map_wth(1,i) + k)
         cff_work(i,j,k) = cff(map_wth(1,i) + k) + dcff(map_wth(1,i) + k)
         cfl_work(i,j,k) = cfl(map_wth(1,i) + k) + dcfl(map_wth(1,i) + k)
         cf_work(i,j,k) = bcf(map_wth(1,i) + k) + dbcf(map_wth(1,i) + k)
@@ -206,7 +233,7 @@ contains
                                      rhodz_dry, rhodz_moist, deltaz,         &
                                      qcl_mpt, tau_d, inv_prt, disprate,      &
                                      inv_mt, si_avg, dcfl_mp, sigma2_s,      &
-                                     qcf2_work )
+                                     qcf2_work, icenumber, snownumber )
 
     j = 1
     do i = 1, seg_len

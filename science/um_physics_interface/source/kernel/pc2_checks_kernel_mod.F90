@@ -25,10 +25,11 @@ private
 
 type, public, extends(kernel_type) :: pc2_checks_kernel_type
   private
-  type(arg_type) :: meta_args(15) = (/                &
+  type(arg_type) :: meta_args(17) = (/                &
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! mv_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! ml_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! mi_wth
+       arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! ms_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! cfl_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! cff_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! bcf_wth
@@ -38,6 +39,7 @@ type, public, extends(kernel_type) :: pc2_checks_kernel_type
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA), & ! dmv_response_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA), & ! dmcl_response_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA), & ! dmci_response_wth
+       arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA), & ! dms_response_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA), & ! dcfl_response_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA), & ! dcff_response_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA)  & ! dbcf_response_wth
@@ -59,7 +61,8 @@ contains
 !> @param[in]     nlayers              Number of layers
 !> @param[in]     mv_wth               Vapour mass mixing ratio
 !> @param[in]     ml_wth               Liquid cloud mass mixing ratio
-!> @param[in]     mi_wth               Liquid cloud mass mixing ratio
+!> @param[in]     mi_wth               Ice cloud mass mixing ratio
+!> @param[in]     ms_wth               Snow mass mixing ratio
 !> @param[in]     cfl_wth              Liquid cloud fraction
 !> @param[in]     cff_wth              Ice cloud fraction
 !> @param[in]     bcf_wth              Bulk cloud fraction
@@ -69,6 +72,7 @@ contains
 !> @param[in,out] dmv_response_wth     Change in water vapour
 !> @param[in,out] dmcl_response_wth    Change in liquid water content
 !> @param[in,out] dmci_response_wth    Change in ice    water content
+!> @param[in,out] dms_response_wth     Change in snow   water content
 !> @param[in,out] dcfl_response_wth    Change in liquid cloud fraction
 !> @param[in,out] dcff_response_wth    Change in ice    cloud fraction
 !> @param[in,out] dbcf_response_wth    Change in bulk   cloud fraction
@@ -84,6 +88,7 @@ subroutine pc2_checks_code( nlayers,                   &
                             mv_wth,                    &
                             ml_wth,                    &
                             mi_wth,                    &
+                            ms_wth,                    &
                             cfl_wth,                   &
                             cff_wth,                   &
                             bcf_wth,                   &
@@ -94,6 +99,7 @@ subroutine pc2_checks_code( nlayers,                   &
                             dmv_response_wth,          &
                             dmcl_response_wth,         &
                             dmci_response_wth,         &
+                            dms_response_wth,          &
                             dcfl_response_wth,         &
                             dcff_response_wth,         &
                             dbcf_response_wth,         &
@@ -125,6 +131,7 @@ subroutine pc2_checks_code( nlayers,                   &
     real(kind=r_def), intent(in),  dimension(undf_wth) :: mv_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: ml_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: mi_wth
+    real(kind=r_def), intent(in),  dimension(undf_wth) :: ms_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: bcf_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: cfl_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: cff_wth
@@ -138,6 +145,7 @@ subroutine pc2_checks_code( nlayers,                   &
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dmv_response_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dmcl_response_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dmci_response_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dms_response_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dcfl_response_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dcff_response_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dbcf_response_wth
@@ -145,8 +153,7 @@ subroutine pc2_checks_code( nlayers,                   &
     real(r_um), dimension(row_length,rows,model_levels) :: &
                   qv_work, qcl_work, qcf_work,             &
                   cfl_work, cff_work, bcf_work,            &
-                  t_work, theta_work, pressure,            &
-                  zeros
+                  t_work, theta_work, pressure, qcf2_work
 
     integer(i_um) :: k
 
@@ -174,21 +181,20 @@ subroutine pc2_checks_code( nlayers,                   &
       qv_work(1,1,k)  = mv_wth(map_wth(1) + k)
       qcl_work(1,1,k) = ml_wth(map_wth(1) + k)
       qcf_work(1,1,k) = mi_wth(map_wth(1) + k)
+      qcf2_work(1,1,k) = ms_wth(map_wth(1) + k)
 
       ! Cast LFRic cloud fractions onto cloud fraction work arrays.
       bcf_work(1,1,k) = bcf_wth(map_wth(1) + k)
       cfl_work(1,1,k) = cfl_wth(map_wth(1) + k)
       cff_work(1,1,k) = cff_wth(map_wth(1) + k)
 
-      ! Dummy zeros in place of qcf2 in pc2_checks
-      zeros(1,1,k)    = 0.0_r_um
     end do
 
     call pc2_checks( pressure,                                 &
                      t_work, bcf_work, cfl_work, cff_work,     &
                      qv_work, qcl_work, qcf_work, l_mr_physics,&
                      row_length, rows, model_levels,           &
-                     0_i_um, 0_i_um, 0_i_um, 0_i_um, zeros,    &
+                     0_i_um, 0_i_um, 0_i_um, 0_i_um, qcf2_work,&
                      wtrac)
 
     ! Recast back to LFRic space
@@ -207,6 +213,7 @@ subroutine pc2_checks_code( nlayers,                   &
       dmv_response_wth (map_wth(1)+k) = qv_work (1,1,k) - mv_wth (map_wth(1) + k)
       dmcl_response_wth(map_wth(1)+k) = qcl_work(1,1,k) - ml_wth (map_wth(1) + k)
       dmci_response_wth(map_wth(1)+k) = qcf_work(1,1,k) - mi_wth (map_wth(1) + k)
+      dms_response_wth(map_wth(1)+k) = qcf2_work(1,1,k) - ms_wth (map_wth(1) + k)
       dcfl_response_wth(map_wth(1)+k) = cfl_work(1,1,k) - cfl_wth(map_wth(1) + k)
       dcff_response_wth(map_wth(1)+k) = cff_work(1,1,k) - cff_wth(map_wth(1) + k)
       dbcf_response_wth(map_wth(1)+k) = bcf_work(1,1,k) - bcf_wth(map_wth(1) + k)
@@ -216,6 +223,7 @@ subroutine pc2_checks_code( nlayers,                   &
     dmv_response_wth   (map_wth(1)+0) = dmv_response_wth   (map_wth(1)+1)
     dmcl_response_wth  (map_wth(1)+0) = dmcl_response_wth  (map_wth(1)+1)
     dmci_response_wth  (map_wth(1)+0) = dmci_response_wth  (map_wth(1)+1)
+    dms_response_wth   (map_wth(1)+0) = dms_response_wth   (map_wth(1)+1)
     dcfl_response_wth  (map_wth(1)+0) = dcfl_response_wth  (map_wth(1)+1)
     dcff_response_wth  (map_wth(1)+0) = dcff_response_wth  (map_wth(1)+1)
     dbcf_response_wth  (map_wth(1)+0) = dbcf_response_wth  (map_wth(1)+1)

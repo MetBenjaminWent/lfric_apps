@@ -103,6 +103,7 @@ contains
     ! Other modules containing stuff passed to CLD
     use nlsizes_namelist_mod, only: bl_levels
     use planet_constants_mod, only: p_zero, kappa
+    use microphysics_config_mod, only: microphysics_casim
     use bm_calc_tau_mod,      only: bm_calc_tau
     use variable_precision,   only: wp
 
@@ -147,20 +148,30 @@ contains
     real(r_um), dimension(seg_len,1,0:nlayers) :: p_theta_levels, icenumber, &
          snownumber
 
-   do i = 1, seg_len
-      do k = 1, nlayers
+    if (microphysics_casim) then
+      do i = 1, seg_len
+        do k = 1, nlayers
+          ! Set ice and snow number, and qcf/qcf2 the right way around
           snownumber(i,1,k) = ns_mphys(map_wth(1,i) + k)
           icenumber(i,1,k) = ni_mphys(map_wth(1,i) + k)
+          qcf(i,1,k) = m_s(map_wth(1,i) + k)
+          qcf2(i,1,k) = m_ci(map_wth(1,i) + k)
+        end do
       end do
-    end do
+    else
+      do i = 1, seg_len
+        do k = 1, nlayers
+          ! Only single ice, no numbers required
+          qcf(i,1,k) = m_ci(map_wth(1,i) + k)
+        end do
+      end do
+    end if
 
     do i = 1, seg_len
       do k = 1, nlayers
         theta(i,1,k) = theta_in_wth(map_wth(1,i) + k)
         exner_theta_levels(i,1,k) = exner_in_wth(map_wth(1,i)+ k)
         q(i,1,k) =  m_v(map_wth(1,i) + k)
-        qcf(i,1,k) = m_ci(map_wth(1,i) + k)
-        qcf2(i,1,k) = m_s(map_wth(1,i) + k)
         ! cloud fields
         cff(i,1,k) = cf_ice(map_wth(1,i) + k)
         ! turbulence fields

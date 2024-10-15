@@ -11,7 +11,7 @@ module bl_exp_alg_mod
   use field_mod,            only: field_type
   use integer_field_mod,    only: integer_field_type
   use field_collection_mod, only: field_collection_type
-  use mr_indices_mod,       only: nummr, imr_v, imr_cl, imr_ci
+  use mr_indices_mod,       only: nummr, imr_v, imr_cl, imr_ci, imr_s
 
   use function_space_mod,            only: function_space_type
   use function_space_collection_mod, only: function_space_collection
@@ -25,6 +25,8 @@ module bl_exp_alg_mod
   use jules_surface_config_mod,      only: formdrag, formdrag_dist_drag
   use surface_config_mod,            only: buddy_sea, buddy_sea_on
   use bl_option_mod,                 only: l_calc_tau_at_p
+  use microphysics_config_mod,       only: microphysics_casim
+  use bl_option_mod,                 only: l_noice_in_turb
   use um_sizes_init_mod,             only: um_sizes_init
 
   use io_config_mod,        only: subroutine_timers
@@ -281,6 +283,7 @@ contains
          zht, z0h_eff, oblen, soil_respiration, rhostar,                       &
          recip_l_mo_sea, h_blend_orog, t1_sd_2d, q1_sd_2d
     type( field_type) :: rdz_wth, taux_land, tauy_land, taux_ssi, tauy_ssi
+    type( field_type ) :: mr_ice
 
     integer(i_def) :: stencil_depth, ncells, ncells_halo
 
@@ -510,12 +513,32 @@ contains
     call xios_get_current_date(datetime)
     day_of_year = int(xios_date_get_day_of_year(datetime), i_def) + 1_i_def
 
+    ! Calculate total ice field
+    call mr_n(imr_ci)%copy_field_properties(mr_ice)
+    call invoke(setval_X(mr_ice, mr_n(imr_ci)))
+    if (microphysics_casim) then
+      call invoke(inc_X_plus_Y(mr_ice, mr_n(imr_s)))
+    end if
+
+                ! Calculate TL = T - (lc/cp)*mcl
+    call invoke(     X_times_Y(dtl_mphys, dtheta_mphys, exner_in_wth),         &
+                inc_X_minus_bY(dtl_mphys, lcrcp, dmr_mphys(imr_cl)),           &
+                ! And mt = mv + mcl
+                    X_plus_Y(dmt_mphys, dmr_mphys(imr_v), dmr_mphys(imr_cl)) )
+    if (.not. l_noice_in_turb) then
+      ! Add in ice increments
+      call invoke(inc_X_minus_bY(dtl_mphys, lsrcp, dmr_mphys(imr_ci)),         &
+                  inc_X_minus_bY(dtl_mphys, lsrcp, dmr_mphys(imr_s)),          &
+                  inc_X_plus_Y(dmt_mphys, dmr_mphys(imr_ci)),                  &
+                  inc_X_plus_Y(dmt_mphys, dmr_mphys(imr_s)) )
+    end if
+
     ! Switch UM to running i-first on whole domain
     call um_sizes_init(ncells)
     ! Call explicit Jules scheme
     call invoke_jules_exp_kernel_type(ncells, ncells_halo, theta, exner_in_wth,&
                                u_in_w3, v_in_w3,                               &
-                               mr_n(imr_v), mr_n(imr_cl), mr_n(imr_ci),        &
+                               mr_n(imr_v), mr_n(imr_cl), mr_ice,              &
                                height_w3, height_wth, zh, z0msea, z0m,         &
                                tile_fraction, leaf_area_index,                 &
                                canopy_height, peak_to_trough_orog,             &
@@ -559,18 +582,11 @@ contains
                                gross_prim_prod, z0h_eff, ocn_cpl_point,        &
                                stencil_depth)
 
-                ! Calculate TL = T - (lc/cp)*mcl - ((lc+lf)/cp)*mci
-    call invoke(     X_times_Y(dtl_mphys, dtheta_mphys, exner_in_wth),         &
-                inc_X_minus_bY(dtl_mphys, lcrcp, dmr_mphys(imr_cl)),           &
-                inc_X_minus_bY(dtl_mphys, lsrcp, dmr_mphys(imr_ci)),           &
-                ! And mt = mv+mcl+mci
-                    X_plus_Y(dmt_mphys, dmr_mphys(imr_v), dmr_mphys(imr_cl)),  &
-                inc_X_plus_Y(dmt_mphys, dmr_mphys(imr_ci)),                    &
-                ! Call explicit BL scheme
-                bl_exp_kernel_type( theta, rho, rho_in_wth, wetrho_in_wth,     &
+    ! Call explicit BL scheme
+    call invoke(bl_exp_kernel_type( theta, rho, rho_in_wth, wetrho_in_wth,     &
                                     exner, exner_in_wth, u_in_w3, v_in_w3,     &
                                     w_in_wth, velocity_w2v, mr_n(imr_v),       &
-                                    mr_n(imr_cl), mr_n(imr_ci), height_w3,     &
+                                    mr_n(imr_cl), mr_ice, height_w3,           &
                                     height_wth, dz_wth, rdz_w3, dtrdz_wth,     &
                                     shear, delta, max_diff_smag, zh, ntml,     &
                                     cumulus, tile_fraction, sd_orog,           &

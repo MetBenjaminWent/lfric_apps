@@ -25,6 +25,7 @@
         "lfric_atm_nwp_gal9_ls_and_jedi-C12_spice_intel_fast-debug-64bit",
         "lfric_atm_nwp_gal9_debug-C48_MG_spice_intel_full-debug-64bit",
         "lfric_atm_nwp_gal9_debug-C48_MG_spice_gnu_full-debug-64bit",
+        "lfric_atm_nwp_casim-C12_spice_intel_fast-debug-64bit",
     ],
     "lfric_atm_nwp_spice": [
         "lfric_atm_nwp_spice_developer",
@@ -112,6 +113,7 @@
         "lfric_atm_nwp_gal9_da-C12_xc40_intel_fast-debug-64bit",
         "lfric_atm_nwp_gal9_ls_and_jedi-C12_xc40_intel_fast-debug-64bit",
         "lfric_atm_nwp_gal9_debug-C48_MG_xc40_intel_full-debug-64bit",
+        "lfric_atm_nwp_casim-C12_xc40_intel_fast-debug-64bit",
     ],
     "lfric_atm_nwp_xc40": [
         "lfric_atm_nwp_xc40_developer",

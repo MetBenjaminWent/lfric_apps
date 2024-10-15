@@ -38,7 +38,7 @@ contains
                                        dtheta_pc2_inc, dt, name_ext )
 
     use pc2_homogeneous_kernel_mod, only: pc2_homogeneous_kernel_type
-    use mr_indices_mod,             only: imr_v, imr_cl, imr_ci, nummr
+    use mr_indices_mod,             only: imr_v, imr_cl, nummr
     use io_config_mod,              only: subroutine_timers
     use timer_mod,                  only: timer
 

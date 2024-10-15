@@ -1026,8 +1026,9 @@ contains
                     model_clock%get_step(), cast_dt, .false. )
       call invoke(inc_X_plus_Y(self%state(igh_t), self%dtheta_cld))
       if (microphysics_casim) then
-        call casim_activate_alg( mr, cloud_fields,                  &
-                                 microphysics_fields)
+        call casim_activate_alg( self%state(igh_t), mr, derived_fields,      &
+                                 cloud_fields, microphysics_fields,          &
+                                 convection_fields )
       end if ! microphysics_casim
     end if
 #endif

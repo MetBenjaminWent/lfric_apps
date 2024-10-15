@@ -28,10 +28,11 @@ private
 
 type, public, extends(kernel_type) :: pc2_initiation_kernel_type
   private
-  type(arg_type) :: meta_args(37) = (/                                   &
+  type(arg_type) :: meta_args(39) = (/                                   &
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! mv_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! ml_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! mi_wth
+       arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! ms_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! cfl_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! cff_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! bcf_wth
@@ -59,6 +60,7 @@ type, public, extends(kernel_type) :: pc2_initiation_kernel_type
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! dmv_inc_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! dmcl_inc_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! dmci_inc_wth
+       arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! dms_inc_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! dcfl_inc_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! dcff_inc_wth
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! dbcf_inc_wth
@@ -83,7 +85,8 @@ contains
 !> @param[in]     nlayers        Number of layers
 !> @param[in]     mv_wth         Vapour mass mixing ratio
 !> @param[in]     ml_wth         Liquid cloud mass mixing ratio
-!> @param[in]     mi_wth         Liquid cloud mass mixing ratio
+!> @param[in]     mi_wth         Ice cloud mass mixing ratio
+!> @param[in]     ms_wth         Snow cloud mass mixing ratio
 !> @param[in]     cfl_wth        Liquid cloud fraction
 !> @param[in]     cff_wth        Ice cloud fraction
 !> @param[in]     bcf_wth        Bulk cloud fraction
@@ -111,6 +114,7 @@ contains
 !> @param[in,out] dmv_inc_wth    Increment to water vapour in theta space
 !> @param[in,out] dmcl_inc_wth   Increment to liquid water content in theta space
 !> @param[in,out] dmci_inc_wth   Increment to ice water content in theta space
+!> @param[in,out] dms_inc_wth    Increment to snow content in theta space
 !> @param[in,out] dcfl_inc_wth   Increment to liquid cloud fraction in theta space
 !> @param[in,out] dcff_inc_wth   Increment to ice cloud fraction in theta space
 !> @param[in,out] dbcf_inc_wth   Increment to bulk cloud fraction in theta space
@@ -135,6 +139,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                                 mv_wth,                            &
                                 ml_wth,                            &
                                 mi_wth,                            &
+                                ms_wth,                            &
                                 cfl_wth,                           &
                                 cff_wth,                           &
                                 bcf_wth,                           &
@@ -164,6 +169,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                                 dmv_inc_wth,                       &
                                 dmcl_inc_wth,                      &
                                 dmci_inc_wth,                      &
+                                dms_inc_wth,                       &
                                 dcfl_inc_wth,                      &
                                 dcff_inc_wth,                      &
                                 dbcf_inc_wth,                      &
@@ -206,6 +212,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
     real(kind=r_def), intent(in), dimension(undf_wth) :: mv_wth
     real(kind=r_def), intent(in), dimension(undf_wth) :: ml_wth
     real(kind=r_def), intent(in), dimension(undf_wth) :: mi_wth
+    real(kind=r_def), intent(in), dimension(undf_wth) :: ms_wth
     real(kind=r_def), intent(in), dimension(undf_wth) :: bcf_wth
     real(kind=r_def), intent(in), dimension(undf_wth) :: cfl_wth
     real(kind=r_def), intent(in), dimension(undf_wth) :: cff_wth
@@ -249,6 +256,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dmv_inc_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dmcl_inc_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dmci_inc_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dms_inc_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dcfl_inc_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dcff_inc_wth
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dbcf_inc_wth
@@ -262,7 +270,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
          qv_incr, qcl_incr, qcf_incr, cfl_incr, cff_incr, bcf_incr, rhcpt,     &
          zeros, tgrad_in, tau_dec_in, tau_hom_in, tau_mph_in, z_theta, wvar_in,&
          gradrinr_in, tlts, qtts, ptts, qsl_tl, p_theta_levels, sskew_out,     &
-         svar_turb_out, svar_bm_out
+         svar_turb_out, svar_bm_out, qcf2_work, qcf2_incr
 
     real(r_um), dimension(seg_len,1) :: zh_in, zhsc_in, dzh_in, bl_type_7_in,  &
          p_star, zlcl_mix
@@ -328,6 +336,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
         qv_work(i,1,k)   = mv_wth(map_wth(1,i) + k)
         qcl_work(i,1,k)  = ml_wth(map_wth(1,i) + k)
         qcf_work(i,1,k)  = mi_wth(map_wth(1,i) + k)
+        qcf2_work(i,1,k)  = ms_wth(map_wth(1,i) + k)
 
         ! Critical relative humidity
         rhcpt(i,1,k)     = rh_crit_wth(map_wth(1,i) + k)
@@ -377,6 +386,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
     qv_incr  = 0.0_r_um
     qcl_incr = 0.0_r_um
     qcf_incr = 0.0_r_um
+    qcf2_incr = 0.0_r_um
     bcf_incr = 0.0_r_um
     cfl_incr = 0.0_r_um
     cff_incr = 0.0_r_um
@@ -436,8 +446,8 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                             sskew_out,                     &
                             svar_turb_out,                 &
                             svar_bm_out,                   &
-                            zeros,                         &
-                            zeros,                         &
+                            qcf2_work,                     &
+                            qcf2_incr,                     &
                             wtrac)
 
     ! Recast back to LFRic space
@@ -456,6 +466,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
         dmv_inc_wth (map_wth(1,i)+k) = qv_work(i,1,k)  - mv_wth(map_wth(1,i) + k)
         dmcl_inc_wth(map_wth(1,i)+k) = qcl_work(i,1,k) - ml_wth(map_wth(1,i) + k)
         dmci_inc_wth(map_wth(1,i)+k) = qcf_work(i,1,k) - mi_wth(map_wth(1,i) + k)
+        dms_inc_wth(map_wth(1,i)+k) = qcf2_work(i,1,k) - ms_wth(map_wth(1,i) + k)
         dcfl_inc_wth(map_wth(1,i)+k) = cfl_work(i,1,k) - cfl_wth(map_wth(1,i) + k)
         dcff_inc_wth(map_wth(1,i)+k) = cff_work(i,1,k) - cff_wth(map_wth(1,i) + k)
         dbcf_inc_wth(map_wth(1,i)+k) = bcf_work(i,1,k) - bcf_wth(map_wth(1,i) + k)
@@ -470,6 +481,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
       dmv_inc_wth   (map_wth(1,i)+0) = dmv_inc_wth   (map_wth(1,i)+1)
       dmcl_inc_wth  (map_wth(1,i)+0) = dmcl_inc_wth  (map_wth(1,i)+1)
       dmci_inc_wth  (map_wth(1,i)+0) = dmci_inc_wth  (map_wth(1,i)+1)
+      dms_inc_wth   (map_wth(1,i)+0) = dms_inc_wth   (map_wth(1,i)+1)
       dcfl_inc_wth  (map_wth(1,i)+0) = dcfl_inc_wth  (map_wth(1,i)+1)
       dcff_inc_wth  (map_wth(1,i)+0) = dcff_inc_wth  (map_wth(1,i)+1)
       dbcf_inc_wth  (map_wth(1,i)+0) = dbcf_inc_wth  (map_wth(1,i)+1)

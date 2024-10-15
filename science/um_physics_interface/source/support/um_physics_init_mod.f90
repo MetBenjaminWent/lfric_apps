@@ -983,9 +983,12 @@ contains
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
+      ! Options used in Casim and old scheme
       l_mcr_qrain    = .true.
       l_mphys_nonshallow = .true.
       l_rain         = .true.
+      l_subgrid_qcl_mp = turb_gen_mixph
+      mp_dz_scal     = 2.0_r_um
 
       ! Domain top used in microphysics - contained in mphys_bypass_mod
       mphys_mod_top  = real(domain_top, r_um)
@@ -1035,9 +1038,7 @@ contains
         l_fsd_generator= cld_fsd_hill
         l_psd          = .true.
         l_shape_rime   = shape_rime
-        l_subgrid_qcl_mp = turb_gen_mixph
         l_warm_new     = .true.
-        mp_dz_scal     = 2.0_r_um
         ndrop_surf     = real(ndrop_surf_in, r_um)
         qclrime        = real(qcl_rime, r_um)
         sediment_loc   = all_sed_start

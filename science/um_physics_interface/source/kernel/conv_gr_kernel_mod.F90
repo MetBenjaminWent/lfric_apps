@@ -33,7 +33,7 @@ module conv_gr_kernel_mod
   !>
   type, public, extends(kernel_type) :: conv_gr_kernel_type
     private
-    type(arg_type) :: meta_args(214) = (/                                         &
+    type(arg_type) :: meta_args(212) = (/                                         &
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                &! outer
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      W3),                       &! rho_in_w3
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! rho_in_wth
@@ -63,8 +63,6 @@ module conv_gr_kernel_mod
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! m_v
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! m_cl
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! m_ci
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! m_r
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! m_g
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! cf_ice
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! cf_liq
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! cf_bulk
@@ -292,8 +290,6 @@ contains
   !> @param[in]     m_v                  Vapour mixing ratio after advection
   !> @param[in]     m_cl                 Cloud liq mixing ratio after advection
   !> @param[in]     m_ci                 Cloud ice mixing ratio after advection
-  !> @param[in]     m_r                  Rain mixing ratio after advection
-  !> @param[in]     m_g                  Graupel mixing ratio after advection
   !> @param[in]     cf_ice               Ice cloud fraction
   !> @param[in]     cf_liq               Liquid cloud fraction
   !> @param[in]     cf_bulk              Bulk cloud fraction
@@ -519,8 +515,6 @@ contains
                           m_v,                               &
                           m_cl,                              &
                           m_ci,                              &
-                          m_r,                               &
-                          m_g,                               &
                           cf_ice,                            &
                           cf_liq,                            &
                           cf_bulk,                           &
@@ -856,7 +850,6 @@ contains
     use cv_param_mod, only: max_mf_fall, dthetadt_conv_active_threshold, &
                             conv_prog_precip_min_threshold
     use jules_surface_mod, only: srf_ex_cnv_gust, IP_SrfExWithCnv
-    use mphys_inputs_mod, only: l_mcr_qgraup, l_mcr_qrain
     use nlsizes_namelist_mod, only: row_length, rows, bl_levels, n_cca_lev
     use pc2_constants_mod, only: i_cld_pc2
     use planet_constants_mod, only: p_zero, kappa, planet_radius, g
@@ -895,7 +888,6 @@ contains
     real(kind=r_def), dimension(undf_wth), intent(in) :: cf_ice,            &
                                                          cf_liq, cf_bulk,   &
                                                          m_v, m_cl, m_ci,   &
-                                                         m_r, m_g,          &
                                                          rho_in_wth,        &
                                                          wetrho_in_wth,     &
                                                          exner_in_wth,      &
@@ -1115,7 +1107,7 @@ contains
          rho_dry_theta, exner_rho_levels, r_rho_levels,                      &
          theta_conv, q_conv, qcl_conv, qcf_conv,                             &
          dtheta_conv,                                                        &
-         qrain_conv, qcf2_conv, qgraup_conv, cf_liquid_conv, cf_frozen_conv, &
+         cf_liquid_conv, cf_frozen_conv,                                     &
          bulk_cf_conv, u_conv, v_conv, dq_add, ccw_3d, dthbydt, dqbydt,      &
          dqclbydt, dqcfbydt, dcflbydt, dcffbydt, dbcfbydt, dubydt_p,         &
          dvbydt_p, it_ccw, it_ccw0, it_conv_rain_3d, it_conv_snow_3d, it_cca,&
@@ -1334,17 +1326,9 @@ contains
       cf_liquid_conv(1,1,k) = cf_liq(map_wth(1) + k)
       cf_frozen_conv(1,1,k) = cf_ice(map_wth(1) + k)
       bulk_cf_conv(1,1,k)   = cf_bulk(map_wth(1) + k)
-      if (l_mcr_qrain) then
-        qrain_conv(1,1,k) = m_r(map_wth(1) + k)
-      end if
-      if (l_mcr_qgraup) then
-        qgraup_conv(1,1,k) = m_g(map_wth(1) + k)
-      end if
       if (l_conv_prog_precip) then
         conv_prog_precip_conv(1,1,k) = conv_prog_precip(map_wth(1) + k)
       end if
-      ! Note need to pass down qcf2
-      qcf2_conv(1,1,k)= 0.0_r_um
 
       ! Total theta increment
       dtheta_conv(1,1,k) = 0.0_r_um

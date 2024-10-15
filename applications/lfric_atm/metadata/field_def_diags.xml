@@ -409,6 +409,7 @@
   <field id="casim__ns_mphys" name="ns_mphys" long_name="number_concentration_of_snow_after_microphysics" unit="kg-1" grid_ref="full_level_face_grid" />
   <field id="casim__ng_mphys" name="ng_mphys" long_name="number_concentration_of_graupel_after_microphysics" unit="kg-1" grid_ref="full_level_face_grid" />
   <field id="casim__nl_mphys_act" name="nl_mphys_act" long_name="number_concentration_of_cloud_droplets_after_activation" unit="kg-1" grid_ref="full_level_face_grid" />
+  <field id="casim__ni_mphys_act" name="ni_mphys_act" long_name="number_concentration_of_cloud_ice_after_activation" unit="kg-1" grid_ref="full_level_face_grid" />
   <!-- Electric (lightning) diagnostics -->
   <field id="electric__flash_potential" name="flash_potential" long_name="lightning_flash_potential" unit="1" domain_ref="face" />
   <field id="electric__gwp" name="gwp" long_name="graupel_water_path" unit="kg m-2" domain_ref="face" />

@@ -58,7 +58,7 @@ contains
     use fem_constants_mod,             only: get_detj_at_w3_r_def
 
     use field_indices_mod,             only: igh_t, igh_p
-    use mr_indices_mod,                only: imr_v, imr_cl, imr_ci
+    use mr_indices_mod,                only: imr_v, imr_cl, imr_ci, imr_s
     use constants_mod,                 only: i_timestep, i_def
     use geometric_constants_mod,       only: get_latitude, get_longitude,      &
                                              get_height
@@ -78,6 +78,7 @@ contains
                                              chem_scheme_strat_test
 
     use sci_field_minmax_alg_mod,      only: log_field_minmax
+    use microphysics_config_mod,       only: microphysics_casim
 
     use um_sizes_init_mod,             only: um_sizes_init
 
@@ -387,6 +388,8 @@ contains
 
     integer( kind=i_def ) :: ncells
 
+    type( field_type ) :: mr_ice
+
     if ( subroutine_timers ) call timer('aerosol_ukca_alg')
 
     call log_event( 'Running UKCA aerosol', LOG_LEVEL_DEBUG )
@@ -678,6 +681,13 @@ contains
     ncells = mesh%get_last_edge_cell()
     call um_sizes_init( ncells )
 
+    ! Calculate total ice field
+    call mr(imr_ci)%copy_field_properties(mr_ice)
+    call invoke(setval_X(mr_ice, mr(imr_ci)))
+    if (microphysics_casim) then
+      call invoke(inc_X_plus_Y(mr_ice, mr(imr_s)))
+    end if
+
     ! Do UKCA time step
 
     call invoke(aerosol_ukca_kernel_type( o3p,                                 &
@@ -851,7 +861,7 @@ contains
                                           w_in_wth,                            &
                                           mr(imr_v),                           &
                                           mr(imr_cl),                          &
-                                          mr(imr_ci),                          &
+                                          mr_ice,                              &
                                           height_w3,                           &
                                           wetrho_in_wth,                       &
                                           detj_shifted,                        &

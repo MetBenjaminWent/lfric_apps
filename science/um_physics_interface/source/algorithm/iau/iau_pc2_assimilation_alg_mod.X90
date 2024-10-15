@@ -94,6 +94,7 @@ module iau_pc2_assimilation_alg_mod
     type( field_type )      :: mv_inc_wth  !mv response from iau_pc2_check
     type( field_type )      :: mcl_inc_wth !mcl response from iau_pc2_check
     type( field_type )      :: mci_inc_wth !mci response from iau_pc2_check
+    type( field_type )      :: ms_inc_wth  !ms response from iau_pc2_check
     type( field_type )      :: cff_inc_wth !cff response from iau_pc2_check
     type( field_type )      :: cfl_inc_wth !cfl response from iau_pc2_homogeneous and check
     type( field_type )      :: bcf_inc_wth !bcf response from iau_pc2_homogeneous and check
@@ -113,6 +114,7 @@ module iau_pc2_assimilation_alg_mod
     call m_v % copy_field_properties( mv_inc_wth )
     call m_cl % copy_field_properties( mcl_inc_wth )
     call m_ci % copy_field_properties( mci_inc_wth )
+    call m_s % copy_field_properties( ms_inc_wth )
     call cff % copy_field_properties( cff_inc_wth )
     call cfl % copy_field_properties( cfl_inc_wth )
     call bcf % copy_field_properties( bcf_inc_wth )
@@ -159,6 +161,7 @@ module iau_pc2_assimilation_alg_mod
                  pc2_checks_kernel_type( m_v,                   &
                                          m_cl,                  &
                                          m_ci,                  &
+                                         m_s,                   &
                                          cfl,                   &
                                          cff,                   &
                                          bcf,                   &
@@ -169,6 +172,7 @@ module iau_pc2_assimilation_alg_mod
                                          mv_inc_wth,            &
                                          mcl_inc_wth,           &
                                          mci_inc_wth,           &
+                                         ms_inc_wth,            &
                                          cfl_inc_wth,           &
                                          cff_inc_wth,           &
                                          bcf_inc_wth  ),        &
@@ -178,12 +182,14 @@ module iau_pc2_assimilation_alg_mod
                  inc_X_plus_Y( m_v, mv_inc_wth ),          &
                  inc_X_plus_Y( m_cl, mcl_inc_wth ),        &
                  inc_X_plus_Y( m_ci, mci_inc_wth ),        &
+                 inc_X_plus_Y( m_s, ms_inc_wth ),          &
                  inc_X_plus_Y( cfl, cfl_inc_wth ),         &
                  inc_X_plus_Y( cff, cff_inc_wth ),         &
                  inc_X_plus_Y( bcf, bcf_inc_wth ),         &
                  enforce_lower_bound_kernel_type (m_v,  0.0_r_def), &
                  enforce_lower_bound_kernel_type (m_cl, 0.0_r_def), &
                  enforce_lower_bound_kernel_type (m_ci, 0.0_r_def), &
+                 enforce_lower_bound_kernel_type (m_s, 0.0_r_def),  &
                  enforce_lower_bound_kernel_type (cfl,  0.0_r_def), &
                  enforce_lower_bound_kernel_type (cff,  0.0_r_def), &
                  enforce_lower_bound_kernel_type (bcf,  0.0_r_def), &

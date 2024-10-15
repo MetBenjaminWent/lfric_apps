@@ -56,7 +56,7 @@ contains
                                  dtheta_pc2_inc, name_ext )
 
     use pc2_initiation_kernel_mod, only: pc2_initiation_kernel_type
-    use mr_indices_mod,            only: imr_v, imr_cl, imr_ci, nummr
+    use mr_indices_mod,            only: imr_v, imr_cl, imr_ci, imr_s, nummr
     use io_config_mod,             only: subroutine_timers
     use timer_mod,                 only: timer
 
@@ -78,6 +78,7 @@ contains
     type( field_type )                :: dmv_pc2_inc
     type( field_type )                :: dmcl_pc2_inc
     type( field_type )                :: dmci_pc2_inc
+    type( field_type )                :: dms_pc2_inc
     type( field_type )                :: dcfl_pc2_inc
     type( field_type )                :: dcff_pc2_inc
     type( field_type )                :: dbcf_pc2_inc
@@ -151,6 +152,7 @@ contains
     call theta%copy_field_properties(dmv_pc2_inc)
     call theta%copy_field_properties(dmcl_pc2_inc)
     call theta%copy_field_properties(dmci_pc2_inc)
+    call theta%copy_field_properties(dms_pc2_inc)
     call theta%copy_field_properties(dcfl_pc2_inc)
     call theta%copy_field_properties(dcff_pc2_inc)
     call theta%copy_field_properties(dbcf_pc2_inc)
@@ -162,6 +164,7 @@ contains
                  pc2_initiation_kernel_type ( mr(imr_v),         &
                                               mr(imr_cl),        &
                                               mr(imr_ci),        &
+                                              mr(imr_s),         &
                                               liquid_fraction,   &
                                               frozen_fraction,   &
                                               bulk_fraction,     &
@@ -192,6 +195,7 @@ contains
                                               dmv_pc2_inc,       &
                                               dmcl_pc2_inc,      &
                                               dmci_pc2_inc,      &
+                                              dms_pc2_inc,       &
                                               dcfl_pc2_inc,      &
                                               dcff_pc2_inc,      &
                                               dbcf_pc2_inc,      &
@@ -206,6 +210,7 @@ contains
                 inc_X_plus_Y(mr(imr_v),       dmv_pc2_inc),      &
                 inc_X_plus_Y(mr(imr_cl),      dmcl_pc2_inc),     &
                 inc_X_plus_Y(mr(imr_ci),      dmci_pc2_inc),     &
+                inc_X_plus_Y(mr(imr_s),       dms_pc2_inc),      &
                 inc_X_plus_Y(liquid_fraction, dcfl_pc2_inc),     &
                 inc_X_plus_Y(frozen_fraction, dcff_pc2_inc),     &
                 inc_X_plus_Y(bulk_fraction,   dbcf_pc2_inc),     &

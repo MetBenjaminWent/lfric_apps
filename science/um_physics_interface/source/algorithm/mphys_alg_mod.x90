@@ -111,6 +111,8 @@ contains
     type( field_type ), pointer :: rim_agg             => null()
     type( field_type ), pointer :: tnuc                => null()
     type( field_type ), pointer :: precfrac
+    type( field_type ), pointer :: ni_mphys
+    type( field_type ), pointer :: ns_mphys
 
     type( field_type ), pointer :: cloud_drop_no_conc  => null()
     type( field_type ), pointer :: n_acc_ins           => null()
@@ -179,6 +181,8 @@ contains
     call microphysics_fields%get_field('rim_agg', rim_agg)
     call microphysics_fields%get_field('tnuc', tnuc)
     call microphysics_fields%get_field('precfrac', precfrac)
+    call microphysics_fields%get_field('ni_mphys',ni_mphys)
+    call microphysics_fields%get_field('ns_mphys',ns_mphys)
 
     call aerosol_fields%get_field('cloud_drop_no_conc', cloud_drop_no_conc)
     call aerosol_fields%get_field('n_acc_ins', n_acc_ins)
@@ -240,6 +244,7 @@ contains
       dz_in_wth => get_dz_at_wtheta( mesh%get_id() )
       call invoke( mphys_turb_gen_kernel_type(theta, mr_n(imr_v), mr_n(imr_cl),&
                                               mr_n(imr_ci), mr_n(imr_s),       &
+                                              ns_mphys, ni_mphys,              &
                                               cfl_in, cff_in, bcf_in,          &
                                               exner_in_wth, rho_in_wth, wvar,  &
                                               dz_in_wth,                       &

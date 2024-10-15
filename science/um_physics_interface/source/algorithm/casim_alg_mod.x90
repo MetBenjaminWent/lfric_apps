@@ -14,7 +14,9 @@ module casim_alg_mod
   use constants_mod,        only: r_def, i_def
 
   use geometric_constants_mod, only: get_height
+  use physical_op_constants_mod, only: get_dz_at_wtheta
   use fs_continuity_mod,       only: W3, Wtheta
+  use mesh_mod,                only: mesh_type
 
   use casim_diagnostics_mod,   only: initialise_diags_for_casim,               &
                                      output_diags_for_casim
@@ -41,6 +43,8 @@ contains
   !>@param[in,out] microphysics_fields    Fields for mphys scheme
   !>@param[in]     cloud_fields           Fields for cloud scheme
   !>@param[in]     aerosol_fields         Fields for the aerosol schemes
+  !>@param[in]     turbulence_fields      Fields for turbulence scheme
+  !>@param[in]     mesh                   Current mesh
   !>@param[in,out] dmr_mphys      Mixing ratio increment due to microphysics
   !>@param[in,out] theta_inc      Potential temperature increment in wth space
   !>@param[in,out] dcfl           Increment to liquid cloud fraction
@@ -48,10 +52,14 @@ contains
   !>@param[in,out] dbcf           Increment to bulk cloud fraction
   subroutine casim_alg( mr_n, theta, dry_rho_in_w3, derived_fields,            &
                         microphysics_fields, cloud_fields, aerosol_fields,     &
+                        turbulence_fields, mesh,                               &
                         dmr_mphys, theta_inc, dcfl, dcff, dbcf )
 
     use casim_kernel_mod, only: casim_kernel_type
+    use mphys_turb_gen_kernel_mod, only: mphys_turb_gen_kernel_type
     use mr_indices_mod,   only: imr_v, imr_cl, imr_r, imr_ci, imr_s, imr_g, nummr
+    use microphysics_config_mod, only: turb_gen_mixph
+    use um_sizes_init_mod,       only: um_sizes_init
 
     use io_config_mod,             only: subroutine_timers
     use timer_mod,                 only: timer
@@ -65,10 +73,13 @@ contains
     type( field_collection_type ), intent(in)    :: microphysics_fields
     type( field_collection_type ), intent(in)    :: cloud_fields
     type( field_collection_type ), intent(in)    :: aerosol_fields
+    type( field_collection_type ), intent(in)    :: turbulence_fields
 
     type( field_type ), intent( inout ) :: dmr_mphys ( nummr )
     type( field_type ), intent( inout ) :: theta_inc
     type( field_type ), intent( inout ) :: dcfl, dcff, dbcf
+
+    type(mesh_type), intent(in), pointer :: mesh
 
     ! Temporary unpacked fields from collections
     type( field_type ), pointer :: exner_in_wth        => null()
@@ -76,6 +87,7 @@ contains
     type( field_type ), pointer :: wetrho_in_w3        => null()
     type( field_type ), pointer :: rho_in_wth          => null()
 
+    type( field_type ), pointer :: bcf_in
     type( field_type ), pointer :: cfl_in              => null()
     type( field_type ), pointer :: cff_in              => null()
 
@@ -98,8 +110,11 @@ contains
     type( field_type ), pointer :: cloud_drop_no_conc  => null()
     type( field_type ), pointer :: murk                => null()
 
+    type( field_type ), pointer :: wvar
+
     type( field_type ), pointer :: height_w3 => null()
     type( field_type ), pointer :: height_wth => null()
+    type( field_type ), pointer :: dz_in_wth
 
     type( field_type ) :: refl_tot
     type( field_type ) :: refl_1km
@@ -107,7 +122,7 @@ contains
     type( field_type ) :: superc_rain
     type( field_type ) :: ls_graup_3d
 
-    integer(kind=i_def) :: mesh_id
+    integer(kind=i_def) :: mesh_id, ncells
 
     if ( subroutine_timers ) call timer("casim_alg")
 
@@ -129,6 +144,7 @@ contains
     call derived_fields%get_field('wetrho_in_w3', wetrho_in_w3)
     call derived_fields%get_field('rho_in_wth', rho_in_wth)
 
+    call cloud_fields%get_field('bulk_fraction', bcf_in)
     call cloud_fields%get_field('liquid_fraction', cfl_in)
     call cloud_fields%get_field('frozen_fraction', cff_in)
 
@@ -149,6 +165,8 @@ contains
 
     call aerosol_fields%get_field('cloud_drop_no_conc',cloud_drop_no_conc)
     call aerosol_fields%get_field('murk', murk)
+
+    call turbulence_fields%get_field('wvar', wvar)
 
     height_w3 => get_height(W3, mesh_id)
     height_wth => get_height(Wtheta, mesh_id)
@@ -173,6 +191,26 @@ contains
                                      theta_inc, cloud_drop_no_conc, murk,      &
                                      refl_tot, refl_1km,                       &
                                      superc_liq, superc_rain ) )
+
+    if (turb_gen_mixph) then
+      dz_in_wth => get_dz_at_wtheta( mesh_id )
+      ! Switch UM to running i-first on whole domain
+      ncells = mesh%get_last_edge_cell()
+      call um_sizes_init(ncells)
+      call invoke( mphys_turb_gen_kernel_type(theta, mr_n(imr_v), mr_n(imr_cl),&
+                                              mr_n(imr_ci), mr_n(imr_s),       &
+                                              ns_mphys, ni_mphys,              &
+                                              cfl_in, cff_in, bcf_in,          &
+                                              exner_in_wth, rho_in_wth, wvar,  &
+                                              dz_in_wth,                       &
+                                              theta_inc, dmr_mphys(imr_v),     &
+                                              dmr_mphys(imr_cl),               &
+                                              dmr_mphys(imr_ci),               &
+                                              dmr_mphys(imr_s),                &
+                                              dcfl, dcff, dbcf) )
+      ! Switch UM back to columns
+      call um_sizes_init(1_i_def)
+    end if
 
     ! Save mv increment for stochastic physics
     call microphysics_fields%get_field('dmv_mphys', dmv_mphys)

@@ -47,12 +47,13 @@ contains
                              dmv_pc2_inc,    &
                              dmcl_pc2_inc,   &
                              dmci_pc2_inc,   &
+                             dms_pc2_inc,    &
                              dcfl_pc2_inc,   &
                              dcff_pc2_inc,   &
                              dbcf_pc2_inc    )
 
     use pc2_checks_kernel_mod, only: pc2_checks_kernel_type
-    use mr_indices_mod,        only: imr_v, imr_cl, imr_ci, nummr
+    use mr_indices_mod,        only: imr_v, imr_cl, imr_ci, nummr, imr_s
     use io_config_mod,         only: subroutine_timers
     use timer_mod,             only: timer
 
@@ -67,6 +68,7 @@ contains
     type( field_type ), intent(out) :: dmv_pc2_inc
     type( field_type ), intent(out) :: dmcl_pc2_inc
     type( field_type ), intent(out) :: dmci_pc2_inc
+    type( field_type ), intent(out) :: dms_pc2_inc
     type( field_type ), intent(out) :: dcfl_pc2_inc
     type( field_type ), intent(out) :: dcff_pc2_inc
     type( field_type ), intent(out) :: dbcf_pc2_inc
@@ -92,6 +94,7 @@ contains
     call theta%copy_field_properties(dmv_pc2_inc)
     call theta%copy_field_properties(dmcl_pc2_inc)
     call theta%copy_field_properties(dmci_pc2_inc)
+    call theta%copy_field_properties(dms_pc2_inc)
     call theta%copy_field_properties(dcfl_pc2_inc)
     call theta%copy_field_properties(dcff_pc2_inc)
     call theta%copy_field_properties(dbcf_pc2_inc)
@@ -99,6 +102,7 @@ contains
     call invoke ( pc2_checks_kernel_type ( mr(imr_v),           & ! IN, they do
                                            mr(imr_cl),          & ! IN, not get
                                            mr(imr_ci),          & ! IN, updated
+                                           mr(imr_s),           &
                                            liquid_fraction,     &
                                            frozen_fraction,     &
                                            bulk_fraction,       &
@@ -109,6 +113,7 @@ contains
                                            dmv_pc2_inc,         &
                                            dmcl_pc2_inc,        &
                                            dmci_pc2_inc,        &
+                                           dms_pc2_inc,         &
                                            dcfl_pc2_inc,        &
                                            dcff_pc2_inc,        &
                                            dbcf_pc2_inc ) )
