@@ -9,6 +9,8 @@ module slow_physics_alg_mod
   use energy_correction_config_mod,                  &
                                  only: encorr_usage, &
                                        encorr_usage_apply
+  use external_forcing_config_mod, &
+                                 only: pc2_force_response
   use clock_mod,                 only: clock_type
   use timestepping_config_mod,   only: outer_iterations
   use cloud_config_mod,          only: scheme, scheme_pc2, scheme_bimodal, &
@@ -223,7 +225,8 @@ contains
 
     ! Local fields...
     ! ...for external forcing
-    type( field_type ) :: dtheta_forcing, du_forcing
+    type( field_type ) :: dtheta_forcing, du_forcing, dmv_forcing, &
+         dmcl_forcing, dcfl_forcing, dbcf_forcing
     ! ... for energy correction
     type( field_type ) :: dtheta_encorr
     ! ...for microphysics
@@ -376,7 +379,9 @@ contains
       time_now = real( clock%get_step(), r_def ) * &
                  real( clock%get_seconds_per_step(), r_def )
       call external_forcing_alg(derived_fields, u, theta, exner, exner_in_wth, &
-                                dt, time_now, dtheta_forcing, du_forcing,      &
+                                mr_n, cloud_fields, dt, time_now,              &
+                                dtheta_forcing, du_forcing, dmv_forcing,       &
+                                dmcl_forcing, dcfl_forcing, dbcf_forcing,      &
                                 theta_forcing_done, wind_forcing_done)
     end if
 
@@ -857,8 +862,21 @@ contains
     !=====================================================================
     ! Update the main fields and increments to pass out
     !=====================================================================
+    if (cloud == cloud_um .and. scheme == scheme_pc2) then
+        call cloud_fields%get_field('liquid_fraction', liquid_fraction)
+        call cloud_fields%get_field('frozen_fraction', frozen_fraction)
+        call cloud_fields%get_field('bulk_fraction', bulk_fraction)
+    end if
+
     if (theta_forcing_done) then
       call invoke(inc_X_plus_Y(dtheta, dtheta_forcing))
+      if (cloud == cloud_um .and. scheme == scheme_pc2 &
+           .and. pc2_force_response) then
+        call invoke(inc_X_plus_Y(mr(imr_v),       dmv_forcing),    &
+                    inc_X_plus_Y(mr(imr_cl),      dmcl_forcing),   &
+                    inc_X_plus_Y(liquid_fraction, dcfl_forcing),   &
+                    inc_X_plus_Y(bulk_fraction,   dbcf_forcing) )
+      end if
     end if
 
     if (energy_correction_done) then
@@ -867,12 +885,6 @@ contains
 
     if (wind_forcing_done) then
       call invoke(inc_X_plus_Y(du, du_forcing))
-    end if
-
-    if (cloud == cloud_um .and. scheme == scheme_pc2) then
-        call cloud_fields%get_field('liquid_fraction', liquid_fraction)
-        call cloud_fields%get_field('frozen_fraction', frozen_fraction)
-        call cloud_fields%get_field('bulk_fraction', bulk_fraction)
     end if
 
     if (microphysics_done) then

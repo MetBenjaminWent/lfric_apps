@@ -21,7 +21,8 @@ module external_forcing_alg_mod
                                              wind_forcing_diffusion,             &
                                              filtering_order,                    &
                                              diffusion_order,                    &
-                                             diffusion_coefficient
+                                             diffusion_coefficient,              &
+                                             pc2_force_response
   use log_mod,                         only: log_event, log_scratch_space,       &
                                              LOG_LEVEL_INFO, LOG_LEVEL_ERROR
   use lfric_xios_write_mod,            only: write_field_generic
@@ -34,7 +35,9 @@ module external_forcing_alg_mod
   use shallow_hot_jupiter_kernel_mod,  only: shallow_hot_jupiter_kernel_type
   use deep_hot_jupiter_kernel_mod,     only: deep_hot_jupiter_kernel_type
   use momentum_smagorinsky_kernel_mod, only: momentum_smagorinsky_kernel_type
-
+#ifdef UM_PHYSICS
+  use pc2_force_response_alg_mod,      only: pc2_force_response_alg
+#endif
   ! Derived Types
   use constants_mod,                   only: i_def, r_def, l_def
   use field_mod,                       only: field_type
@@ -47,11 +50,13 @@ module external_forcing_alg_mod
                                              get_panel_id,    &
                                              get_height
   use mesh_mod,                        only: mesh_type
-
+  use mr_indices_mod,                  only: nummr
   use io_config_mod,                   only: subroutine_timers, write_diag, &
                                              use_xios_io
   use physical_op_constants_mod,       only: get_dx_at_w2
   use planet_config_mod,               only: kappa
+  use section_choice_config_mod,       only: cloud, cloud_um
+  use cloud_config_mod,                only: scheme, scheme_pc2
 
   use reference_element_mod,           only: T
   use sci_set_any_dof_kernel_mod,      only: set_any_dof_kernel_type
@@ -80,21 +85,33 @@ contains
   !> @param[in]     theta              Theta field
   !> @param[in]     exner              Exner pressure
   !> @param[in]     exner_in_wth       Exner pressure on Wtheta space
+  !> @param[in]     mr_n               Mixing ratios at start of timestep
+  !> @param[in]     cloud_fields       Group of cloud fields
   !> @param[in]     dt                 The model timestep length
   !> @param[in]     time_now           Current model time (seconds)
   !> @param[out]    dtheta_forcing     Theta increment from external forcing
   !> @param[out]    du_forcing         Wind increment from external forcing
+  !> @param[out]    dmv_forcing        Vapour increment from external forcing
+  !> @param[out]    dmcl_forcing       Liquid increment from external forcing
+  !> @param[out]    dcfl_forcing       Cloud Liquid fraction increment
+  !> @param[out]    dbcf_forcing       Cloud bulk fraction increment
   !> @param[in,out] theta_forcing_done Flag to say if theta code run
   !> @param[in,out] wind_forcing_done  Flag to say if wind code run
-  subroutine external_forcing_alg(derived_fields, u, theta, exner, exner_in_wth, &
-                                  dt, time_now, dtheta_forcing, du_forcing,      &
+  subroutine external_forcing_alg(derived_fields, u, theta, exner,             &
+                                  exner_in_wth, mr_n, cloud_fields, dt,        &
+                                  time_now, dtheta_forcing, du_forcing,        &
+                                  dmv_forcing, dmcl_forcing, dcfl_forcing,     &
+                                  dbcf_forcing,                                &
                                   theta_forcing_done, wind_forcing_done)
 
     implicit none
 
-    type( field_collection_type ), intent(in) :: derived_fields
+    type( field_collection_type ), intent(in) :: derived_fields, cloud_fields
     type( field_type ), intent( in )  :: u, theta, exner, exner_in_wth
+    type( field_type ), intent( in )  :: mr_n(nummr)
     type( field_type ), intent( out ) :: dtheta_forcing, du_forcing
+    type( field_type ), intent( out ) :: dmv_forcing, dmcl_forcing, &
+                                         dcfl_forcing, dbcf_forcing
     real( kind=r_def ), intent( in )  :: dt, time_now
 
     logical( kind=l_def ), intent(inout) :: theta_forcing_done, &
@@ -196,6 +213,18 @@ contains
         call dtheta_forcing%set_write_behaviour(write_behaviour)
         call dtheta_forcing%write_field('forcing__dtheta_force')
       end if
+
+      ! pc2 response to forcing if requested
+#ifdef UM_PHYSICS
+      if (cloud == cloud_um .and. scheme == scheme_pc2 .and. &
+           pc2_force_response) then
+
+        call pc2_force_response_alg(mr_n, theta, derived_fields, cloud_fields, &
+                                    dtheta_forcing, dmv_forcing, dmcl_forcing, &
+                                    dcfl_forcing, dbcf_forcing, dt)
+
+      end if
+#endif
 
       nullify( chi, panel_id )
 
