@@ -127,7 +127,7 @@ program semi_implicit
   deallocate( filename )
 
   call init_collections()
-  call init_time( modeldb%clock, modeldb%calendar )
+  call init_time( modeldb )
   call initialise( application_name, modeldb,  modeldb%calendar )
 
   if (do_test_timesteps) then
@@ -150,7 +150,7 @@ program semi_implicit
   endif
 
   call finalise( application_name, modeldb )
-  call final_time( modeldb%clock, modeldb%calendar )
+  call final_time( modeldb )
   call final_collections()
   call final_configuration()
   call finalise_halo_comms()
