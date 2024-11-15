@@ -68,7 +68,8 @@ module jedi_lfric_linear_modeldb_driver_mod
   implicit none
 
   private
-  public initialise_modeldb, step, finalise_modeldb
+  public initialise_modeldb, finalise_modeldb
+  public step_tl, identity_step_tl
 
 contains
 
@@ -189,7 +190,6 @@ contains
 
     ! Close IO and create new clock that is not linked to XIOS
     call final_time( modeldb )
-    call init_time( modeldb )
 
     call log_event( "end of initialise_modeldb: initialise_linear_model", &
                     LOG_LEVEL_TRACE )
@@ -200,7 +200,7 @@ contains
   !> @brief Increments the model state by a single timestep.
   !>
   !> @param [in,out] modeldb   The structure that holds model state
-  subroutine step( modeldb )
+  subroutine step_tl( modeldb )
 
     implicit none
 
@@ -215,7 +215,7 @@ contains
 
     nullify(mesh, twod_mesh, base_mesh_nml)
 
-    !. 1. Tick the clock and check its still running
+    ! 1. Tick the clock and check its still running
     clock_running = modeldb%clock%tick()
     ! If the clock has finished then we need to abort and that may be due to
     ! incorrect model_clock configuration
@@ -237,7 +237,32 @@ contains
                       modeldb,   &
                       modeldb%clock )
 
-  end subroutine step
+  end subroutine step_tl
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Increments the model state by a single timestep.
+  !>
+  !> @param [in,out] modeldb   The structure that holds model state
+  subroutine identity_step_tl( modeldb )
+
+    implicit none
+
+    type( modeldb_type ), intent(inout) :: modeldb
+
+    ! Local
+    logical( kind=l_def ) :: clock_running
+
+    ! Tick the clock and check its still running
+    clock_running = modeldb%clock%tick()
+    ! If the clock has finished then we need to abort and that may be due to
+    ! incorrect model_clock configuration
+    if ( .not. clock_running ) then
+      write ( log_scratch_space, '(A)' ) &
+              "jedi_lfric_linear_modeldb::The LFRic model clock has stopped."
+      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+    end if
+
+  end subroutine identity_step_tl
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Finalise the modeldb
@@ -261,9 +286,6 @@ contains
 
     ! Finalise infrastructure and constants
     call finalise_infrastructure( modeldb )
-
-    ! Finalise time
-    call final_time( modeldb )
 
   end subroutine finalise_modeldb
 

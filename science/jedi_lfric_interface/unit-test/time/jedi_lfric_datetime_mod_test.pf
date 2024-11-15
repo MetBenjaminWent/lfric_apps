@@ -92,7 +92,8 @@ contains
 
     integer(i_timestep) :: date, returned_date
     integer(i_timestep) :: time, returned_time
-    logical(l_def)      :: ahead
+    logical(l_def)      :: is_less_than
+    logical(l_def)      :: is_greater_than
 
     date = 2460040
     time = 58770
@@ -160,15 +161,24 @@ contains
     call jedi_datetime_3%get_time( returned_time )
     @assertEqual( time, returned_time )
 
-    ! Test is ahead (datetime_2 is ahead of datetime)
-    ahead = jedi_datetime_2%is_ahead( jedi_datetime )
-    @assertEqual( .true., ahead )
-    ahead = jedi_datetime%is_ahead( jedi_datetime_2 )
-    @assertEqual( .false., ahead )
+    ! Test is_greater_than (datetime_2 is greater than datetime)
+    is_greater_than = jedi_datetime_2 > jedi_datetime
+    @assertEqual( .true., is_greater_than )
+    is_greater_than = jedi_datetime > jedi_datetime_2
+    @assertEqual( .false., is_greater_than )
+
+    ! Test is_less_than (datetime is less than datetime_2)
+    is_less_than =  jedi_datetime < jedi_datetime_2
+    @assertEqual( .true., is_less_than )
+    is_less_than =  jedi_datetime_2 < jedi_datetime
+    @assertEqual( .false., is_less_than )
+
     ! update datetime_3 so both have the same datetime
     jedi_datetime_3 = jedi_datetime_2
-    ahead = jedi_datetime_3%is_ahead( jedi_datetime_2 )
-    @assertEqual( .false., ahead )
+    is_greater_than = jedi_datetime_3 > jedi_datetime_2
+    @assertEqual( .false., is_greater_than )
+    is_less_than =  jedi_datetime_3 < jedi_datetime_2
+    @assertEqual( .false., is_less_than )
 
     ! Test getting iso string back
     call jedi_datetime_2%to_string( returned_iso_datetime )

@@ -74,7 +74,6 @@ module atlas_field_interface_test
   end type atlas_field_interface_test_type
 
   integer( i_def ), parameter :: element_order = 0
-  real( real64 ),   parameter :: tol = 1.0e-12_real64
 
 contains
 
@@ -189,6 +188,30 @@ contains
     end do
 
   end function compute_dot_product
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  function compute_tolerance( dot_product_1, dot_product_2 ) result(tolerance)
+
+    implicit none
+
+    real( real64 ), intent(in) :: dot_product_1
+    real( real64 ), intent(in) :: dot_product_2
+
+    real( real64 ) :: tolerance
+
+    ! Local
+    real( real64 ), parameter :: overall_tolerance = 1500.0_real64
+    real( real64 )            :: machine_tolerance
+
+    ! Machine tolerance computed as the smallest delta between two numbers of a
+    ! given type using the larger dot_product
+    machine_tolerance = spacing( max( abs( dot_product_1 ), &
+                                      abs( dot_product_2 ) ) )
+    ! Output tolerance scaled by a predefined factor
+    tolerance = overall_tolerance*machine_tolerance
+
+  end function compute_tolerance
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -494,6 +517,7 @@ contains
     real( real64 )                        :: dot_product_2
     type( field_proxy_type )              :: lfric_field_12_proxy
     type( field_proxy_type )              :: lfric_field_22_proxy
+    real( real64 )                        :: tolerance
 
     ! Get the required objects and data to use locally
     nlevels = context%fspace_w3%get_nlayers()
@@ -535,7 +559,8 @@ contains
     ! Check the values in 11 and 22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_to_lfric()
@@ -545,7 +570,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
     ! -- Test copy_from_lfric
 
@@ -566,7 +592,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_from_lfric()
@@ -576,7 +603,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
   end subroutine adjoint_test_w3_field
 
@@ -629,6 +657,7 @@ contains
     real( real64 )                     :: dot_product_2
     type( field_proxy_type )           :: lfric_field_12_proxy
     type( field_proxy_type )           :: lfric_field_22_proxy
+    real( real64 )                     :: tolerance
 
     ! Get the required objects and data to use locally
     nlevels = context%fspace_w3%get_nlayers()
@@ -670,7 +699,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_to_lfric()
@@ -680,7 +710,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
     ! -- Test copy_from_lfric
 
@@ -701,7 +732,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_from_lfric()
@@ -711,7 +743,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
   end subroutine adjoint_test_w3_field_flip
 
@@ -735,6 +768,7 @@ contains
     type( atlas_field_interface_type ) :: atlas_field_interface
     type( field_type )                 :: lfric_field
     type( field_proxy_type )           :: lfric_field_proxy
+    real( real64 )                     :: tolerance
 
     ! Get the required objects and data to use locally
     nlevels = context%fspace_wth%get_nlayers() + 1
@@ -896,6 +930,7 @@ contains
     real( real64 )                     :: dot_product_2
     type( field_proxy_type )           :: lfric_field_12_proxy
     type( field_proxy_type )           :: lfric_field_22_proxy
+    real( real64 )                     :: tolerance
 
     ! Get the required objects and data to use locally
     nlevels = context%fspace_wth%get_nlayers() + 1
@@ -935,7 +970,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_to_lfric()
@@ -945,7 +981,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
     ! -- Test copy_from_lfric
 
@@ -966,7 +1003,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_from_lfric()
@@ -975,7 +1013,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
   end subroutine adjoint_test_wtheta_field
 
@@ -1150,6 +1189,7 @@ contains
     real( real64 )                     :: dot_product_2
     type( field_proxy_type )           :: lfric_field_12_proxy
     type( field_proxy_type )           :: lfric_field_22_proxy
+    real( real64 )                     :: tolerance
 
     ! Get the required objects and data to use locally
     nlevels = context%fspace_wth%get_nlayers() + 1
@@ -1191,7 +1231,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_to_lfric()
@@ -1201,7 +1242,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
     ! -- Test copy_from_lfric
 
@@ -1222,7 +1264,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_from_lfric()
@@ -1232,7 +1275,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
   end subroutine adjoint_test_wtheta_field_zero_missing
 
@@ -1408,6 +1452,7 @@ contains
     real( real64 )                     :: dot_product_2
     type( field_proxy_type )           :: lfric_field_12_proxy
     type( field_proxy_type )           :: lfric_field_22_proxy
+    real( real64 )                     :: tolerance
 
     ! Get the required objects and data to use locally
     nlevels = context%fspace_wth%get_nlayers() + 1
@@ -1449,7 +1494,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_to_lfric()
@@ -1459,7 +1505,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
     ! -- Test copy_from_lfric
 
@@ -1480,7 +1527,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_from_lfric()
@@ -1490,7 +1538,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
   end subroutine adjoint_test_wtheta_field_copy_missing
 
@@ -1633,6 +1682,7 @@ contains
     real( real64 )                     :: dot_product_2
     type( field_proxy_type )           :: lfric_field_12_proxy
     type( field_proxy_type )           :: lfric_field_22_proxy
+    real( real64 )                     :: tolerance
 
     ! Get the required objects and data to use locally
     nlevels = context%fspace_2d%get_nlayers()
@@ -1672,7 +1722,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_to_lfric()
@@ -1682,7 +1733,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
     ! -- test copy_from_lfric
 
@@ -1703,7 +1755,8 @@ contains
     ! Check the values in F11 and F22 are different
     dot_product_1 = compute_dot_product(atlas_field_11, atlas_field_11)
     dot_product_2 = compute_dot_product(lfric_field_12_data_ptr, lfric_field_12_data_ptr)
-    @assertGreaterThan( abs(dot_product_1-dot_product_2), tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertGreaterThan( abs(dot_product_1-dot_product_2), tolerance )
 
     ! Adjoint test
     call atlas_field_interface_1%copy_from_lfric()
@@ -1713,7 +1766,8 @@ contains
     dot_product_2 = compute_dot_product(atlas_field_11, atlas_field_21)
 
     ! Check <F11,F21> == <F12,F22>; within machine tolerance
-    @assertEqual( dot_product_1, dot_product_2, tol )
+    tolerance = compute_tolerance( dot_product_1, dot_product_2 )
+    @assertEqual( dot_product_1, dot_product_2, tolerance )
 
   end subroutine adjoint_test_twod_w3_field
 

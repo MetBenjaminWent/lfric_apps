@@ -21,6 +21,8 @@
         "jedi_lfric_tests_forecast_pseudo_pseudomodel-C12_spice_gnu_full-debug-64bit",
         "jedi_lfric_tests_tlm_forecast_tl_default-C12_spice_intel_fast-debug-64bit",
         "jedi_lfric_tests_tlm_forecast_tl_default-C12_spice_gnu_fast-debug-64bit",
+        "jedi_lfric_tests_tlm_tests_default-C12_spice_intel_fast-debug-64bit",
+        "jedi_lfric_tests_tlm_tests_default-C12_spice_gnu_fast-debug-64bit",
         "jedi_lfric_tests_spice_integration_tests",
     ],
     "jedi_lfric_tests_spice": [
@@ -46,6 +48,7 @@
         "jedi_lfric_tests_forecast_pseudo_default-C12_xc40_intel_fast-debug-64bit",
         "jedi_lfric_tests_forecast_pseudo_pseudomodel-C12_xc40_intel_fast-debug-64bit",
         "jedi_lfric_tests_tlm_forecast_tl_default-C12_xc40_intel_fast-debug-64bit",
+        "jedi_lfric_tests_tlm_tests_default-C12_xc40_intel_fast-debug-64bit",
         "jedi_lfric_tests_xc40_integration_tests",
     ],
     "jedi_lfric_tests_xc40": [

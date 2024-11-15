@@ -197,7 +197,7 @@ subroutine forecast( self, state, forecast_length, post_processor )
   call post_processor%process( state )
 
   ! Loop until date_time_end
-  do while ( end_time%is_ahead( state%valid_time() ) )
+  do while ( end_time > state%valid_time() )
     call self%model_step( state )
     call post_processor%process( state )
   end do

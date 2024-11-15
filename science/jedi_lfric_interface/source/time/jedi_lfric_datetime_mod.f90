@@ -49,9 +49,9 @@ module jedi_lfric_datetime_mod
     procedure, public  :: get_time
 
     procedure, public  :: add_seconds
-    procedure, public  :: is_ahead
 
     procedure, public  :: to_string
+    procedure, public  :: print
 
     ! new_datetime = datetime
     procedure, private, pass(self) :: copy
@@ -64,6 +64,15 @@ module jedi_lfric_datetime_mod
     ! duration = datetime1 - datetime2
     procedure, private, pass(self) :: seconds_between
     generic,   public              :: operator(-) => seconds_between
+
+    ! logical = datetime1 > datetime2
+    procedure, private, pass(self) :: is_greater_than
+    generic,   public              :: operator(>) => is_greater_than
+
+    ! logical = datetime1 < datetime2
+    procedure, private, pass(self) :: is_less_than
+    generic,   public              :: operator(<) => is_less_than
+
 
   end type jedi_datetime_type
 
@@ -265,27 +274,49 @@ contains
 
   end subroutine
 
-  !> @brief Returns true if the datetime is ahead in time of the passed datetime
+  !> @brief Returns true if the datetime is greater than the passed datetime
   !!
   !> @param [in] datetime The jedi_datetime instance to compare with
-  function is_ahead( self, datetime )
+  function is_greater_than( self, datetime )
 
     implicit none
 
     class(jedi_datetime_type), intent(in) :: self
     type(jedi_datetime_type),  intent(in) :: datetime
 
-    logical(l_def) :: is_ahead
+    logical(l_def) :: is_greater_than
 
     type( jedi_duration_type ) :: duration
 
-    is_ahead = .false.
+    is_greater_than = .false.
 
     duration = datetime - self
 
-    if ( duration < 0 ) is_ahead = .true.
+    if ( duration < 0 ) is_greater_than = .true.
 
-  end function is_ahead
+  end function is_greater_than
+
+  !> @brief Returns true if the datetime is less than the passed datetime
+  !!
+  !> @param [in] datetime The jedi_datetime instance to compare with
+  function is_less_than( self, datetime )
+
+    implicit none
+
+    class(jedi_datetime_type), intent(in) :: self
+    type(jedi_datetime_type),  intent(in) :: datetime
+
+    logical(l_def) :: is_less_than
+
+    type( jedi_duration_type ) :: duration
+
+    is_less_than = .false.
+
+    duration = datetime - self
+
+    if ( duration > 0 ) is_less_than = .true.
+
+  end function is_less_than
 
   !> @brief Returns the datetime as an iso string (UTC)
   !!
@@ -331,6 +362,24 @@ contains
     iso_datetime = trim(iso_datetime) // temp_str_2
 
   end subroutine to_string
+
+  !> @brief Writes the curent dateime via log_event
+  subroutine print( self )
+
+    implicit none
+
+    class( jedi_datetime_type ), intent(in) :: self
+
+    ! Local
+    character(str_def) :: iso_datetime
+
+    call self%to_string(iso_datetime)
+
+    write ( log_scratch_space, '(2(A))' ) &
+      'JEDI iso datetime: ', iso_datetime
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+  end subroutine print
 
   !> @brief Overload assignment
   !!

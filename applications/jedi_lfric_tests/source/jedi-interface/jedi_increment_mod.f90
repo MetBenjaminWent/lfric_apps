@@ -59,42 +59,56 @@ type, public :: jedi_increment_type
 contains
 
   !> Jedi increment initialiser.
-  procedure :: initialise
-  procedure :: increment_initialiser
+  procedure, private :: construct_increment
+  procedure, private :: initialise_via_configuration
+  procedure, private :: initialise_via_copy
+  generic, public    :: initialise => initialise_via_configuration, &
+                                      initialise_via_copy
 
   !> Setup the atlas_field_interface_type that enables copying between Atlas
   !> field emulators and the fields in a LFRic field collection
   procedure, private :: setup_interface_to_field_collection
 
+  !> Get Atlas field from the bundle using the fieldname
+  procedure, private :: get_field_data
+
   !> Set the internal Atlas field emulators from a input field_collection
   procedure, public :: set_from_field_collection
+  procedure, public :: set_from_field_collection_ad
 
   !> Get via the internal Atlas field emulators via a copy to a field_collection
   procedure, public :: get_to_field_collection
+  procedure, public :: get_to_field_collection_ad
+
+  !> Set the input field collection to zero
+  procedure, public :: zero_lfric_fields
 
   !> Return the curent time
   procedure, public :: valid_time
 
-  !> Read model fields from file into fields
+  !> Read the Atlas fields from file into fields
   procedure, public :: read_file
 
-  !> @todo Write model fields to file from the fields
+  !> @todo Write the Atlas fields to file from the fields
   !> procedure, public :: write_file
 
-  !> Zero the model fields
+  !> Zero the Atlas fields
   procedure, public :: zero
+
+  !> Randomise the Atlas fields
+  procedure, public :: random
+
+  !> Compute the root mean square norm
+  procedure, public :: norm
+
+  !> Compute dot_product with a supplied input increment
+  procedure, public :: dot_product_with
 
   !> Update the curent time
   procedure, public :: update_time
 
   !> Print field
   procedure, public :: print_field
-
-  !> Set the internal Atlas field emulators from the model prognostics fields
-  procedure, public :: set_from_model_prognostics
-
-  !> Get the model prognostics fields from the internal Atlas field emulators
-  procedure, public :: get_to_model_prognostics
 
   !> Finalizer
   final             :: jedi_increment_destructor
@@ -110,7 +124,7 @@ contains
 ! Methods required by the JEDI (OOPS) model interface
 !-------------------------------------------------------------------------------
 
-!> @brief    Initialise a jedi_increment_type
+!> @brief Construct and initialise fields to zero or read from file
 !>
 !> @param [in] geometry      The geometry object required to construct the
 !>                           increment
@@ -118,7 +132,7 @@ contains
 !>                           information to construct an increment and set the
 !>                           data via either a file-read or setting the values
 !>                           to zero
-subroutine initialise( self, geometry, configuration )
+subroutine initialise_via_configuration( self, geometry, configuration )
 
   implicit none
 
@@ -127,15 +141,26 @@ subroutine initialise( self, geometry, configuration )
   type( namelist_collection_type ),   intent(in)    :: configuration
 
   ! Local
-  type( namelist_type ), pointer :: increment_config
-  logical( l_def )               :: initialise_via_read
+  type( namelist_type ),  pointer :: increment_config
+  logical( l_def )                :: initialise_via_read
+  character(str_def)              :: inc_time_str
+  character(str_def), allocatable :: variables(:)
 
+  ! 1. Setup from configuration
   increment_config => configuration%get_namelist('jedi_increment')
 
-  ! Create
-  call self%increment_initialiser( geometry, increment_config )
+  call increment_config%get_value( 'inc_time', inc_time_str )
+  call self%inc_time%init( inc_time_str )
 
-  ! Initialise fields by either reading or zeroing the fields
+  call increment_config%get_value( 'variables', variables )
+  call setup_field_meta_data( self%field_meta_data, variables )
+
+  self%geometry => geometry
+
+  ! 2. Create fields
+  call self%construct_increment()
+
+  ! 3. Initialise fields by either reading or zeroing the fields
   call increment_config%get_value( 'initialise_via_read', initialise_via_read )
   if ( initialise_via_read ) then
     if ( geometry%get_io_setup_increment() ) then
@@ -149,48 +174,64 @@ subroutine initialise( self, geometry, configuration )
     call self%zero()
   endif
 
-end subroutine initialise
+end subroutine initialise_via_configuration
 
-!> @brief    Initialiser for jedi_increment_type
+!> @brief Construct and initialise fields by copy for jedi_increment_type
 !>
-!> @param [in] geometry The geometry object required to construct the increment
-!> @param [in] config   A configuration object including the required
-!>                      information to construct a increment
-subroutine increment_initialiser( self, geometry, config )
+!> @param [in] rhs  An increment to copy construct from
+!>
+subroutine initialise_via_copy( self, rhs )
+
+  implicit none
+
+  class( jedi_increment_type ), intent(inout) :: self
+  class( jedi_increment_type ),    intent(in) :: rhs
+
+  ! Local
+  integer( kind=i_def ) :: n_variables
+  integer( kind=i_def ) :: ivar
+
+  ! 1. Setup from rhs increment
+  self%field_meta_data = rhs%field_meta_data
+  self%inc_time = rhs%inc_time
+  self%geometry => rhs%geometry
+
+  ! 2. Create fields
+  call self%construct_increment()
+
+  ! 3. Initialise fields by copy from rhs
+  n_variables = self%field_meta_data%get_n_variables()
+  do ivar=1,n_variables
+    self%fields(ivar) = rhs%fields(ivar)
+  enddo
+
+end subroutine initialise_via_copy
+
+!> @brief    Construct increment fields
+!>
+subroutine construct_increment( self )
 
   use fs_continuity_mod,     only : W3, Wtheta
 
   implicit none
 
   class( jedi_increment_type ),       intent(inout) :: self
-  type( jedi_geometry_type ), target,    intent(in) :: geometry
-  type( namelist_type ), pointer,     intent(inout) :: config
 
   ! Local
-  integer(i_def)                  :: n_horizontal
-  integer(i_def)                  :: n_levels
-  integer(i_def)                  :: n_layers
-  integer(i_def)                  :: ivar
-  integer(i_def)                  :: n_variables
-  integer(i_def)                  :: fs_id
-  logical(l_def)                  :: twod_field
-  character(str_def)              :: inc_time
-  character(str_def), allocatable :: variables(:)
+  integer( kind=i_def ) :: n_horizontal
+  integer( kind=i_def ) :: n_levels
+  integer( kind=i_def ) :: n_layers
+  integer( kind=i_def ) :: ivar
+  integer( kind=i_def ) :: n_variables
+  integer( kind=i_def ) :: fs_id
+  logical( kind=l_def ) :: twod_field
 
-  ! Setup
-  call config%get_value( 'inc_time', inc_time )
-  call self%inc_time%init( inc_time )
-
-  call config%get_value( 'variables', variables )
-  call setup_field_meta_data( self%field_meta_data, variables )
-
-  self%geometry => geometry
   n_variables = self%field_meta_data%get_n_variables()
 
   allocate( self%fields(n_variables) )
 
-  n_horizontal=geometry%get_n_horizontal()
-  n_layers=geometry%get_n_layers()
+  n_horizontal=self%geometry%get_n_horizontal()
+  n_layers=self%geometry%get_n_layers()
 
   do ivar=1,n_variables
 
@@ -223,7 +264,7 @@ subroutine increment_initialiser( self, geometry, config )
   ! Setup the io_collection (empty ready for read/write operations)
   call self%io_collection%initialise(name = 'io_collection', table_len=100)
 
-end subroutine increment_initialiser
+end subroutine construct_increment
 
 !> @brief    Returns the current time of the increment
 !>
@@ -292,8 +333,8 @@ subroutine zero( self )
   class( jedi_increment_type ),    intent(inout) :: self
 
   ! Local
-  integer :: n_variables
-  integer :: ivar
+  integer( kind=i_def ) :: n_variables
+  integer( kind=i_def ) :: ivar
 
   ! Zero the Atlas fields
   n_variables = self%field_meta_data%get_n_variables()
@@ -303,83 +344,77 @@ subroutine zero( self )
 
 end subroutine zero
 
+!> @brief A method to set all internal Atlas field emulators to random values
+!>
+subroutine random( self )
+
+  implicit none
+
+  class( jedi_increment_type ), intent(inout) :: self
+
+  ! Local
+  integer( kind=i_def ) :: n_variables
+  integer( kind=i_def ) :: ivar
+
+  ! Randomise the Atlas fields
+  n_variables = self%field_meta_data%get_n_variables()
+  do ivar=1,n_variables
+    call self%fields(ivar)%random()
+  enddo
+
+end subroutine random
+
+!> @brief Compute the root mean square norm
+!>
+function norm( self ) result(rms)
+
+  implicit none
+
+  class( jedi_increment_type ), intent(in) :: self
+  real(real64)                             :: rms
+
+  ! Local
+  integer( kind=i_def ) :: n_variables
+  integer( kind=i_def ) :: ivar
+  integer( kind=i_def ) :: n_values
+
+  n_variables = self%field_meta_data%get_n_variables()
+  rms = 0.0_real64
+  n_values = 0_i_def
+  do ivar=1,n_variables
+    rms = rms + self%fields(ivar)%sum_of_squares()
+    n_values = n_values + self%fields(ivar)%get_number_of_points()
+  enddo
+  rms = sqrt( rms / real(n_values, kind=real64) )
+
+end function norm
+
+!> @brief Compute dot_product with a supplied input increment
+!>
+function dot_product_with( self, rhs ) result(dot_product)
+
+  implicit none
+
+  class( jedi_increment_type ), intent(in) :: self
+  class( jedi_increment_type ), intent(in) :: rhs
+  real( real64 )                           :: dot_product
+
+  ! Local
+  integer( kind=i_def ) :: n_variables
+  integer( kind=i_def ) :: ivar
+
+  n_variables = self%field_meta_data%get_n_variables()
+
+  dot_product = 0.0_real64
+  do ivar=1,n_variables
+    dot_product = dot_product + self%fields(ivar)%dot_product_with(rhs%fields(ivar))
+  enddo
+
+end function dot_product_with
+
 !------------------------------------------------------------------------------
 ! Local methods to support LFRic-JEDI implementation
 !------------------------------------------------------------------------------
-
-!> @brief    Set the Atlas field emulators from the model prognostics stored in
-!>           the model prognostics field_collection
-!>
-!> @param [inout] model_prognostics The model prognostic field collection
-!>
-subroutine set_from_model_prognostics( self, model_prognostics )
-
-  use transform_winds_mod, only : wind_vector_to_scalar
-
-  implicit none
-
-  class( jedi_increment_type ),  intent(inout) :: self
-  type( field_collection_type ), intent(inout) :: model_prognostics
-
-  ! Local
-  character( len=str_def ), allocatable :: variable_names(:)
-
-  !> @todo This is a placeholder for code to come
-  !>       as part of #3734
-  !>
-  !>       In this code:
-  !>       The cell-centered winds (W3/Wtheta) stored in the input prognostics
-  !>       field collection are updated by interpolation from the W2 wind
-  !>       field. This is performed in wind_vector_to_scalar via
-  !>       map_physics_winds and split_wind_alg. The updated cell centred winds
-  !>       are then updated via the copy: set_from_field_collection
-
-  call wind_vector_to_scalar( model_prognostics )
-
-  ! Get a list of variables to copy
-  call self%field_meta_data%get_variable_names( variable_names )
-
-  ! Set model_prognostics to the Atlas field emulators
-  call self%set_from_field_collection( variable_names, model_prognostics )
-
-end subroutine set_from_model_prognostics
-
-!> @brief   Get the model prognostics fields from the internal Atlas field
-!>          emulators
-!>
-!> @param [inout] model_prognostics The model prognostic field collection
-!>
-subroutine get_to_model_prognostics( self, model_prognostics )
-
-  use transform_winds_mod, only : wind_scalar_to_vector
-
-  implicit none
-
-  class( jedi_increment_type ),  intent(inout) :: self
-  type( field_collection_type ), intent(inout) :: model_prognostics
-
-  ! Local
-  character( len=str_def ), allocatable :: variable_names(:)
-
-  ! Get a list of variables to copy
-  call self%field_meta_data%get_variable_names( variable_names )
-
-  ! Get Atlas field emulators to the model_prognostics
-  call self%get_to_field_collection( variable_names, model_prognostics )
-
-  !> @todo This is a placeholder for code to come
-  !>       as part of #3734
-  !>
-  !>       In this code:
-  !>       The cell-centered winds stored in Atlas have been copied via
-  !>       get_to_field_collection to the cell centered (W3/Wtheta) model
-  !>       prognostic field collection. The following performs the
-  !>       interpolation of the winds from the cell centered (W3/Wtheta) to W2
-  !>       using the set_wind method.
-  !>
-  call wind_scalar_to_vector( model_prognostics )
-
-end subroutine get_to_model_prognostics
 
 !> @brief    Setup atlas_lfric_interface_fields that enables copying
 !>           between Atlas field emulators and the LFRic fields in
@@ -405,12 +440,12 @@ subroutine setup_interface_to_field_collection( self, &
   type( field_collection_type ),      intent(inout) :: field_collection
 
   ! Local
-  integer(i_def)            :: ivar
-  type(field_type), pointer :: lfric_field_ptr
-  real(real64),     pointer :: atlas_data_ptr(:,:)
-  integer(i_def),   pointer :: horizontal_map_ptr(:)
-  integer(i_def)            :: n_variables
-  logical                   :: all_variables_exists
+  integer( kind=i_def )          :: ivar
+  type(field_type),      pointer :: lfric_field_ptr
+  real( kind=real64 ),   pointer :: atlas_data_ptr(:,:)
+  integer( kind=i_def ), pointer :: horizontal_map_ptr(:)
+  integer( kind=i_def )          :: n_variables
+  logical( kind=l_def )          :: all_variables_exists
 
   ! Check that the increment conatins all the required fields
   all_variables_exists = self%field_meta_data%check_variables_exist(variable_names)
@@ -427,7 +462,7 @@ subroutine setup_interface_to_field_collection( self, &
     !! field_meta_data and field_collection
     call get_model_field( variable_names(ivar), &
                           field_collection, lfric_field_ptr )
-    atlas_data_ptr => self%fields(ivar)%get_data()
+    call self%get_field_data(variable_names(ivar), atlas_data_ptr)
     call atlas_lfric_interface_fields(ivar)%initialise( atlas_data_ptr,     &
                                                         horizontal_map_ptr, &
                                                         lfric_field_ptr )
@@ -435,6 +470,44 @@ subroutine setup_interface_to_field_collection( self, &
 
 end subroutine setup_interface_to_field_collection
 
+!> @brief  Method to get a pointer to the field for a given variable name
+!>
+!> @param [in]  variable_names  The name of the field to retrieve
+!> @param [out] atlas_data_ptr  The field pointer to the atlas_emulator array
+subroutine get_field_data( self, variable_name, atlas_data_ptr )
+
+  implicit none
+
+  class( jedi_increment_type ), intent(inout) :: self
+  character( len=str_def ),        intent(in) :: variable_name
+  real( real64 ), pointer,        intent(out) :: atlas_data_ptr(:,:)
+
+  ! Local
+  integer( kind=i_def ) :: ivar
+  integer( kind=i_def ) :: n_variables
+  logical( kind=l_def ) :: field_found
+
+  ! Find the field requested
+  n_variables = size(self%fields)
+
+  field_found = .false.
+  do ivar = 1, n_variables
+    if (variable_name==self%fields(ivar)%get_field_name()) then
+      atlas_data_ptr => self%fields(ivar)%get_data()
+      field_found = .true.
+      return
+    endif
+  end do
+
+  if (.not. field_found) then
+    nullify(atlas_data_ptr)
+    write ( log_scratch_space, '(3A)' ) &
+      "The Atlas field with the name ", trim(variable_name), &
+      ", could not be found."
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+  endif
+
+end subroutine get_field_data
 
 !> @brief    Set the internal Atlas field emulators by copying the fields
 !>           stored in a field_collection
@@ -451,8 +524,8 @@ subroutine set_from_field_collection( self, variable_names, field_collection )
   type( field_collection_type ), intent(inout) :: field_collection
 
   ! Local
-  integer(i_def) :: ivar
-  integer(i_def) :: n_variables
+  integer( kind=i_def )                           :: ivar
+  integer( kind=i_def )                           :: n_variables
   type( atlas_field_interface_type ), allocatable :: atlas_lfric_interface_fields(:)
 
   ! Allocate space for the interface fields
@@ -471,6 +544,41 @@ subroutine set_from_field_collection( self, variable_names, field_collection )
 
 end subroutine set_from_field_collection
 
+!> @brief    Adjoint of: set the internal Atlas field emulators by copying the
+!>           fields stored in a field_collection
+!>
+!> @param [in]    variable_names    The list of variables to copy
+!> @param [inout] field_collection  The fields to adjoint copy from
+!>
+subroutine set_from_field_collection_ad( self, variable_names, field_collection )
+
+  implicit none
+
+  class( jedi_increment_type ),  intent(inout) :: self
+  character( len=str_def ),      intent(in)    :: variable_names(:)
+  type( field_collection_type ), intent(inout) :: field_collection
+
+  ! Local
+  integer( kind=i_def )                           :: ivar
+  integer( kind=i_def )                           :: n_variables
+  type( atlas_field_interface_type ), allocatable :: atlas_lfric_interface_fields(:)
+
+  ! Allocate space for the interface fields
+  n_variables = size(variable_names)
+  allocate( atlas_lfric_interface_fields(n_variables) )
+
+  ! Link internal Atlas field emulators to LFRic fields
+  call self%setup_interface_to_field_collection( atlas_lfric_interface_fields, &
+                                                 variable_names, &
+                                                 field_collection )
+
+  ! Copy the LFRic fields in the field_collection to the Atlas field emulators
+  do ivar = n_variables, 1, -1
+    call atlas_lfric_interface_fields(ivar)%copy_from_lfric_ad()
+  end do
+
+end subroutine set_from_field_collection_ad
+
 !> @brief    Get a copy of the internal Atlas field emulators by copying into a
 !>           field_collection
 !>
@@ -486,8 +594,8 @@ subroutine get_to_field_collection( self, variable_names, field_collection )
   type( field_collection_type ), intent(inout) :: field_collection
 
   ! Local
-  integer(i_def) :: ivar
-  integer(i_def) :: n_variables
+  integer( kind=i_def )                           :: ivar
+  integer( kind=i_def )                           :: n_variables
   type( atlas_field_interface_type ), allocatable :: atlas_lfric_interface_fields(:)
 
   ! Allocate space for the interface fields
@@ -505,6 +613,76 @@ subroutine get_to_field_collection( self, variable_names, field_collection )
   end do
 
 end subroutine get_to_field_collection
+
+!> @brief    Adjoint of: Get a copy of the internal Atlas field emulators by
+!>           copying into a field_collection
+!>
+!> @param [in]    variable_names    The list of variables to copy
+!> @param [inout] field_collection  The fields to copy to
+!>
+subroutine get_to_field_collection_ad( self, variable_names, field_collection )
+
+  implicit none
+
+  class( jedi_increment_type ),  intent(inout) :: self
+  character( len=str_def ),         intent(in) :: variable_names(:)
+  type( field_collection_type ), intent(inout) :: field_collection
+
+  ! Local
+  integer( kind=i_def )                           :: ivar
+  integer( kind=i_def )                           :: n_variables
+  type( atlas_field_interface_type ), allocatable :: atlas_lfric_interface_fields(:)
+
+  ! Allocate space for the interface fields
+  n_variables = size(variable_names)
+  allocate( atlas_lfric_interface_fields(n_variables) )
+
+  ! Link internal Atlas field emulators to LFRic fields
+  call self%setup_interface_to_field_collection( atlas_lfric_interface_fields, &
+                                                 variable_names, &
+                                                 field_collection )
+
+  ! Copy the LFRic fields in the field_collection to the Atlas field emulators
+  do ivar = n_variables, 1, -1
+    call atlas_lfric_interface_fields(ivar)%copy_to_lfric_ad()
+  end do
+
+end subroutine get_to_field_collection_ad
+
+!> @brief    Zero the internal LFRic fields in the input
+!>           field_collection
+!>
+!> @param [in]    variable_names    The list of variables to copy
+!> @param [inout] field_collection  The fields to copy to
+!>
+subroutine zero_lfric_fields( self, variable_names, field_collection )
+
+  implicit none
+
+  class( jedi_increment_type ),  intent(inout) :: self
+  character( len=str_def ),         intent(in) :: variable_names(:)
+  type( field_collection_type ), intent(inout) :: field_collection
+
+  ! Local
+  integer( kind=i_def )                           :: ivar
+  integer( kind=i_def )                           :: n_variables
+  type( atlas_field_interface_type ), allocatable :: atlas_lfric_interface_fields(:)
+
+  ! Allocate space for the interface fields
+  n_variables = size(variable_names)
+  allocate( atlas_lfric_interface_fields(n_variables) )
+
+  ! Link internal Atlas field emulators to LFRic fields
+  call self%setup_interface_to_field_collection( atlas_lfric_interface_fields, &
+                                                 variable_names, &
+                                                 field_collection )
+
+  ! Zero the LFRic fields in the field_collection
+  do ivar = 1, n_variables
+    call atlas_lfric_interface_fields(ivar)%zero_lfric()
+  end do
+
+end subroutine zero_lfric_fields
 
 !> @brief    Update the inc_time by a single time-step
 !>
@@ -534,7 +712,7 @@ subroutine set_clock( self, new_time )
   type( jedi_duration_type )        :: time_difference
   type( jedi_duration_type )        :: time_step
   type( model_clock_type ), pointer :: io_clock
-  logical( l_def )                  :: clock_running
+  logical( kind=l_def  )            :: clock_running
 
   io_clock => self%geometry%get_clock()
   call time_step%init( int( io_clock%get_seconds_per_step(), kind=i_def ) )
@@ -553,7 +731,7 @@ subroutine set_clock( self, new_time )
 
   ! Tick the clock to the required time.
   clock_running = .true.
-  do while ( new_time%is_ahead( self%inc_time ) )
+  do while ( new_time > self%inc_time )
     clock_running = io_clock%tick()
     self%inc_time = self%inc_time + time_step
   end do
@@ -592,15 +770,12 @@ subroutine print_field( self )
   class( jedi_increment_type ), intent(inout) :: self
 
   ! Local
-  real(real64), pointer :: atlas_data_ptr(:,:)
-  integer(i_def)        :: ivar
-  character(str_def)    :: iso_datetime
+  real( kind=real64 ), pointer :: atlas_data_ptr(:,:)
+  integer( kind=i_def )        :: ivar
 
   ! Printing data
   call log_event( "Increment print ----", LOG_LEVEL_INFO )
-  call self%inc_time%to_string( iso_datetime )
-  write ( log_scratch_space, '(2A)' ) 'Time: ', iso_datetime
-  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+  call self%inc_time%print()
   do ivar = 1, self%field_meta_data%get_n_variables()
     atlas_data_ptr => self%fields(ivar)%get_data()
     write ( log_scratch_space, '(2A,F20.10)' ) &

@@ -20,6 +20,7 @@ DEFAULT_APPS = {
         "jedi_forecast",
         "jedi_forecast_pseudo",
         "jedi_tlm_forecast_tl",
+        "jedi_tlm_tests",
     ],
     "gravity_wave": ["gravity_wave"],
     "gungho_model": ["gungho_model"],

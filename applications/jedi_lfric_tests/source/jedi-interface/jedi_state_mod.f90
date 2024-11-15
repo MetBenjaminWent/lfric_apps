@@ -645,7 +645,7 @@ subroutine set_clock( self, new_time )
 
   ! Tick the clock to the required time.
   clock_running = .true.
-  do while ( new_time%is_ahead( self%state_time ) )
+  do while ( new_time > self%state_time )
     clock_running = io_clock%tick()
     self%state_time = self%state_time + time_step
   end do

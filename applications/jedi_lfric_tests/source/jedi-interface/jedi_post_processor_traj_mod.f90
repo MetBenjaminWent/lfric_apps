@@ -13,19 +13,34 @@
 !>
 module jedi_post_processor_traj_mod
 
-  use jedi_post_processor_mod, only : jedi_post_processor_type
-  use jedi_state_mod,          only : jedi_state_type
-  use jedi_linear_model_mod,   only : jedi_linear_model_type
+  use constants_mod,              only : i_def
+  use jedi_base_linear_model_mod, only : jedi_base_linear_model_type
+  use jedi_post_processor_mod,    only : jedi_post_processor_type
+  use jedi_state_mod,             only : jedi_state_type
+  use jedi_linear_model_mod,      only : jedi_linear_model_type
+  use jedi_id_linear_model_mod,   only : jedi_id_linear_model_type
+  use log_mod,                    only : log_event,          &
+                                         log_scratch_space,  &
+                                         LOG_LEVEL_ERROR
 
   implicit none
 
   private
 
+  ! Enumerator types to define the linear model to use
+  integer(kind=i_def), parameter :: type_full = 5
+  integer(kind=i_def), parameter :: type_identity = 8
+  integer(kind=i_def), parameter :: type_none = 43
+
   type, public, extends(jedi_post_processor_type) :: jedi_post_processor_traj_type
     private
 
-    !> Pointer to a linear model instance so the trajectory can be updated
-    type(jedi_linear_model_type), pointer :: jedi_linear_model => null()
+    !> Pointer to a linear model instance
+    type(jedi_linear_model_type),    pointer :: jedi_linear_model => null()
+    type(jedi_id_linear_model_type), pointer :: jedi_id_linear_model => null()
+
+    !> Enumerator that holds the enrolled model type
+    integer(kind=i_def) :: type_of_linear_model = type_none
 
   contains
     private
@@ -39,7 +54,7 @@ module jedi_post_processor_traj_mod
     procedure, public :: pp_final
 
     !> Finalizer
-    final              :: post_processor_traj_destructor
+    final             :: post_processor_traj_destructor
 
   end type jedi_post_processor_traj_type
 
@@ -53,10 +68,22 @@ contains
 
   implicit none
 
-  class( jedi_post_processor_traj_type ), intent(inout) :: self
-  type( jedi_linear_model_type ), target, intent(inout) :: jedi_linear_model
+  class( jedi_post_processor_traj_type ),       intent(inout) :: self
+  class( jedi_base_linear_model_type ), target, intent(inout) :: jedi_linear_model
 
-    self%jedi_linear_model => jedi_linear_model
+
+  ! Select the correct extened class
+  select type(jedi_linear_model)
+    type is ( jedi_linear_model_type )
+      self%jedi_linear_model => jedi_linear_model
+      self%type_of_linear_model = type_full
+    type is ( jedi_id_linear_model_type )
+      self%jedi_id_linear_model => jedi_linear_model
+      self%type_of_linear_model = type_identity
+    class default
+      call log_event( "The supplied linear model is not supported", &
+                      LOG_LEVEL_ERROR )
+    end select
 
   end subroutine initialise
 
@@ -83,7 +110,14 @@ contains
     class(jedi_post_processor_traj_type), intent(inout) :: self
     type(jedi_state_type),                intent(inout) :: jedi_state
 
-    call self%jedi_linear_model%set_trajectory( jedi_state )
+    select case(self%type_of_linear_model)
+    case(type_full)
+      call self%jedi_linear_model%set_trajectory( jedi_state )
+    case(type_identity)
+      call self%jedi_id_linear_model%set_trajectory( jedi_state )
+    case default
+      call log_event( 'The linear model has not been set-up', LOG_LEVEL_ERROR )
+    end select
 
   end subroutine process
 
@@ -107,8 +141,11 @@ contains
 
     type(jedi_post_processor_traj_type), intent(inout) :: self
 
-    ! Nullify the linear model pointer
+    ! Nullify the linear model pointers
     nullify(self%jedi_linear_model)
+    nullify(self%jedi_id_linear_model)
+    ! Reset the enumerator
+    self%type_of_linear_model = type_none
 
   end subroutine post_processor_traj_destructor
 

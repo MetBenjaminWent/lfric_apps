@@ -435,7 +435,7 @@ subroutine copy_from_lfric_ad(self)
   n_vertical_lfric = self%n_vertical_lfric
 
   ! Adjoint of copy LFRic to Atlas
-  do ij = 1,self%n_horizontal
+  do ij = self%n_horizontal,1,-1
     atlas_ij = self%map_horizontal(ij)
     lfric_ij = (ij-1)*n_vertical_lfric
     field_proxy%data(lfric_ij+lfric_kstart:lfric_ij+n_vertical_lfric) &
@@ -493,7 +493,7 @@ subroutine copy_to_lfric_ad( self )
   !
   if ( self%surface_level_type == surface_level_absent_copy_level_above ) then
     ! Adjoint of (copy the level above)
-    do ij = 1,self%n_horizontal
+    do ij = self%n_horizontal,1,-1
       atlas_ij = self%map_horizontal(ij)
       lfric_ij = (ij-1)*n_vertical_lfric
       self%atlas_data(atlas_kstart,atlas_ij) &
@@ -503,7 +503,7 @@ subroutine copy_to_lfric_ad( self )
   end if
 
   ! Adjoint of (fill data ommiting the lowest level if its not available)
-  do ij = 1,self%n_horizontal
+  do ij = self%n_horizontal,1,-1
     atlas_ij = self%map_horizontal(ij)
     lfric_ij = (ij-1)*n_vertical_lfric
     self%atlas_data(atlas_kstart:atlas_kend:atlas_kdirection,atlas_ij) &
