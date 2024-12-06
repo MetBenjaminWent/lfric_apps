@@ -10,6 +10,8 @@ module tl_end_of_transport_step_alg_mod
 
   use base_mesh_config_mod,           only: topology, topology_non_periodic
   use boundaries_config_mod,          only: limited_area
+  use check_configuration_mod,        only: check_any_eqn_consistent,          &
+                                            check_any_wt_eqn_conservative
   use constants_mod,                  only: i_def, r_tran, l_def
   use end_of_transport_step_alg_mod,  only: build_up_flux
   use fem_constants_mod,              only: get_directional_im3_div_r_tran
@@ -109,19 +111,17 @@ contains
     type(transport_metadata_type), intent(in)    :: transport_metadata
 
     ! Internal variables
-    integer(kind=i_def)                   :: mesh_id, step, fs_idx
+    integer(kind=i_def)                   :: mesh_id
     type(mesh_type),              pointer :: mesh => null()
     type(r_tran_field_type)               :: increment
     type(r_tran_field_type)               :: sum_flux
-    type(r_tran_field_type)               :: conservative_field_np1
-    type(r_tran_field_type),      pointer :: conservative_field_n => null()
     type(r_tran_field_type),      pointer :: field_start => null()
     type(r_tran_operator_type),   pointer :: div => null()
     type(function_space_type),    pointer :: w2_fs => null()
     logical(kind=l_def)                   :: enforce_min_value
     logical(kind=l_def)                   :: final_split_step
     logical(kind=l_def)                   :: is_dry_field
-    integer(kind=i_def)                   :: direction
+    logical(kind=l_def)                   :: store_dry_field
 
     ! Extract transport runtime
     mesh => field_np1%get_mesh()
@@ -190,49 +190,15 @@ contains
     ! Store field in transport_runtime for conservative transport
     ! if this is the underlying dry field
     if ( is_dry_field ) then
-      ! Determine direction of transport
-      fs_idx = flux%which_function_space()
-      select case (fs_idx)
-      case (W2H)
-        direction = direction_h
-      case (W2V)
-        direction = direction_v
-      case (W2)
-        direction = direction_3d
-      end select
-
-      step = tl_transport_runtime%get_tracer_step_ctr()
-
-      ! Store rho_d from the start of the whole transport step
-      if (step == 1) then
-        call tl_transport_runtime%set_rho_d(field_in, step)
-      end if
-
-      ! Store rho_d from the end of this step
-      if ( final_split_step ) then
-        call tl_transport_runtime%set_rho_d(field_np1, step + 1)
-
-      else
-        ! field_np1 is advective so need to compute the conservative update
-        div => get_directional_im3_div_r_tran(mesh_id, direction)
-        conservative_field_n => tl_transport_runtime%get_rho_d(mesh_id, step)
-        call conservative_field_np1%initialise(field_in%get_function_space())
-        call increment%initialise(field_np1%get_function_space())
-
-        call invoke( dg_matrix_vector_kernel_type(increment, flux, div),     &
-                     X_minus_Y(conservative_field_np1, conservative_field_n, &
-                               increment) )
-
-        if ( limited_area .and. topology == topology_non_periodic ) then
-          call log_event('T.L.: conservative overwrite blending zone not ' // &
-                        'yet implemented', LOG_LEVEL_ERROR)
-        end if
-
-        call tl_transport_runtime%set_rho_d(conservative_field_np1, step + 1)
-      end if
-
-      ! Store the dry flux
-      call tl_transport_runtime%set_dry_flux(flux, step)
+      store_dry_field = (                                                      &
+          check_any_eqn_consistent() .or. check_any_wt_eqn_conservative()      &
+      )
+    end if
+    if ( is_dry_field .and. store_dry_field ) then
+      call log_event(                                                          &
+              'T.L.: storage of dry fields not yet implemented',               &
+              LOG_LEVEL_ERROR                                                  &
+      )
     end if
 
     ! Increment the step counter in the transport runtime
