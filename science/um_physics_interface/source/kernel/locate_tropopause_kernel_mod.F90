@@ -124,6 +124,7 @@ subroutine locate_tropopause_code(nlayers,                    &
           dz = height_wth(map_wth(1)+kk) - height_wth(map_wth(1)+k)
           if (dz >= dz_trop .or. kk==nlayers) then
             lapse_rate_above = ( t_wth(k) - t_wth(kk) ) / dz
+            exit
           end if
         end do
         if (lapse_rate_above < lapse_trop) then
