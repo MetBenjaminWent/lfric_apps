@@ -107,6 +107,7 @@ contains
     type( field_type ), pointer :: rh_crit => null()
 
     type( field_type ), pointer :: dsldzm      => null()
+    type( field_type ), pointer :: mix_len_bm  => null()
     type( field_type ), pointer :: wvar        => null()
     type( field_type ), pointer :: gradrinr    => null()
     type( field_type ), pointer :: zh          => null()
@@ -209,6 +210,7 @@ contains
       call cloud_fields%get_field('liquid_fraction', cf_liq)
 
       call turbulence_fields%get_field('dsldzm', dsldzm)
+      call turbulence_fields%get_field('mix_len_bm', mix_len_bm)
       call turbulence_fields%get_field('wvar', wvar)
       call turbulence_fields%get_field('gradrinr', gradrinr)
       call turbulence_fields%get_field('zhsc', zhsc)
@@ -234,7 +236,8 @@ contains
         call invoke( inc_X_plus_Y(mr_ice, mr(imr_ci) ) )
       end if ! microphysics_casim
 
-      call invoke( bm_kernel_type(  theta, exner , exner_wth, dsldzm,          &
+      call invoke( bm_kernel_type(  theta, exner, exner_wth,                   &
+                                    dsldzm, mix_len_bm,                        &
                                     wvar, tau_dec_bm, tau_hom_bm, tau_mph_bm,  &
                                     height_wth, gradrinr, zh, zhsc, inv_depth, &
                                     bl_type_ind, mr(imr_v), mr(imr_cl),        &

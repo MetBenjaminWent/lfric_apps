@@ -95,6 +95,7 @@ contains
     type( field_type ), pointer :: rh_crit         => null()
 
     type( field_type ), pointer :: dsldzm      => null()
+    type( field_type ), pointer :: mix_len_bm  => null()
     type( field_type ), pointer :: wvar        => null()
     type( field_type ), pointer :: gradrinr    => null()
     type( field_type ), pointer :: zh          => null()
@@ -140,6 +141,7 @@ contains
     call turbulence_fields%get_field('cumulus', cumulus)
 
     call turbulence_fields%get_field('dsldzm', dsldzm)
+    call turbulence_fields%get_field('mix_len_bm', mix_len_bm)
     call turbulence_fields%get_field('wvar', wvar)
     call turbulence_fields%get_field('gradrinr', gradrinr)
     call turbulence_fields%get_field('zh', zh)
@@ -173,6 +175,7 @@ contains
                                               exner_wth,         &
                                               exner_w3,          &
                                               dsldzm,            &
+                                              mix_len_bm,        &
                                               wvar,              &
                                               gradrinr,          &
                                               zh,                &

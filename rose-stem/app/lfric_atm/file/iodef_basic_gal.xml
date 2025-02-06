@@ -509,6 +509,7 @@
 	<field id="turbulence__tke" name="tke_bl" long_name="turbulent_kinetic_energy" unit="m2 s-2" grid_ref="full_level_face_grid" />
         <field id="turbulence__wvar" name="wvar" long_name="vertical_velocity_variance" unit="m2 s-2" grid_ref="full_level_face_grid" />
         <field id="turbulence__dsldzm" name="dsldzm" long_name="liquid_temperature_gradient" unit="kg m-1" grid_ref="full_level_face_grid" />
+        <field id="turbulence__mix_len_bm" name="mix_len_bm" long_name="Turb length-scale for bimodal" unit="m" grid_ref="full_level_face_grid" />
         <field id="turbulence__gradrinr" name="gradrinr" long_name="gradient_richardson_number" unit="1" grid_ref="full_level_face_grid" />
 	<field id="turbulence__rhokh" name="rhokh_bl" long_name="scalar_eddy_diffusivity_times_density" unit="kg m-1 s-1" grid_ref="half_level_face_grid" />
         <field id="turbulence__heat_flux_bl" name="heat_flux_bl" long_name="upward_heat_flux_in_air" unit="W m-2" grid_ref="half_level_face_grid" />

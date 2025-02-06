@@ -64,6 +64,7 @@ contains
   !> @param[in] bl_type_ind       Diagnosed BL types
   !> @param[in] wvar              Vertical velocity variance in wth
   !> @param[in] dsldzm            Liquid potential temperature gradient in wth
+  !> @param[in] mix_len_bm        Turb length-scale for bimodal in wth
   !> @param[in] gradrinr          Gradient Richardson number in wth
   !> @param[in] rhokh_bl          Heat eddy diffusivity on BL levels
   !> @param[in] tke_bl            Turbulent kinetic energy (m2 s-2)
@@ -94,7 +95,8 @@ contains
   !> @param[in] z0m_eff           Gridbox mean effective roughness length for momentum
   !> @param[in] bl_weight_1dbl    Blending weight to 1D BL scheme in the BL
   !> @param[in] dust_flux         Flux of mineral dust by division
-  subroutine output_diags_for_bl_exp(ntml, cumulus, bl_type_ind, wvar, dsldzm, &
+  subroutine output_diags_for_bl_exp(ntml, cumulus, bl_type_ind,               &
+                                     wvar, dsldzm, mix_len_bm,                 &
                                      gradrinr, rhokh_bl, tke_bl, dtrdz_tq_bl,  &
                                      rdz_tq_bl, zhsc, level_ent, level_ent_dsc,&
                                      ent_we_lim, ent_t_frac, ent_zrzi,         &
@@ -109,8 +111,8 @@ contains
     implicit none
 
     ! Prognostic fields to output
-    type( field_type ), intent(in)    :: wvar,                                 &
-                                         dsldzm, gradrinr, rhokh_bl, tke_bl,   &
+    type( field_type ), intent(in)    :: wvar, dsldzm, mix_len_bm, gradrinr,   &
+                                         rhokh_bl, tke_bl,                     &
                                          dtrdz_tq_bl, rdz_tq_bl, zhsc,         &
                                          zht, z0h_eff,                         &
                                          ent_we_lim, ent_t_frac, ent_zrzi,     &
@@ -133,6 +135,7 @@ contains
     call bl_type_ind%write_field('turbulence__bl_type_ind')
     call wvar%write_field('turbulence__wvar')
     call dsldzm%write_field('turbulence__dsldzm')
+    call mix_len_bm%write_field('turbulence__mix_len_bm')
     call gradrinr%write_field('turbulence__gradrinr')
     call rhokh_bl%write_field('turbulence__rhokh')
     call tke_bl%write_field('turbulence__tke')

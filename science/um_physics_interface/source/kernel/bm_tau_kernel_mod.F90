@@ -23,7 +23,7 @@ module bm_tau_kernel_mod
   !>
   type, public, extends(kernel_type) :: bm_tau_kernel_type
     private
-    type(arg_type) :: meta_args(15) = (/                &
+    type(arg_type) :: meta_args(16) = (/                &
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! m_v
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! theta_in_wth
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! exner_in_wth
@@ -33,6 +33,7 @@ module bm_tau_kernel_mod
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! ni_mphys
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! cf_ice
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! wvar
+         arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! mix_len_bm
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! lmix_bl
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! rho_in_wth
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA), & ! wetrho_in_wth
@@ -64,6 +65,7 @@ contains
   !> @param[in]     ni_mphys      Snow number mixing ratio in wth
   !> @param[in]     cf_ice        Ice cloud fraction
   !> @param[in]     wvar          Vertical velocity variance in wth
+  !> @param[in]     mix_len_bm    Turb length-scale for bimodal in wth
   !> @param[in]     lmix_bl       Turbulence mixing length in wth
   !> @param[in]     rho_in_wth    Dry rho in wth
   !> @param[in]     wetrho_in_wth Wet rho in wth
@@ -85,6 +87,7 @@ contains
                          ni_mphys,      &
                          cf_ice,        &
                          wvar,          &
+                         mix_len_bm,    &
                          lmix_bl,       &
                          rho_in_wth,    &
                          wetrho_in_wth, &
@@ -101,6 +104,7 @@ contains
     ! Structures holding diagnostic arrays - not used
 
     ! Other modules containing stuff passed to CLD
+    use cloud_config_mod,     only: i_bm_ez_opt, i_bm_ez_opt_entpar
     use nlsizes_namelist_mod, only: bl_levels
     use planet_constants_mod, only: p_zero, kappa
     use microphysics_config_mod, only: microphysics_casim
@@ -117,6 +121,7 @@ contains
     integer(kind=i_def), intent(in),    dimension(ndf_wth,seg_len)  :: map_wth
 
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: wvar
+    real(kind=r_def),    intent(in),    dimension(undf_wth) :: mix_len_bm
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: lmix_bl
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: rho_in_wth
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: wetrho_in_wth
@@ -139,8 +144,8 @@ contains
 
     ! profile fields from level 1 upwards
     real(r_um), dimension(seg_len,1,nlayers) :: cff, q, theta, qcf, qcf2,      &
-         rho_dry_theta, rho_wet_tq, exner_theta_levels, wvar_in, tau_dec_out,  &
-         tau_hom_out, tau_mph_out
+         rho_dry_theta, rho_wet_tq, exner_theta_levels, wvar_in, mix_len_in,   &
+         tau_dec_out, tau_hom_out, tau_mph_out
 
     real(r_um), dimension(seg_len,1,bl_levels) :: elm_in
 
@@ -178,12 +183,21 @@ contains
         wvar_in(i,1,k)     = wvar(map_wth(1,i) + k)
       end do
     end do
-
-    do i = 1, seg_len
-      do k = 2, bl_levels
-        elm_in(i,1,k) = lmix_bl(map_wth(1,i) + k-1)
+    if (i_bm_ez_opt == i_bm_ez_opt_entpar) then
+      ! Length-scale used for entraining parcel mode construction method
+      do i = 1, seg_len
+        do k = 1, nlayers
+          mix_len_in(i,1,k)  = mix_len_bm(map_wth(1,i) + k)
+        end do
       end do
-    end do
+    else
+      ! Mixing-length diagnostic used for stable-layer mode construction method
+      do i = 1, seg_len
+        do k = 2, bl_levels
+          elm_in(i,1,k) = lmix_bl(map_wth(1,i) + k-1)
+        end do
+      end do
+    end if
 
     do i = 1, seg_len
       do k = 0, nlayers
@@ -193,7 +207,7 @@ contains
     end do
 
     call bm_calc_tau(q, theta, exner_theta_levels, qcf, bl_levels, cff, &
-                    p_theta_levels, wvar_in, elm_in, rho_dry_theta,     &
+                    p_theta_levels, wvar_in, elm_in, mix_len_in, rho_dry_theta,&
                     rho_wet_tq, icenumber, snownumber, tau_dec_out,     &
                     tau_hom_out, tau_mph_out, qcf2)
 

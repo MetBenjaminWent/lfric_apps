@@ -569,6 +569,7 @@ contains
     call processor%apply(make_spec('bt_bl', main%turbulence, Wtheta))
     call processor%apply(make_spec('lmix_bl', main%turbulence, Wtheta))
     call processor%apply(make_spec('dsldzm', main%turbulence, Wtheta))
+    call processor%apply(make_spec('mix_len_bm', main%turbulence, Wtheta))
     call processor%apply(make_spec('tke_bl', main%turbulence, Wtheta))
     call processor%apply(make_spec('rhokm_bl', main%turbulence, Wtheta))
     call processor%apply(make_spec('dtrdz_tq_bl', main%turbulence, Wtheta))

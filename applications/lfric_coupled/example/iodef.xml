@@ -241,6 +241,7 @@
 	<field id="du_bl3" name="du_bl3" long_name="upward_air_velocity_increment_from_bl_scheme" unit="m s-1" grid_ref="full_level_face_grid" />
 	<field id="zh" name="zh" long_name="boundary_layer_depth" unit="m" domain_ref="face" />
         <field id="dsldzm" name="dsldzm" long_name="liquid_temperature_gradient" unit="kg m-1" grid_ref="full_level_face_grid" />
+        <field id="mix_len_bm" name="mix_len_bm" long_name="Turb length-scale for bimodal" unit="m" grid_ref="full_level_face_grid" />
         <field id="wvar" name="wvar" long_name="vertical_velocity_variance" unit="m2 s-2" grid_ref="full_level_face_grid" />
         <field id="gradrinr" name="gradrinr" long_name="gradient_richardson_number" unit="1" grid_ref="full_level_face_grid" />
 	<!-- radiation fields -->

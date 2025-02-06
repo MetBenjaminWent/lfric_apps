@@ -1,5 +1,8 @@
+import re
 import sys
+
 from metomi.rose.upgrade import MacroUpgrade
+
 
 class UpgradeError(Exception):
     """Exception created when an upgrade fails."""
@@ -13,16 +16,44 @@ class UpgradeError(Exception):
 
     __str__ = __repr__
 
+
 """
 Copy this template and complete to add your macro
-
 class vnXX_txxx(MacroUpgrade):
     # Upgrade macro for <TICKET> by <Author>
-
     BEFORE_TAG = "vnX.X"
     AFTER_TAG = "vnX.X_txxx"
-
     def upgrade(self, config, meta_config=None):
         # Add settings
         return config, self.reports
 """
+
+
+class vn20_t481(MacroUpgrade):
+    """Upgrade macro for ticket #481 by Mike Whitall."""
+
+    BEFORE_TAG = "vn2.0"
+    AFTER_TAG = "vn2.0_t481"
+
+    def upgrade(self, config, meta_config=None):
+        # Commands From: science/um_physics_interface/rose-meta/um-cloud
+        # All altered settings are in the cloud namelist
+        nml = "namelist:cloud"
+        # Logical ez_subcrit_only replaced by a 3-way integer switch:
+        ez_subcrit = self.get_setting_value(config, [nml, "ez_subcrit"])
+        self.remove_setting(config, [nml, "ez_subcrit"])
+        if ez_subcrit == ".true.":
+            i_bm_ez = "'subcrit'"
+        else:
+            i_bm_ez = "'orig'"
+        # end if
+        self.add_setting(config, [nml, "i_bm_ez_opt"], i_bm_ez)
+        # New settings added
+        self.add_setting(config, [nml, "ent_coef_bm"], "0.2")
+        self.add_setting(config, [nml, "l_bm_sigma_s_grad"], ".false.")
+        self.add_setting(config, [nml, "l_bm_tweaks"], ".false.")
+        self.add_setting(config, [nml, "max_sigmas"], "3.0")
+        self.add_setting(config, [nml, "min_sigx_ft"], "0.0")
+        self.add_setting(config, [nml, "turb_var_fac_bm"], "1.0")
+
+        return config, self.reports

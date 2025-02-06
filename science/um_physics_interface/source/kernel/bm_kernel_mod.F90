@@ -26,11 +26,12 @@ module bm_kernel_mod
   !>
   type, public, extends(kernel_type) :: bm_kernel_type
     private
-    type(arg_type) :: meta_args(25) = (/                    &
+    type(arg_type) :: meta_args(26) = (/                    &
          arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! theta_in_wth
          arg_type(GH_FIELD, GH_REAL, GH_READ,      W3),     & ! exner_in_w3
          arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! exner_in_wth
          arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! dsldzm
+         arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! mix_len_bm
          arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! wvar
          arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! tau_dec_bm
          arg_type(GH_FIELD, GH_REAL, GH_READ,      WTHETA), & ! tau_hom_bm
@@ -73,6 +74,7 @@ contains
   !> @param[in]     exner_in_w3   Pressure in the w3 space
   !> @param[in]     exner_in_wth  Exner Pressure in the theta space
   !> @param[in]     dsldzm        Liquid potential temperature gradient in wth
+  !> @param[in]     mix_len_bm    Turb length-scale for bimodal in wth
   !> @param[in]     wvar          Vertical velocity variance in wth
   !> @param[in]     tau_dec_bm    Decorrelation time scale in wth
   !> @param[in]     tau_hom_bm    Homogenisation time scale in wth
@@ -113,6 +115,7 @@ contains
                      exner_in_w3,  &
                      exner_in_wth, &
                      dsldzm,       &
+                     mix_len_bm,   &
                      wvar,         &
                      tau_dec_bm,   &
                      tau_hom_bm,   &
@@ -153,6 +156,7 @@ contains
     ! Structures holding diagnostic arrays - not used
 
     ! Other modules containing stuff passed to CLD
+    use cloud_config_mod,     only: i_bm_ez_opt, i_bm_ez_opt_entpar
     use planet_constants_mod, only: p_zero, kappa, cp
     use water_constants_mod,  only: lc
     use bm_ctl_mod,           only: bm_ctl
@@ -175,6 +179,7 @@ contains
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: exner_in_wth
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: theta_in_wth
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: dsldzm
+    real(kind=r_def),    intent(in),    dimension(undf_wth) :: mix_len_bm
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: wvar
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: gradrinr
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: tau_dec_bm
@@ -205,14 +210,21 @@ contains
 
     ! profile fields from level 1 upwards
     real(r_um), dimension(seg_len,1,nlayers) :: cf_inout, cfl_inout, cff_inout,&
-         area_cloud_fraction, qt, qcl_out, qcf_in, tl, tgrad_in, tau_dec_in,   &
-         tau_hom_in, tau_mph_in, z_theta, wvar_in, gradrinr_in, sskew_out,     &
+         area_cloud_fraction, qt, qcl_out, qcf_in, tl,                         &
+         tgrad_in, mix_len_in, tau_dec_in, tau_hom_in, tau_mph_in,             &
+         z_theta, wvar_in, gradrinr_in, sskew_out,                             &
          svar_turb_out, svar_bm_out
 
     real(r_um), dimension(seg_len,1) :: zh_in, zhsc_in, dzh_in, bl_type_7_in
 
     ! profile fields from level 1 upwards
     real(r_um), dimension(seg_len,1,nlayers) :: p_theta_levels
+
+    ! Extra bimodal scheme diagnostics not yet implemented in LFRic
+    real(r_um), dimension(1,1,1,1) :: entzone,                                 &
+                                      sl_modes, qw_modes, rh_modes, sd_modes
+    ! Switch set to false to indicate not to calculate the above
+    logical, parameter :: l_calc_diag = .FALSE.
 
     ! error status
     integer(i_um) :: errorstatus
@@ -233,7 +245,6 @@ contains
         cff_inout(i,1,k) = cf_ice(map_wth(1,i) + k)
         cfl_inout(i,1,k) = cf_liq(map_wth(1,i) + k)
         area_cloud_fraction(i,1,k) = cf_area(map_wth(1,i) + k)
-        tgrad_in(i,1,k) = dsldzm(map_wth(1,i) + k)
         tau_dec_in(i,1,k) = tau_dec_bm(map_wth(1,i) + k)
         tau_hom_in(i,1,k) = tau_hom_bm(map_wth(1,i) + k)
         tau_mph_in(i,1,k) = tau_mph_bm(map_wth(1,i) + k)
@@ -243,6 +254,21 @@ contains
         gradrinr_in(i,1,k) = gradrinr(map_wth(1,i) + k)
       end do
     end do
+    if (i_bm_ez_opt == i_bm_ez_opt_entpar) then
+      ! Length-scale used for entraining parcel mode construction method
+      do i = 1, seg_len
+        do k = 1, nlayers
+          mix_len_in(i,1,k)  = mix_len_bm(map_wth(1,i) + k)
+        end do
+      end do
+    else
+      ! SL-gradient used for stable-layer mode construction method
+      do i = 1, seg_len
+        do k = 1, nlayers
+          tgrad_in(i,1,k)    = dsldzm(map_wth(1,i) + k)
+        end do
+      end do
+    end if
 
     ! 2d fields for gradrinr-based entrainment zones
     do i = 1, seg_len
@@ -261,12 +287,14 @@ contains
 
     call bm_ctl( p_theta_levels, tgrad_in, wvar_in,                   &
                  tau_dec_in, tau_hom_in, tau_mph_in, z_theta,         &
-                 gradrinr_in, zh_in, zhsc_in, dzh_in, bl_type_7_in,   &
+                 gradrinr_in, mix_len_in, zh_in, zhsc_in, dzh_in,     &
+                 bl_type_7_in,                                        &
                  nlayers, l_mr_physics,                               &
                  tl, cf_inout, qt, qcf_in, qcl_out,                   &
                  cfl_inout, cff_inout,                                &
-                 sskew_out, svar_turb_out, svar_bm_out,               &
-                 errorstatus)
+                 sskew_out, svar_turb_out, svar_bm_out, entzone,      &
+                 sl_modes, qw_modes, rh_modes, sd_modes,              &
+                 l_calc_diag, errorstatus )
 
     ! update main model prognostics
     !-----------------------------------------------------------------------

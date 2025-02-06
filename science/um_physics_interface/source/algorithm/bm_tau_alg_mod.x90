@@ -59,6 +59,7 @@ contains
 
     type( field_type ), pointer :: cf_fro  => null()
 
+    type( field_type ), pointer :: mix_len_bm => null()
     type( field_type ), pointer :: lmix_bl => null()
     type( field_type ), pointer :: wvar => null()
     type( field_type ), pointer :: tau_dec_bm => null()
@@ -77,6 +78,7 @@ contains
     call cloud_fields%get_field('tau_hom_bm', tau_hom_bm)
     call cloud_fields%get_field('tau_mph_bm', tau_mph_bm)
 
+    call turbulence_fields%get_field('mix_len_bm', mix_len_bm)
     call turbulence_fields%get_field('lmix_bl', lmix_bl)
     call turbulence_fields%get_field('wvar', wvar)
 
@@ -93,7 +95,8 @@ contains
 
     call invoke( bm_tau_kernel_type( mr_n(imr_v), theta, exner_in_wth,         &
                                      mr_n(imr_ci), mr_n(imr_s), ns_mphys,      &
-                                     ni_mphys, cf_fro, wvar, lmix_bl,          &
+                                     ni_mphys, cf_fro,                         &
+                                     wvar, mix_len_bm, lmix_bl,                &
                                      rho_in_wth, wetrho_in_wth,                &
                                      tau_dec_bm, tau_hom_bm, tau_mph_bm)  )
 

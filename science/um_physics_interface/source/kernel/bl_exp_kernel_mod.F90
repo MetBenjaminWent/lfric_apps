@@ -23,7 +23,8 @@ module bl_exp_kernel_mod
   use blayer_config_mod,      only : bl_mix_w
   use cloud_config_mod,       only : rh_crit_opt, rh_crit_opt_tke, scheme,    &
                                      scheme_bimodal, scheme_pc2,              &
-                                     pc2ini, pc2ini_bimodal
+                                     pc2ini, pc2ini_bimodal,                  &
+                                     i_bm_ez_opt, i_bm_ez_opt_entpar
   use microphysics_config_mod, only: turb_gen_mixph, prog_tnuc
   use mixing_config_mod,       only: smagorinsky
   use jules_surface_config_mod, only : formdrag, formdrag_dist_drag
@@ -39,7 +40,7 @@ module bl_exp_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_exp_kernel_type
     private
-    type(arg_type) :: meta_args(91) = (/                                       &
+    type(arg_type) :: meta_args(92) = (/                                       &
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      WTHETA),                   &! theta_in_wth
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      W3),                       &! rho_in_w3
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      WTHETA),                   &! rho_in_wth
@@ -84,6 +85,7 @@ module bl_exp_kernel_mod
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      WTHETA),                   &! tnuc
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINuOUS_SPACE_1),&! tnuc_nlcl
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     WTHETA),                   &! dsldzm
+         arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     WTHETA),                   &! mix_len_bm
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     WTHETA),                   &! wvar
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     WTHETA),                   &! visc_m_blend
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     WTHETA),                   &! visc_h_blend
@@ -190,6 +192,7 @@ contains
   !> @param[in]     tnuc                   Temperature of nucleation (K)
   !> @param[in,out] tnuc_nlcl              Temperature of nucleation (K) (2D)
   !> @param[in,out] dsldzm                 Liquid potential temperature gradient in wth
+  !> @param[in,out] mix_len_bm             Turb length-scale for bimodal in wth
   !> @param[in,out] wvar                   Vertical velocity variance in wth
   !> @param[in,out] visc_m_blend           Blended BL-Smag diffusion coefficient for momentum
   !> @param[in,out] visc_h_blend           Blended BL-Smag diffusion coefficient for scalars
@@ -303,6 +306,7 @@ contains
                          tnuc,                                  &
                          tnuc_nlcl,                             &
                          dsldzm,                                &
+                         mix_len_bm,                            &
                          wvar,                                  &
                          visc_m_blend,                          &
                          visc_h_blend,                          &
@@ -410,6 +414,7 @@ contains
 
     real(kind=r_def), dimension(undf_wth), intent(inout):: rh_crit,            &
                                                            dsldzm,             &
+                                                           mix_len_bm,         &
                                                            wvar, dw_bl,        &
                                                            visc_h_blend,       &
                                                            visc_m_blend,       &
@@ -505,7 +510,8 @@ contains
     ! profile fields from level 1 upwards
     real(r_bl), dimension(seg_len,1,nlayers) :: rho_dry, z_rho, z_theta,     &
          bulk_cloud_fraction, rho_wet_tq, u_p, v_p, rhcpt, theta,            &
-         p_rho_levels, exner_rho_levels, tgrad_bm, exner_theta_levels,       &
+         p_rho_levels, exner_rho_levels, tgrad_bm, mix_len_tmp,              &
+         exner_theta_levels,                                                 &
          bulk_cf_conv, qcf_conv, r_rho_levels, visc_h, visc_m, rneutml_sq,    &
          tnuc_new
 
@@ -881,7 +887,7 @@ contains
     ! OUT data required for tracer mixing :
       kent, we_lim, t_frac, zrzi, kent_dsc, we_lim_dsc, t_frac_dsc, zrzi_dsc,  &
     ! OUT data required elsewhere in UM system :
-      zhsc,ntdsc,nbdsc,wstar,wthvs,uw0,vw0,rhcpt, tgrad_bm                     &
+      zhsc,ntdsc,nbdsc,wstar,wthvs,uw0,vw0,rhcpt, tgrad_bm, mix_len_tmp        &
       )
 
     if (prog_tnuc) then
@@ -1092,18 +1098,29 @@ contains
       end do
     end if
 
-    ! Liquid temperature gradient for bimodal cloud scheme
+    ! Liquid temperature gradient and turbulent length-scale
+    ! for bimodal cloud scheme
     if (scheme == scheme_bimodal .or. &
          (scheme == scheme_pc2 .and. pc2ini == pc2ini_bimodal ) ) then
-      do k = 1, nlayers
-        do i = 1, seg_len
-          dsldzm(map_wth(1,i)+k) = tgrad_bm(i,1,k)
+      if (i_bm_ez_opt == i_bm_ez_opt_entpar) then
+        ! Length-scale used for entraining parcel mode construction method
+        do k = 1, nlayers
+          do i = 1, seg_len
+            mix_len_bm(map_wth(1,i)+k) = mix_len_tmp(i,1,k)
+          end do
         end do
-      end do
+      else
+        ! SL-gradient used for stable-layer mode construction method
+        do k = 1, nlayers
+          do i = 1, seg_len
+            dsldzm(map_wth(1,i)+k) = tgrad_bm(i,1,k)
+          end do
+        end do
+      end if
     end if
     if (scheme == scheme_bimodal .or. turb_gen_mixph .or. &
          (scheme == scheme_pc2 .and. pc2ini == pc2ini_bimodal ) ) then
-      do k = 2, nlayers
+      do k = 2, nlayers+1
         do i = 1, seg_len
           wvar(map_wth(1,i)+k-1) = bl_w_var(i,1,k)
         end do

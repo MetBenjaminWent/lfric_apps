@@ -151,6 +151,7 @@ contains
     type( field_type ), pointer :: dw_bl           => null()
     type( field_type ), pointer :: lmix_bl         => null()
     type( field_type ), pointer :: dsldzm          => null()
+    type( field_type ), pointer :: mix_len_bm      => null()
     type( field_type ), pointer :: wvar            => null()
     type( field_type ), pointer :: gradrinr        => null()
     type( field_type ), pointer :: rhokm_w2        => null()
@@ -358,6 +359,7 @@ contains
     call turbulence_fields%get_field('dw_bl', dw_bl)
     call turbulence_fields%get_field('lmix_bl', lmix_bl)
     call turbulence_fields%get_field('dsldzm', dsldzm)
+    call turbulence_fields%get_field('mix_len_bm', mix_len_bm)
     call turbulence_fields%get_field('wvar', wvar)
     call turbulence_fields%get_field('gradrinr', gradrinr)
     call turbulence_fields%get_field('rhokm_w2', rhokm_w2)
@@ -625,7 +627,8 @@ contains
                                     h_blend_orog, t1_sd_2d, q1_sd_2d,          &
                                     dtl_mphys, dmt_mphys, sw_heating_rate,     &
                                     lw_heating_rate, cf_bulk, cf_liquid,       &
-                                    rh_crit, tnuc, tnuc_nlcl, dsldzm,          &
+                                    rh_crit, tnuc, tnuc_nlcl,                  &
+                                    dsldzm, mix_len_bm,                        &
                                     wvar, visc_m, visc_h,                      &
                                     dw_bl, rhokm_bl, surf_interp, rhokh_bl,    &
                                     tke_bl, ngstress_bl, bq_bl, bt_bl,         &
@@ -698,7 +701,8 @@ contains
     ! output BL diagnostics
     if (write_diag .and. use_xios_io) then
 
-      call output_diags_for_bl_exp(ntml, cumulus, bl_type_ind, wvar, dsldzm, &
+      call output_diags_for_bl_exp(ntml, cumulus, bl_type_ind,               &
+                                   wvar, dsldzm, mix_len_bm,                 &
                                    gradrinr, rhokh_bl, tke_bl, dtrdz_tq_bl,  &
                                    rdz_w3, zhsc, level_ent, level_ent_dsc,   &
                                    ent_we_lim, ent_t_frac, ent_zrzi,         &

@@ -28,7 +28,7 @@ private
 
 type, public, extends(kernel_type) :: pc2_initiation_kernel_type
   private
-  type(arg_type) :: meta_args(39) = (/                                   &
+  type(arg_type) :: meta_args(40) = (/                                   &
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! mv_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! ml_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! mi_wth
@@ -40,6 +40,7 @@ type, public, extends(kernel_type) :: pc2_initiation_kernel_type
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! exner_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  W3),                        & ! exner_w3
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! dsldzm
+       arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! mix_len_bm
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! wvar
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                    & ! gradrinr
        arg_type(GH_FIELD, GH_REAL, GH_READ,  ANY_DISCONTINUOUS_SPACE_1), & ! zh
@@ -94,6 +95,7 @@ contains
 !> @param[in]     exner_wth      Exner pressure in theta space
 !> @param[in]     exner_w3       Exner pressure in w3 space
 !> @param[in]     dsldzm         Liquid potential temperature gradient in wth
+!> @param[in]     mix_len_bm     Turb length-scale for bimodal in wth
 !> @param[in]     wvar           Vertical velocity variance in wth
 !> @param[in]     gradrinr       Gradient Richardson Number in wth
 !> @param[in]     zh             Mixed-layer height
@@ -147,6 +149,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                                 exner_wth,                         &
                                 exner_w3,                          &
                                 dsldzm,                            &
+                                mix_len_bm,                        &
                                 wvar,                              &
                                 gradrinr,                          &
                                 zh,                                &
@@ -183,7 +186,8 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                                 ndf_2d,  undf_2d,  map_2d,         &
                                 ndf_bl,  undf_bl,  map_bl)
 
-    use constants_mod, only: r_def, i_def, r_um, i_um
+    use constants_mod,    only: r_def, i_def, r_um, i_um
+    use cloud_config_mod, only: i_bm_ez_opt, i_bm_ez_opt_entpar
 
     !---------------------------------------
     ! UM modules
@@ -221,6 +225,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
     real(kind=r_def), intent(in), dimension(undf_w3)  :: exner_w3
 
     real(kind=r_def), intent(in), dimension(undf_wth) :: dsldzm
+    real(kind=r_def), intent(in), dimension(undf_wth) :: mix_len_bm
     real(kind=r_def), intent(in), dimension(undf_wth) :: wvar
     real(kind=r_def), intent(in), dimension(undf_wth) :: gradrinr
     real(kind=r_def), intent(in), dimension(undf_wth) :: tau_dec_bm
@@ -268,7 +273,8 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
     real(r_um), dimension(seg_len,1,nlayers) :: qv_work, qcl_work, qcf_work,   &
          cfl_work, cff_work, bcf_work, t_work, theta_work, rhts, t_incr,       &
          qv_incr, qcl_incr, qcf_incr, cfl_incr, cff_incr, bcf_incr, rhcpt,     &
-         zeros, tgrad_in, tau_dec_in, tau_hom_in, tau_mph_in, z_theta, wvar_in,&
+         zeros, tgrad_in, mix_len_in, tau_dec_in, tau_hom_in, tau_mph_in,      &
+         z_theta, wvar_in,                                                     &
          gradrinr_in, tlts, qtts, ptts, qsl_tl, p_theta_levels, sskew_out,     &
          svar_turb_out, svar_bm_out, qcf2_work, qcf2_incr
 
@@ -324,7 +330,6 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                                            **(1.0_r_def/kappa)
 
         ! Bimodal cloud scheme inputs
-        tgrad_in(i,1,k)   = dsldzm(map_wth(1,i) + k)
         wvar_in(i,1,k)    = wvar(map_wth(1,i) + k)
         gradrinr_in(i,1,k)= gradrinr(map_wth(1,i) + k)
         tau_dec_in(i,1,k) = tau_dec_bm(map_wth(1,i) + k)
@@ -358,6 +363,22 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
 
       end do     ! k
     end do
+
+    if (i_bm_ez_opt == i_bm_ez_opt_entpar) then
+      ! Length-scale used for entraining parcel mode construction method
+      do i = 1, seg_len
+        do k = 1, nlayers
+          mix_len_in(i,1,k)  = mix_len_bm(map_wth(1,i) + k)
+        end do
+      end do
+    else
+      ! SL-gradient used for stable-layer mode construction method
+      do i = 1, seg_len
+        do k = 1, nlayers
+          tgrad_in(i,1,k)    = dsldzm(map_wth(1,i) + k)
+        end do
+      end do
+    end if
 
     do i = 1, seg_len
       ! 2d fields for gradrinr-based entrainment zones
@@ -408,6 +429,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                             qv_work,                       &
                             qcl_work,                      &
                             qcf_work,                      &
+                            qcf2_work,                     &
                             bcf_work,                      &
                             cfl_work,                      &
                             cff_work,                      &
@@ -430,6 +452,7 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                             tau_mph_in,                    &
                             z_theta,                       &
                             gradrinr_in,                   &
+                            mix_len_in,                    &
                             zh_in,                         &
                             zhsc_in,                       &
                             dzh_in,                        &
@@ -440,14 +463,13 @@ subroutine pc2_initiation_code( nlayers, seg_len,                  &
                             qv_incr,                       &
                             qcl_incr,                      &
                             qcf_incr,                      &
+                            qcf2_incr,                     &
                             bcf_incr,                      &
                             cfl_incr,                      &
                             cff_incr,                      &
                             sskew_out,                     &
                             svar_turb_out,                 &
                             svar_bm_out,                   &
-                            qcf2_work,                     &
-                            qcf2_incr,                     &
                             wtrac)
 
     ! Recast back to LFRic space

@@ -76,10 +76,19 @@ module um_physics_init_mod
                                         falliceshear_method_real,             &
                                         falliceshear_method_constant,         &
                                         subgrid_qv, ice_width_in => ice_width,&
-                                        ez_subcrit, ez_max,  &
-                                       two_d_fsd_factor_in => two_d_fsd_factor,&
-                                       pc2_init_logic, pc2_init_logic_original,&
-                                       pc2_init_logic_smooth
+                                    ent_coef_bm_in => ent_coef_bm,             &
+                                    ez_max,                                    &
+                                    i_bm_ez_opt_in => i_bm_ez_opt,             &
+                                    l_bm_sigma_s_grad_in => l_bm_sigma_s_grad, &
+                                    l_bm_tweaks_in => l_bm_tweaks,             &
+                                    max_sigmas_in => max_sigmas,               &
+                                    min_sigx_ft_in => min_sigx_ft,             &
+                                    turb_var_fac_bm_in => turb_var_fac_bm,     &
+                                    two_d_fsd_factor_in => two_d_fsd_factor,   &
+                                    pc2_init_logic, pc2_init_logic_original,   &
+                                    pc2_init_logic_smooth,                     &
+                                    i_bm_ez_opt_orig, i_bm_ez_opt_subcrit,     &
+                                    i_bm_ez_opt_entpar
 
   use convection_config_mod,     only : cv_scheme,                    &
                                         cv_scheme_gregory_rowntree,   &
@@ -280,7 +289,10 @@ contains
          check_run_cloud, l_pc2_implicit_erosion,                          &
          cloud_pc2_tol, cloud_pc2_tol_2,                                   &
          forced_cu_fac, i_pc2_conv_coupling, allicetdegc, starticetkelvin, &
-         l_bm_ez_subcrit_only, ez_max_bm, l_pc2_homog_conv_pressure
+         ent_coef_bm, ez_max_bm, i_bm_ez_opt, l_bm_sigma_s_grad,           &
+         l_bm_tweaks, max_sigmas, min_sigx_ft, turb_var_fac_bm,            &
+         l_pc2_homog_conv_pressure,                                        &
+         i_bm_ez_orig, i_bm_ez_subcrit, i_bm_ez_entpar
     use cloud_config_mod, only: cld_fsd_hill
     use comorph_um_namelist_mod, only: ass_min_radius, autoc_opt,            &
          cf_conv_fac, coef_auto, col_eff_coef, core_ent_fac, drag_coef_cond, &
@@ -921,13 +933,31 @@ contains
           i_rhcpt = rhcpt_tke_based
       end select
       ice_width           = real(ice_width_in, r_um)
-      l_bm_ez_subcrit_only= ez_subcrit
-      ez_max_bm           = ez_max
       ! l_add_cca_to_mcica is unused in LFRic, its functionality
       ! ... being replaced by the cloud_representation option in
       ! ... the radiation namelist (T=combined, F=liquid_and_ice).
       l_subgrid_qv               = subgrid_qv
       rhcrit(1:number_of_layers) = real(rh_crit, r_um)
+
+      ! Bimodal cloud-scheme options
+      ! (used if scheme == scheme_bimodal .OR.
+      !          scheme == scheme_pc2 and pc2ini == pc2ini_bimodal).
+      ! For now just set them regardless as cannot be trigger-ignored.
+      ent_coef_bm       = real( ent_coef_bm_in, r_um )
+      ez_max_bm         = real( ez_max, r_um )
+      max_sigmas        = real( max_sigmas_in, r_um )
+      min_sigx_ft       = real( min_sigx_ft_in, r_um )
+      turb_var_fac_bm   = real( turb_var_fac_bm_in, r_um )
+      l_bm_sigma_s_grad = l_bm_sigma_s_grad_in
+      l_bm_tweaks       = l_bm_tweaks_in
+      SELECT CASE ( i_bm_ez_opt_in )
+      CASE ( i_bm_ez_opt_orig )
+        i_bm_ez_opt = i_bm_ez_orig
+      CASE ( i_bm_ez_opt_subcrit )
+        i_bm_ez_opt = i_bm_ez_subcrit
+      CASE ( i_bm_ez_opt_entpar )
+        i_bm_ez_opt = i_bm_ez_entpar
+      END SELECT
 
       ! Options which are bespoke to the choice of scheme
       select case (scheme)

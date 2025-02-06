@@ -142,6 +142,7 @@ contains
     type( field_type ), pointer :: heat_flux_bl   => null()
     type( field_type ), pointer :: dtrdz_tq_bl    => null()
     type( field_type ), pointer :: dsldzm         => null()
+    type( field_type ), pointer :: mix_len_bm     => null()
     type( field_type ), pointer :: wvar           => null()
     type( field_type ), pointer :: gradrinr       => null()
     type( field_type ), pointer :: rhokm_w2       => null()
@@ -309,6 +310,7 @@ contains
     call turbulence_fields%get_field('heat_flux_bl', heat_flux_bl)
     call turbulence_fields%get_field('dtrdz_tq_bl', dtrdz_tq_bl)
     call turbulence_fields%get_field('dsldzm', dsldzm)
+    call turbulence_fields%get_field('mix_len_bm', mix_len_bm)
     call turbulence_fields%get_field('wvar', wvar)
     call turbulence_fields%get_field('gradrinr', gradrinr)
     call turbulence_fields%get_field('rhokm_w2', rhokm_w2)
@@ -600,7 +602,8 @@ contains
                                        diss_u, diss_v, dt_conv, mr(imr_v),     &
                                        mr(imr_cl), mr(imr_ci), mr(imr_s),      &
                                        cf_area, cf_fro, cf_liq, cf_bulk,       &
-                                       cca, ccw, rh_crit, dsldzm, wvar,        &
+                                       cca, ccw, rh_crit,                      &
+                                       dsldzm, mix_len_bm, wvar,               &
                                        gradrinr, tau_dec_bm, tau_hom_bm,       &
                                        tau_mph_bm, rhokh, bq_bl, bt_bl, fqw,   &
                                        ftl, dtrdz_tq_bl, rdz_w3,               &

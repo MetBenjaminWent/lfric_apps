@@ -17,7 +17,8 @@ module bl_imp2_kernel_mod
   use section_choice_config_mod, only : cloud, cloud_um
   use blayer_config_mod,         only : fric_heating
   use cloud_config_mod,          only : scheme, scheme_smith, scheme_pc2, &
-                                        scheme_bimodal
+                                        scheme_bimodal,                   &
+                                        i_bm_ez_opt, i_bm_ez_opt_entpar
   use constants_mod,             only : i_def, i_um, r_def, r_um, r_bl
   use fs_continuity_mod,         only : W3, Wtheta
   use kernel_mod,                only : kernel_type
@@ -40,7 +41,7 @@ module bl_imp2_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_imp2_kernel_type
     private
-    type(arg_type) :: meta_args(56) = (/                                         &
+    type(arg_type) :: meta_args(57) = (/                                         &
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                &! outer
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                &! loop
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! wetrho_in_wth
@@ -67,6 +68,7 @@ module bl_imp2_kernel_mod
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! ccw
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! rh_crit_wth
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! dsldzm
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! mix_len_bm
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! wvar
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! gradrinr
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! tau_dec_bm
@@ -138,6 +140,7 @@ contains
   !> @param[in,out] ccw                  Convective cloud water (kg/kg) (can be ice or liquid)
   !> @param[in]     rh_crit_wth          Critical relative humidity
   !> @param[in]     dsldzm               Liquid potential temperature gradient in wth
+  !> @param[in]     mix_len_bm           Turb length-scale for bimodal in wth
   !> @param[in]     wvar                 Vertical velocity variance in wth
   !> @param[in]     gradrinr             Gradient Richardson number in wth
   !> @param[in]     tau_dec_bm           Decorrelation time scale in wth
@@ -222,6 +225,7 @@ contains
                           ccw,                                &
                           rh_crit_wth,                        &
                           dsldzm,                             &
+                          mix_len_bm,                         &
                           wvar,                               &
                           gradrinr,                           &
                           tau_dec_bm,                         &
@@ -330,7 +334,8 @@ contains
                                                          bq_bl, bt_bl,         &
                                                          dtrdz_tq_bl,          &
                                                          dsldzm,               &
-                                                         wvar, m_ci,           &
+                                                         mix_len_bm,           &
+                                                         wvar, m_ci,            &
                                                          gradrinr,             &
                                                          tau_dec_bm,           &
                                                          tau_hom_bm,           &
@@ -369,9 +374,16 @@ contains
          qcl_earliest, qcf_earliest, cf_earliest, cfl_earliest,              &
          cff_earliest, qt_force, tl_force, t_inc_pc2, q_inc_pc2, qcl_inc_pc2,&
          bcf_inc_pc2, cfl_inc_pc2, sskew, svar_turb, svar_bm, qcf_total,     &
-         ri_bm, tgrad_in, tau_dec_in, tau_hom_in, tau_mph_in, wvar_in
+         ri_bm, tgrad_in, mix_len_in, tau_dec_in, tau_hom_in, tau_mph_in,    &
+         wvar_in
     real(r_bl), dimension(seg_len,1,nlayers) ::                              &
          r_rho_levels, rho_wet_tq
+
+    ! Extra bimodal scheme diagnostics not yet implemented in LFRic
+    real(r_um), dimension(1,1,1,1) :: entzone,                               &
+                                      sl_modes, qw_modes, rh_modes, sd_modes
+    ! Switch set to false to indicate not to calculate the above
+    logical, parameter :: l_calc_diag = .FALSE.
 
     ! profile field on boundary layer levels
     real(r_bl), dimension(seg_len,1,bl_levels) :: fqw, ftl, rhokh,           &
@@ -959,13 +971,27 @@ contains
             zhsc(i,1) = zhsc_2d(map_2d(1,i))
             bl_type_7(i,1) = bl_type_ind(map_bl(1,i)+6)
             do k = 1, nlayers
-              tgrad_in(i,1,k)    = dsldzm(map_wth(1,i) + k)
               tau_dec_in(i,1,k)  = tau_dec_bm(map_wth(1,i) + k)
               tau_hom_in(i,1,k)  = tau_hom_bm(map_wth(1,i) + k)
               tau_mph_in(i,1,k)  = tau_mph_bm(map_wth(1,i) + k)
               wvar_in(i,1,k)     = wvar(map_wth(1,i) + k )
             end do
           end do
+          if (i_bm_ez_opt == i_bm_ez_opt_entpar) then
+            ! Length-scale used for entraining parcel mode construction method
+            do i = 1, seg_len
+              do k = 1, nlayers
+                mix_len_in(i,1,k)  = mix_len_bm(map_wth(1,i) + k)
+              end do
+            end do
+          else
+            ! SL-gradient used for stable-layer mode construction method
+            do i = 1, seg_len
+              do k = 1, nlayers
+                tgrad_in(i,1,k)    = dsldzm(map_wth(1,i) + k)
+              end do
+            end do
+          end if
 
           ! --------------------------------------------------------------------
           ! Section BL.4v Call bimodal cloud scheme to convert Tl and qT to T, q
@@ -1005,11 +1031,13 @@ contains
 
           call bm_ctl( p_theta_levels(:,:,1:), tgrad_in, wvar_in,              &
                        tau_dec_in, tau_hom_in, tau_mph_in, z_theta,            &
-                       ri_bm, zh, zhsc, dzh, bl_type_7,                        &
+                       ri_bm, mix_len_in, zh, zhsc, dzh, bl_type_7,            &
                        nlayers, l_mr_physics, t_latest, cf_latest,             &
                        q_latest, qcf_total, qcl_latest,                        &
                        cfl_latest,cff_latest,                                  &
-                       sskew, svar_turb, svar_bm,error_code)
+                       sskew, svar_turb, svar_bm, entzone,                     &
+                       sl_modes, qw_modes, rh_modes, sd_modes,                 &
+                       l_calc_diag, error_code )
 
           do k = 1, nlayers
             do i = 1, seg_len
