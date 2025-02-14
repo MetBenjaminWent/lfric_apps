@@ -35,7 +35,7 @@ private
 ! Contains the metadata needed by the PSy layer.
 type, public, extends(kernel_type) :: sw_kernel_type
   private
-  type(arg_type) :: meta_args(90) = (/ &
+  type(arg_type) :: meta_args(97) = (/ &
     arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, Wtheta),                    & ! sw_heating_rate_rts
     arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! sw_down_surf_rts
     arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! sw_direct_surf_rts
@@ -68,6 +68,13 @@ type, public, extends(kernel_type) :: sw_kernel_type
     arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! h2
     arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! he
     arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! hcn
+    arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! cs
+    arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! k
+    arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! li
+    arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! na
+    arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! rb
+    arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! tio
+    arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! vo
     arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! mcl
     arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! mcf
     arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    & ! n_ice
@@ -174,6 +181,13 @@ contains
 !> @param[in]     h2                        Hydrogen
 !> @param[in]     he                        Helium
 !> @param[in]     hcn                       Hydrogen cyanide
+!> @param[in]     cs                        Cesium
+!> @param[in]     potassium                 Potassium
+!> @param[in]     li                        Lithium
+!> @param[in]     na                        Sodium
+!> @param[in]     rb                        Rubidium
+!> @param[in]     tio                       Titanium oxide
+!> @param[in]     vo                        Vanadium oxide
 !> @param[in]     mcl                       Cloud liquid field
 !> @param[in]     mcf                       Cloud ice field
 !> @param[in]     n_ice                     Ice number concentration
@@ -269,6 +283,7 @@ subroutine sw_code(nlayers, n_profile, &
     cos_zenith_angle_rts, lit_fraction_rts, &
     stellar_irradiance_rts, orographic_correction_rts, &
     h2o, co2, o3, n2o, co, ch4, o2, so2, nh3, n2, h2, he, hcn, &
+    cs, potassium, li, na, rb, tio, vo, &
     mcl, mcf, n_ice, &
     conv_liquid_mmr, conv_frozen_mmr, &
     radiative_cloud_fraction, radiative_conv_fraction, &
@@ -328,18 +343,25 @@ subroutine sw_code(nlayers, n_profile, &
     ch4_mix_ratio_now, ch4_well_mixed, &
     co_mix_ratio_now, co_well_mixed, &
     co2_mix_ratio_now, co2_well_mixed, &
+    cs_mix_ratio_now, cs_well_mixed, &
     h2_mix_ratio_now, h2_well_mixed, &
     h2o_mix_ratio_now, h2o_well_mixed, &
     hcfc22_mix_ratio_now, &
     hcn_mix_ratio_now, hcn_well_mixed, &
     he_mix_ratio_now, he_well_mixed, &
     hfc134a_mix_ratio_now, &
+    k_mix_ratio_now, k_well_mixed, &
+    li_mix_ratio_now, li_well_mixed, &
     n2_mix_ratio_now, n2_well_mixed, &
     n2o_mix_ratio_now, n2o_well_mixed, &
+    na_mix_ratio_now, na_well_mixed, &
     nh3_mix_ratio_now, nh3_well_mixed, &
     o2_mix_ratio_now, o2_well_mixed, &
     o3_mix_ratio_now, o3_well_mixed, &
-    so2_mix_ratio_now, so2_well_mixed
+    rb_mix_ratio_now, rb_well_mixed, &
+    so2_mix_ratio_now, so2_well_mixed, &
+    tio_mix_ratio_now, tio_well_mixed, &
+    vo_mix_ratio_now, vo_well_mixed
 
   implicit none
 
@@ -383,7 +405,8 @@ subroutine sw_code(nlayers, n_profile, &
     liquid_fraction, frozen_fraction, &
     conv_liquid_fraction, conv_frozen_fraction, &
     sigma_mc, cloud_drop_no_conc, &
-    h2o, co2, o3, n2o, co, ch4, o2, so2, nh3, n2, h2, he, hcn
+    h2o, co2, o3, n2o, co, ch4, o2, so2, nh3, n2, h2, he, hcn, &
+    cs, potassium, li, na, rb, tio, vo
 
   integer(i_def), dimension(undf_2d), intent(in) :: rand_seed, n_cloud_layer
 
@@ -683,7 +706,7 @@ subroutine sw_code(nlayers, n_profile, &
     l_aerosol_mode = .false.
   end if
 
-  do k=0, nlayers
+  do k = 0, nlayers
     profile_list = pack( [(l, l=1, n_profile)], &
                          lit_fraction_rts(twod_1:twod_last) > 0.0_r_def &
                          .and. n_cloud_layer(twod_1:twod_last) == k )
@@ -703,47 +726,68 @@ subroutine sw_code(nlayers, n_profile, &
         ch4_1d                 = ch4(wth_1:wth_last),                        &
         co_1d                  = co(wth_1:wth_last),                         &
         co2_1d                 = co2(wth_1:wth_last),                        &
+        cs_1d                  = cs(wth_1:wth_last),                         &
         h2_1d                  = h2(wth_1:wth_last),                         &
         h2o_1d                 = h2o(wth_1:wth_last),                        &
         hcn_1d                 = hcn(wth_1:wth_last),                        &
         he_1d                  = he(wth_1:wth_last),                         &
+        k_1d                   = potassium(wth_1:wth_last),                  &
+        li_1d                  = li(wth_1:wth_last),                         &
         n2_1d                  = n2(wth_1:wth_last),                         &
         n2o_1d                 = n2o(wth_1:wth_last),                        &
+        na_1d                  = na(wth_1:wth_last),                         &
         nh3_1d                 = nh3(wth_1:wth_last),                        &
         o2_1d                  = o2(wth_1:wth_last),                         &
         o3_1d                  = o3(wth_1:wth_last),                         &
+        rb_1d                  = rb(wth_1:wth_last),                         &
         so2_1d                 = so2(wth_1:wth_last),                        &
+        tio_1d                 = tio(wth_1:wth_last),                        &
+        vo_1d                  = vo(wth_1:wth_last),                         &
         cfc11_mix_ratio        = cfc11_mix_ratio_now,                        &
         cfc113_mix_ratio       = cfc113_mix_ratio_now,                       &
         cfc12_mix_ratio        = cfc12_mix_ratio_now,                        &
         ch4_mix_ratio          = ch4_mix_ratio_now,                          &
         co_mix_ratio           = co_mix_ratio_now,                           &
         co2_mix_ratio          = co2_mix_ratio_now,                          &
+        cs_mix_ratio           = cs_mix_ratio_now,                           &
         h2_mix_ratio           = h2_mix_ratio_now,                           &
         h2o_mix_ratio          = h2o_mix_ratio_now,                          &
         hcfc22_mix_ratio       = hcfc22_mix_ratio_now,                       &
         hcn_mix_ratio          = hcn_mix_ratio_now,                          &
         he_mix_ratio           = he_mix_ratio_now,                           &
         hfc134a_mix_ratio      = hfc134a_mix_ratio_now,                      &
+        k_mix_ratio            = k_mix_ratio_now,                            &
+        li_mix_ratio           = li_mix_ratio_now,                           &
         n2_mix_ratio           = n2_mix_ratio_now,                           &
         n2o_mix_ratio          = n2o_mix_ratio_now,                          &
+        na_mix_ratio           = na_mix_ratio_now,                           &
         nh3_mix_ratio          = nh3_mix_ratio_now,                          &
         o2_mix_ratio           = o2_mix_ratio_now,                           &
         o3_mix_ratio           = o3_mix_ratio_now,                           &
+        rb_mix_ratio           = rb_mix_ratio_now,                           &
         so2_mix_ratio          = so2_mix_ratio_now,                          &
+        tio_mix_ratio          = tio_mix_ratio_now,                          &
+        vo_mix_ratio           = vo_mix_ratio_now,                           &
         l_ch4_well_mixed       = ch4_well_mixed,                             &
         l_co_well_mixed        = co_well_mixed,                              &
         l_co2_well_mixed       = co2_well_mixed,                             &
+        l_cs_well_mixed        = cs_well_mixed,                              &
         l_h2_well_mixed        = h2_well_mixed,                              &
         l_h2o_well_mixed       = h2o_well_mixed,                             &
         l_hcn_well_mixed       = hcn_well_mixed,                             &
         l_he_well_mixed        = he_well_mixed,                              &
+        l_k_well_mixed         = k_well_mixed,                               &
+        l_li_well_mixed        = li_well_mixed,                              &
         l_n2_well_mixed        = n2_well_mixed,                              &
         l_n2o_well_mixed       = n2o_well_mixed,                             &
+        l_na_well_mixed        = na_well_mixed,                              &
         l_nh3_well_mixed       = nh3_well_mixed,                             &
         l_o2_well_mixed        = o2_well_mixed,                              &
         l_o3_well_mixed        = o3_well_mixed,                              &
+        l_rb_well_mixed        = rb_well_mixed,                              &
         l_so2_well_mixed       = so2_well_mixed,                             &
+        l_tio_well_mixed       = tio_well_mixed,                             &
+        l_vo_well_mixed        = vo_well_mixed,                              &
         cos_zenith_angle       = cos_zenith_angle_rts(twod_1:twod_last),     &
         solar_irrad            = stellar_irradiance_rts(twod_1:twod_last),   &
         l_orog                 = l_orog,                                     &

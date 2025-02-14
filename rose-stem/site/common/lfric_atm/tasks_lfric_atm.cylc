@@ -516,6 +516,19 @@
         "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR",
     }) %}
 
+{% elif task_ns.conf_name == "hd209458b-C24" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["l66_9000km", "hd209458b"],
+        "resolution": "C24",
+        "DT": 30,
+        "tsteps": 120,
+        "crun": 2,
+        "crun_compare": false,
+        "mpi_parts": 6,
+        "log_level": "info",
+    }) %}
+
 {% elif task_ns.conf_name == "camembert_case3_gj1214b-C12" %}
 
     {% do task_dict.update({
@@ -866,6 +879,16 @@
         "wallclock": 5,
         "kgo_checks": ["checksum"],
         "plot_str": "plot_scm.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR",
+    }) %}
+
+{% elif task_ns.conf_name == "scm_hd209458b-BiP2x2-50000x50000" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["l66_9000km", "hd209458b", "scm_hd209458b"],
+        "resolution": "BiP2x2-50000x50000",
+        "DT": 30,
+        "tsteps": 120,
+        "wallclock": 5,
     }) %}
 
 {% elif task_ns.conf_name == "canned" %}

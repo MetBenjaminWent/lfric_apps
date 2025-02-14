@@ -17,6 +17,7 @@ fi
 # from `work` to `results`
 # avoiding cp copy commands, as these are very
 # storage & wall clock intensive
+ln -sf $TASK_OUTPUT_DIR/results/lfric_flexchem_diagnostics.nc $CYLC_TASK_WORK_DIR/lfric_flexchem_diagnostics.nc
 ln -sf $TASK_OUTPUT_DIR/results/lfric_diag.nc $CYLC_TASK_WORK_DIR/lfric_diag.nc
 ln -sf $TASK_OUTPUT_DIR/results/lfric_ral_diagnostics.nc $CYLC_TASK_WORK_DIR/lfric_ral_diagnostics.nc
 ln -sf $TASK_OUTPUT_DIR/results/lfric_gal_diagnostics.nc $CYLC_TASK_WORK_DIR/lfric_gal_diagnostics.nc

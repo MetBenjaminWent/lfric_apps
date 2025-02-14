@@ -106,18 +106,25 @@ subroutine socrates_init()
     ch4_rad_opt, ch4_rad_opt_off, &
     co_rad_opt, co_rad_opt_off, &
     co2_rad_opt, co2_rad_opt_off, &
+    cs_rad_opt, cs_rad_opt_off, &
     h2_rad_opt, h2_rad_opt_off, &
     h2o_rad_opt, h2o_rad_opt_off, &
     hcfc22_rad_opt, hcfc22_rad_opt_off, &
     hcn_rad_opt, hcn_rad_opt_off, &
     he_rad_opt, he_rad_opt_off, &
     hfc134a_rad_opt, hfc134a_rad_opt_off, &
+    k_rad_opt, k_rad_opt_off, &
+    li_rad_opt, li_rad_opt_off, &
     n2_rad_opt, n2_rad_opt_off, &
     n2o_rad_opt, n2o_rad_opt_off, &
+    na_rad_opt, na_rad_opt_off, &
     nh3_rad_opt, nh3_rad_opt_off, &
     o2_rad_opt, o2_rad_opt_off, &
     o3_rad_opt, o3_rad_opt_off, &
-    so2_rad_opt, so2_rad_opt_off
+    rb_rad_opt, rb_rad_opt_off, &
+    so2_rad_opt, so2_rad_opt_off, &
+    tio_rad_opt, tio_rad_opt_off, &
+    vo_rad_opt, vo_rad_opt_off
   use rad_ccf, only: set_socrates_constants
   use socrates_runes, only: &
     ip_scatter_full, ip_scatter_none, ip_scatter_approx, ip_scatter_hybrid, &
@@ -145,36 +152,50 @@ subroutine socrates_init()
   logical(l_def) :: l_ch4
   logical(l_def) :: l_co
   logical(l_def) :: l_co2
+  logical(l_def) :: l_cs
   logical(l_def) :: l_h2
   logical(l_def) :: l_h2o
   logical(l_def) :: l_hcfc22
   logical(l_def) :: l_hcn
   logical(l_def) :: l_he
   logical(l_def) :: l_hfc134a
+  logical(l_def) :: l_k
+  logical(l_def) :: l_li
   logical(l_def) :: l_n2
   logical(l_def) :: l_n2o
+  logical(l_def) :: l_na
   logical(l_def) :: l_nh3
   logical(l_def) :: l_o2
   logical(l_def) :: l_o3
+  logical(l_def) :: l_rb
   logical(l_def) :: l_so2
+  logical(l_def) :: l_tio
+  logical(l_def) :: l_vo
   l_cfc11 = (cfc11_rad_opt /= cfc11_rad_opt_off)
   l_cfc113 = (cfc113_rad_opt /= cfc113_rad_opt_off)
   l_cfc12 = (cfc12_rad_opt /= cfc12_rad_opt_off)
   l_ch4 = (ch4_rad_opt /= ch4_rad_opt_off)
   l_co = (co_rad_opt /= co_rad_opt_off)
   l_co2 = (co2_rad_opt /= co2_rad_opt_off)
+  l_cs = (cs_rad_opt /= cs_rad_opt_off)
   l_h2 = (h2_rad_opt /= h2_rad_opt_off)
   l_h2o = (h2o_rad_opt /= h2o_rad_opt_off)
   l_hcfc22 = (hcfc22_rad_opt /= hcfc22_rad_opt_off)
   l_hcn = (hcn_rad_opt /= hcn_rad_opt_off)
   l_he = (he_rad_opt /= he_rad_opt_off)
   l_hfc134a = (hfc134a_rad_opt /= hfc134a_rad_opt_off)
+  l_k = (k_rad_opt /= k_rad_opt_off)
+  l_li = (li_rad_opt /= li_rad_opt_off)
   l_n2 = (n2_rad_opt /= n2_rad_opt_off)
   l_n2o = (n2o_rad_opt /= n2o_rad_opt_off)
+  l_na = (na_rad_opt /= na_rad_opt_off)
   l_nh3 = (nh3_rad_opt /= nh3_rad_opt_off)
   l_o2 = (o2_rad_opt /= o2_rad_opt_off)
   l_o3 = (o3_rad_opt /= o3_rad_opt_off)
+  l_rb = (rb_rad_opt /= rb_rad_opt_off)
   l_so2 = (so2_rad_opt /= so2_rad_opt_off)
+  l_tio = (tio_rad_opt /= tio_rad_opt_off)
+  l_vo = (vo_rad_opt /= vo_rad_opt_off)
 
   ! Set constants in the socrates modules
   call set_socrates_constants()
@@ -192,18 +213,25 @@ subroutine socrates_init()
       l_ch4            = l_ch4,                  &
       l_co             = l_co,                   &
       l_co2            = l_co2,                  &
+      l_cs             = l_cs,                   &
       l_h2             = l_h2,                   &
       l_h2o            = l_h2o,                  &
       l_hcfc22         = l_hcfc22,               &
       l_hcn            = l_hcn,                  &
       l_he             = l_he,                   &
       l_hfc134a        = l_hfc134a,              &
+      l_k              = l_k,                    &
+      l_li             = l_li,                   &
       l_n2             = l_n2,                   &
       l_n2o            = l_n2o,                  &
+      l_na             = l_na,                   &
       l_nh3            = l_nh3,                  &
       l_o2             = l_o2,                   &
       l_o3             = l_o3,                   &
-      l_so2            = l_so2 )
+      l_rb             = l_rb,                   &
+      l_so2            = l_so2,                  &
+      l_tio            = l_tio,                  &
+      l_vo             = l_vo                    )
     call get_spectrum(                           &
       spectrum_name    = 'swinc',                &
       n_band           = n_swinc_band,           &
@@ -221,18 +249,25 @@ subroutine socrates_init()
       l_ch4            = l_ch4,                  &
       l_co             = l_co,                   &
       l_co2            = l_co2,                  &
+      l_cs             = l_cs,                   &
       l_h2             = l_h2,                   &
       l_h2o            = l_h2o,                  &
       l_hcfc22         = l_hcfc22,               &
       l_hcn            = l_hcn,                  &
       l_he             = l_he,                   &
       l_hfc134a        = l_hfc134a,              &
+      l_k              = l_k,                    &
+      l_li             = l_li,                   &
       l_n2             = l_n2,                   &
       l_n2o            = l_n2o,                  &
+      l_na             = l_na,                   &
       l_nh3            = l_nh3,                  &
       l_o2             = l_o2,                   &
       l_o3             = l_o3,                   &
-      l_so2            = l_so2 )
+      l_rb             = l_rb,                   &
+      l_so2            = l_so2,                  &
+      l_tio            = l_tio,                  &
+      l_vo             = l_vo                    )
     call get_spectrum(                           &
       spectrum_name    = 'lwinc',                &
       n_band           = n_lwinc_band,           &
@@ -252,18 +287,25 @@ subroutine socrates_init()
     l_ch4            = l_ch4,               &
     l_co             = l_co,                &
     l_co2            = l_co2,               &
+    l_cs             = l_cs,                &
     l_h2             = l_h2,                &
     l_h2o            = l_h2o,               &
     l_hcfc22         = l_hcfc22,            &
     l_hcn            = l_hcn,               &
     l_he             = l_he,                &
     l_hfc134a        = l_hfc134a,           &
+    l_k              = l_k,                 &
+    l_li             = l_li,                &
     l_n2             = l_n2,                &
     l_n2o            = l_n2o,               &
+    l_na             = l_na,                &
     l_nh3            = l_nh3,               &
     l_o2             = l_o2,                &
     l_o3             = l_o3,                &
-    l_so2            = l_so2 )
+    l_rb             = l_rb,                &
+    l_so2            = l_so2,               &
+    l_tio            = l_tio,               &
+    l_vo             = l_vo                 )
   call get_spectrum(                        &
     spectrum_name    = 'sw',                &
     n_band           = n_sw_band,           &
@@ -294,18 +336,25 @@ subroutine socrates_init()
     l_ch4            = l_ch4,               &
     l_co             = l_co,                &
     l_co2            = l_co2,               &
+    l_cs             = l_cs,                &
     l_h2             = l_h2,                &
     l_h2o            = l_h2o,               &
     l_hcfc22         = l_hcfc22,            &
     l_hcn            = l_hcn,               &
     l_he             = l_he,                &
     l_hfc134a        = l_hfc134a,           &
+    l_k              = l_k,                 &
+    l_li             = l_li,                &
     l_n2             = l_n2,                &
     l_n2o            = l_n2o,               &
+    l_na             = l_na,                &
     l_nh3            = l_nh3,               &
     l_o2             = l_o2,                &
     l_o3             = l_o3,                &
-    l_so2            = l_so2 )
+    l_rb             = l_rb,                &
+    l_so2            = l_so2,               &
+    l_tio            = l_tio,               &
+    l_vo             = l_vo                 )
   call get_spectrum(                        &
     spectrum_name    = 'lw',                &
     n_band           = n_lw_band,           &

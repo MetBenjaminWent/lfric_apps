@@ -1,5 +1,8 @@
+import re
 import sys
+
 from metomi.rose.upgrade import MacroUpgrade
+
 
 class UpgradeError(Exception):
     """Exception created when an upgrade fails."""
@@ -13,16 +16,30 @@ class UpgradeError(Exception):
 
     __str__ = __repr__
 
+
 """
 Copy this template and complete to add your macro
-
 class vnXX_txxx(MacroUpgrade):
     # Upgrade macro for <TICKET> by <Author>
-
     BEFORE_TAG = "vnX.X"
     AFTER_TAG = "vnX.X_txxx"
-
     def upgrade(self, config, meta_config=None):
         # Add settings
         return config, self.reports
 """
+
+
+class vn20_t429(MacroUpgrade):
+    """Upgrade macro for ticket #429 by Denis Sergeev."""
+
+    BEFORE_TAG = "vn2.0"
+    AFTER_TAG = "vn2.0_t429"
+
+    def upgrade(self, config, meta_config=None):
+        # Commands From: rose-meta/um-chemistry
+        # Add the Burrows & Sharp (1999) chemistry scheme option
+        # (enabled if chem_scheme='flexchem')
+        nml = "namelist:chemistry"
+        self.add_setting(config, [nml, "flexchem_opt"], "'bs1999'")
+
+        return config, self.reports

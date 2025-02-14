@@ -137,6 +137,13 @@ contains
     type( field_type ), pointer :: n2 => null()
     type( field_type ), pointer :: o2 => null()
     type( field_type ), pointer :: h2o => null()
+    type( field_type ), pointer :: cs => null()
+    type( field_type ), pointer :: k => null()
+    type( field_type ), pointer :: li => null()
+    type( field_type ), pointer :: na => null()
+    type( field_type ), pointer :: rb => null()
+    type( field_type ), pointer :: tio => null()
+    type( field_type ), pointer :: vo => null()
 
     call chemistry_fields%get_field('o3p',o3p)
     call chemistry_fields%get_field('o1d',o1d)
@@ -220,7 +227,6 @@ contains
     call chemistry_fields%get_field('so3',so3)
     call chemistry_fields%get_field('passive_o3',passive_o3)
     call chemistry_fields%get_field('age_of_air',age_of_air)
-    call chemistry_fields%get_field('h2o2_limit', h2o2_limit)
     call chemistry_fields%get_field('dms', dms)
     call chemistry_fields%get_field('so2', so2)
     call chemistry_fields%get_field('h2so4', h2so4)
@@ -233,6 +239,19 @@ contains
     call chemistry_fields%get_field('n2', n2)
     call chemistry_fields%get_field('o2', o2)
     call chemistry_fields%get_field('h2o', h2o)
+    call chemistry_fields%get_field('cs', cs)
+    call chemistry_fields%get_field('k', k)
+    call chemistry_fields%get_field('li', li)
+    call chemistry_fields%get_field('na', na)
+    call chemistry_fields%get_field('rb', rb)
+    call chemistry_fields%get_field('tio', tio)
+    call chemistry_fields%get_field('vo', vo)
+    if ( glomap_mode == glomap_mode_ukca           .or.  &
+         glomap_mode == glomap_mode_dust_and_clim ) then
+      ! Upper limit for H2O2 (ancillary field) only active for glomap_mode and
+      !  checkpointed for offline oxidants, never advected
+      call chemistry_fields%get_field('h2o2_limit', h2o2_limit)
+    end if
 
     ! Flexible/idealised chemistry scheme
     ! (These gases are also can be used as 3D fields in radiation.)
@@ -249,6 +268,13 @@ contains
                     setval_c(nh3, 0.0_r_def), &
                     setval_c(o2,  0.0_r_def), &
                     setval_c(o3,  0.0_r_def), &
+                    setval_c(cs,  0.0_r_def), &
+                    setval_c(k,   0.0_r_def), &
+                    setval_c(li,  0.0_r_def), &
+                    setval_c(na,  0.0_r_def), &
+                    setval_c(rb,  0.0_r_def), &
+                    setval_c(tio, 0.0_r_def), &
+                    setval_c(vo,  0.0_r_def), &
                     setval_c(so2, 0.0_r_def) )
     end if
 

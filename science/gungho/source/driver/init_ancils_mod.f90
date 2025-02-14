@@ -69,16 +69,23 @@ module init_ancils_mod
                                              chem_scheme_offline_ox
   use radiative_gases_config_mod,     only : &
     ch4_rad_opt, ch4_rad_opt_ancil, &
+    cs_rad_opt, cs_rad_opt_ancil, &
     co_rad_opt, co_rad_opt_ancil, &
     co2_rad_opt, co2_rad_opt_ancil, &
     h2_rad_opt, h2_rad_opt_ancil, &
     h2o_rad_opt, h2o_rad_opt_ancil, &
     hcn_rad_opt, hcn_rad_opt_ancil, &
     he_rad_opt, he_rad_opt_ancil, &
+    k_rad_opt, k_rad_opt_ancil, &
+    li_rad_opt, li_rad_opt_ancil, &
     n2_rad_opt, n2_rad_opt_ancil, &
+    na_rad_opt, na_rad_opt_ancil, &
     nh3_rad_opt, nh3_rad_opt_ancil, &
     o2_rad_opt, o2_rad_opt_ancil, &
-    so2_rad_opt, so2_rad_opt_ancil
+    rb_rad_opt, rb_rad_opt_ancil, &
+    so2_rad_opt, so2_rad_opt_ancil, &
+    tio_rad_opt, tio_rad_opt_ancil, &
+    vo_rad_opt, vo_rad_opt_ancil
 
   implicit none
 
@@ -879,7 +886,6 @@ contains
 
     ! Here ancil fields are set up with a call to setup_ancil_field.
     if ( ancil_option == ancil_option_idealised ) then
-      call log_event("setting up idealised ancils - start", LOG_LEVEL_INFO)
       if (ch4_rad_opt == ch4_rad_opt_ancil) then
         call setup_ancil_field("ch4", depository, ancil_fields, &
           mesh, twod_mesh)
@@ -924,7 +930,34 @@ contains
         call setup_ancil_field("so2", depository, ancil_fields, &
           mesh, twod_mesh)
       endif
-      call log_event("setting up idealised ancils - done", LOG_LEVEL_INFO)
+      if (cs_rad_opt == cs_rad_opt_ancil) then
+        call setup_ancil_field("cs", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (k_rad_opt == k_rad_opt_ancil) then
+        call setup_ancil_field("k", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (li_rad_opt == li_rad_opt_ancil) then
+        call setup_ancil_field("li", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (na_rad_opt == na_rad_opt_ancil) then
+        call setup_ancil_field("na", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (rb_rad_opt == rb_rad_opt_ancil) then
+        call setup_ancil_field("rb", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (tio_rad_opt == tio_rad_opt_ancil) then
+        call setup_ancil_field("tio", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
+      if (vo_rad_opt == vo_rad_opt_ancil) then
+        call setup_ancil_field("vo", depository, ancil_fields, &
+          mesh, twod_mesh)
+      endif
     endif
 
     ! Now the field collection is set up, the fields will be initialised in

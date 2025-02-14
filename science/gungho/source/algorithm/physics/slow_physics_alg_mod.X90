@@ -13,6 +13,8 @@ module slow_physics_alg_mod
                                  only: pc2_force_response
   use model_clock_mod,           only: model_clock_type
   use timestepping_config_mod,   only: outer_iterations
+  use chemistry_config_mod,      only: chem_scheme, chem_scheme_flexchem, &
+                                       flexchem_opt, flexchem_opt_none
   use cloud_config_mod,          only: scheme, scheme_pc2, scheme_bimodal, &
                                        pc2ini, pc2ini_bimodal,cld_fsd_hill
   use convection_config_mod,     only: cv_scheme, cv_scheme_lambert_lewis, &
@@ -137,6 +139,7 @@ module slow_physics_alg_mod
   use um_sizes_init_mod,         only: um_sizes_init
   use easyaerosol_alg_mod,       only: easyaerosol_alg
   use murk_alg_mod,              only: murk_alg
+  use flexchem_alg_mod,          only: flexchem_alg
 
 #endif
   use intermesh_mappings_alg_mod, &
@@ -586,6 +589,11 @@ contains
       ! diagnostics and does not affect model evolution.
 
     end if ! call to electric scheme
+
+    if (chem_scheme == chem_scheme_flexchem .and. &
+        flexchem_opt /= flexchem_opt_none) then
+      call flexchem_alg(pressure_in_wth, temperature_in_wth, chemistry_fields)
+    end if ! call to flexchem
 
     !--------------------------------------------------------------------
     ! Socrates radiation scheme

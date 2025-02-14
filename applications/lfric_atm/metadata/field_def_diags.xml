@@ -150,6 +150,19 @@
   <field id="chemistry__dmso" name="dmso" long_name="mass_fraction_of_dimethyl_sulfoxide_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
   <field id="chemistry__monoterpene" name="monoterpene" long_name="mass_fraction_of_monoterpene_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
   <field id="chemistry__secondary_organic" name="secondary_organic" long_name="mass_fraction_of_secondary_organic_aerosols_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="chemistry__co2" name="co2" long_name="mass_fraction_of_carbon_dioxide_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="chemistry__h2o" name="h2o" long_name="mass_fraction_of_water_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="chemistry__hcn" name="hcn" long_name="mass_fraction_of_hydrogen_cyanide_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="chemistry__he" name="he" long_name="mass_fraction_of_helium_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="chemistry__n2" name="n2" long_name="mass_fraction_of_nitrogen_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="chemistry__o2" name="o2" long_name="mass_fraction_of_oxygen_in_air" unit="kg kg-1" grid_ref="full_level_face_grid" />
+  <field id="chemistry__cs" name="cs" long_name="mass_fraction_of_cesium_in_air" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />
+  <field id="chemistry__k" name="k" long_name="mass_fraction_of_potassium_in_air" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />
+  <field id="chemistry__li" name="li" long_name="mass_fraction_of_lithium_in_air" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />
+  <field id="chemistry__na" name="na" long_name="mass_fraction_of_sodium_in_air" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />
+  <field id="chemistry__rb" name="rb" long_name="mass_fraction_of_rubidium_in_air" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />
+  <field id="chemistry__tio" name="tio" long_name="mass_fraction_of_titanium_oxide_in_air" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />
+  <field id="chemistry__vo" name="vo" long_name="mass_fraction_of_vanadium_oxide_in_air" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />  
   <!-- aerosol diagnostics -->
   <field id="aerosol__dust_flux" name="dust_flux" long_name="dust_emissions_flux_in_size_bins" unit="kg m-2 s-1" domain_ref="face" axis_ref="dust_divisions" />
   <field id="aerosol__n_nuc_sol" name="n_nuc_sol" long_name="nucleation_soluble_mode_number" unit="1" grid_ref="full_level_face_grid" />

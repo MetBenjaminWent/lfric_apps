@@ -84,16 +84,23 @@ module create_physics_prognostics_mod
     ch4_rad_opt, ch4_rad_opt_ancil, ch4_rad_opt_prognostic, &
     co_rad_opt, co_rad_opt_ancil, co_rad_opt_prognostic, &
     co2_rad_opt, co2_rad_opt_ancil, co2_rad_opt_prognostic, &
+    cs_rad_opt, cs_rad_opt_ancil, cs_rad_opt_prognostic, &
     h2_rad_opt, h2_rad_opt_ancil, h2_rad_opt_prognostic, &
     h2o_rad_opt, h2o_rad_opt_ancil, h2o_rad_opt_prognostic, &
     hcn_rad_opt, hcn_rad_opt_ancil, hcn_rad_opt_prognostic, &
     he_rad_opt, he_rad_opt_ancil, he_rad_opt_prognostic, &
+    k_rad_opt, k_rad_opt_ancil, k_rad_opt_prognostic, &
+    li_rad_opt, li_rad_opt_ancil, li_rad_opt_prognostic, &
     n2_rad_opt, n2_rad_opt_ancil, n2_rad_opt_prognostic, &
     n2o_rad_opt, n2o_rad_opt_ancil, n2o_rad_opt_prognostic, &
+    na_rad_opt, na_rad_opt_ancil, na_rad_opt_prognostic, &
     nh3_rad_opt, nh3_rad_opt_ancil, nh3_rad_opt_prognostic, &
     o2_rad_opt, o2_rad_opt_ancil, o2_rad_opt_prognostic, &
     o3_rad_opt, o3_rad_opt_prognostic, &
-    so2_rad_opt, so2_rad_opt_ancil, so2_rad_opt_prognostic
+    rb_rad_opt, rb_rad_opt_ancil, rb_rad_opt_prognostic, &
+    so2_rad_opt, so2_rad_opt_ancil, so2_rad_opt_prognostic, &
+    tio_rad_opt, tio_rad_opt_ancil, tio_rad_opt_prognostic, &
+    vo_rad_opt, vo_rad_opt_ancil, vo_rad_opt_prognostic
   use formulation_config_mod,         only : moisture_formulation,    &
                                              moisture_formulation_dry
 
@@ -1274,6 +1281,48 @@ contains
     call processor%apply(make_spec('o2', main%chemistry, &
       empty=(.not. is_rad), &
       adv_coll=if_adv((o2_rad_opt == o2_rad_opt_prognostic), adv%last_con), &
+      ckp=is_rad))
+    is_rad = ( (cs_rad_opt == cs_rad_opt_ancil) .or. &
+               (cs_rad_opt == cs_rad_opt_prognostic) )
+    call processor%apply(make_spec('cs', main%chemistry, &
+      empty=(.not. is_rad), &
+      adv_coll=if_adv((cs_rad_opt == cs_rad_opt_prognostic), adv%last_con), &
+      ckp=is_rad))
+    is_rad = ( (k_rad_opt == k_rad_opt_ancil) .or. &
+               (k_rad_opt == k_rad_opt_prognostic) )
+    call processor%apply(make_spec('k', main%chemistry, &
+      empty=(.not. is_rad), &
+      adv_coll=if_adv((k_rad_opt == k_rad_opt_prognostic), adv%last_con), &
+      ckp=is_rad))
+    is_rad = ( (li_rad_opt == li_rad_opt_ancil) .or. &
+               (li_rad_opt == li_rad_opt_prognostic) )
+    call processor%apply(make_spec('li', main%chemistry, &
+      empty=(.not. is_rad), &
+      adv_coll=if_adv((li_rad_opt == li_rad_opt_prognostic), adv%last_con), &
+      ckp=is_rad))
+    is_rad = ( (na_rad_opt == na_rad_opt_ancil) .or. &
+               (na_rad_opt == na_rad_opt_prognostic) )
+    call processor%apply(make_spec('na', main%chemistry, &
+      empty=(.not. is_rad), &
+      adv_coll=if_adv((na_rad_opt == na_rad_opt_prognostic), adv%last_con), &
+      ckp=is_rad))
+    is_rad = ( (rb_rad_opt == rb_rad_opt_ancil) .or. &
+               (rb_rad_opt == rb_rad_opt_prognostic) )
+    call processor%apply(make_spec('rb', main%chemistry, &
+      empty=(.not. is_rad), &
+      adv_coll=if_adv((rb_rad_opt == rb_rad_opt_prognostic), adv%last_con), &
+      ckp=is_rad))
+    is_rad = ( (tio_rad_opt == tio_rad_opt_ancil) .or. &
+               (tio_rad_opt == tio_rad_opt_prognostic) )
+    call processor%apply(make_spec('tio', main%chemistry, &
+      empty=(.not. is_rad), &
+      adv_coll=if_adv((tio_rad_opt == tio_rad_opt_prognostic), adv%last_con), &
+      ckp=is_rad))
+    is_rad = ( (vo_rad_opt == vo_rad_opt_ancil) .or. &
+               (vo_rad_opt == vo_rad_opt_prognostic) )
+    call processor%apply(make_spec('vo', main%chemistry, &
+      empty=(.not. is_rad), &
+      adv_coll=if_adv((vo_rad_opt == vo_rad_opt_prognostic), adv%last_con), &
       ckp=is_rad))
 
 
