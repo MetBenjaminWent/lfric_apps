@@ -35,6 +35,18 @@
         "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR",
     }) %}
 
+{% elif task_ns.conf_name == "nwp_gal9_mgnoukca-C48_MG" %}
+    {% do task_dict.update({
+        "opt_confs": ["nwp_gal9_mgnoukca"],
+        "resolution": "C48_MG",
+        "DT": 1800,
+        "tsteps": 36,
+        "mpi_parts": 12,
+        "threads": 2,
+        "wallclock": 20,
+        "kgo_checks": ["checksum"],
+    }) %}
+
 {% elif task_ns.conf_name == "nwp_gal9-C192_MG" %}
 
     {% do task_dict.update({
@@ -78,7 +90,6 @@
         "mpi_parts": 3072,
         "wallclock": 20,
     }) %}
-
 
 {% elif task_ns.conf_name == "nwp_gal9-C224_MG" %}
 
@@ -134,6 +145,18 @@
         "mpi_parts": 24,
         "kgo_checks": ["checksum"],
         "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_gal_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
+{% elif task_ns.conf_name == "nwp_gal9_coarse_aero_threaded-C48_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["nwp_gal9_coarse_aero"],
+        "resolution": "C48_MG",
+        "DT": 1800,
+        "tsteps": 36,
+        "mpi_parts": 12,
+        "threads": 2,
+        "kgo_checks": ["checksum"],
     }) %}
 
 {% elif task_ns.conf_name == "nwp_gal9_da-C12" %}

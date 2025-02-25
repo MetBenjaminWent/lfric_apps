@@ -171,10 +171,6 @@
     "lfric_atm_azspice_build": [
         "build_lfric_atm_azspice_gnu_fast-debug-64bit",
     ],
-    "lfric_atm_xc40_perftools":[
-        "lfric_atm_nwp_gal9-C48_MG_xc40_perftools-gnu_fast-debug-64bit",
-        "lfric_atm_nwp_gal9-C48_MG_xc40_gnu_fast-debug-64bit",
-    ],
     }) %}
 
 {# ###################################################################### #}
@@ -267,6 +263,7 @@
         "lfric_atm_clim_gal9_chem-C12_xc40_intel_fast-debug-64bit",
         "lfric_atm_aquaplanet-C12_xc40_intel_fast-debug-64bit",
         "lfric_atm_thai_ben1-C48_MG_xc40_intel_fast-debug-64bit",
+        "lfric_atm_xc40_threaded",
     ],
     "lfric_atm_xc40_weekly": [
         "lfric_atm_nwp_gal9-C224_MG_xc40_intel_production-64bit-rbl32",
@@ -274,7 +271,8 @@
         "lfric_atm_ral_xc40_weekly",
     ],
     "lfric_atm_xc40_threaded": [
-        "lfric_atm_rce_test_threaded-BiP64x64-1500x1500_MG_xc40_intel_fast-debug-64bit",
+        "lfric_atm_nwp_gal9_mgnoukca-C48_MG_xc40_intel_full-debug-64bit",
+        "lfric_atm_nwp_gal9_coarse_aero_threaded-C48_MG_xc40_intel_fast-debug-64bit",
     ],
     "lfric_atm_xc40": [
         "lfric_atm_xc40_developer",
@@ -418,12 +416,17 @@
         "lfric_atm_clim_gal9_chem-C12_ex1a_cce_fast-debug-64bit",
         "lfric_atm_aquaplanet-C12_ex1a_cce_fast-debug-64bit",
         "lfric_atm_thai_ben1-C48_MG_ex1a_cce_fast-debug-64bit",
+        "lfric_atm_ex1a_threaded",
     ],
     "lfric_atm_ex1a_weekly": [
         "lfric_atm_nwp_gal9-C224_MG_ex1a_cce_production-64bit-rbl32",
         "lfric_atm_nwp_gal9_copy-C224_MG_ex1a_cce_full-debug-64bit-rbl32",
         "lfric_atm_clim_gal9-C48_MG_ex1a_cce_production-64bit-rbl32",
         "lfric_atm_ral_ex1a_weekly",
+    ],
+    "lfric_atm_ex1a_threaded": [
+        "lfric_atm_nwp_gal9_mgnoukca-C48_MG_ex1a_cce_fast-debug-64bit",
+        "lfric_atm_nwp_gal9_coarse_aero_threaded-C48_MG_ex1a_cce_fast-debug-64bit",
     ],
     "lfric_atm_ex1a": [
         "lfric_atm_ex1a_developer",
