@@ -50,6 +50,7 @@
         "gravity_wave_limited_spherical_50x50_LAM50x50-2x2_azspice_gnu_fast-debug-64bit",
         "gravity_wave_limited_c24-C24_azspice_gnu_fast-debug-64bit",
         "gravity_wave_limited_c24_rec-C24_azspice_gnu_fast-debug-64bit",
+        "gravity_wave_azspice_unit_tests",
         "gravity_wave_azspice_canned",
     ],
     "gravity_wave_azspice": [
@@ -102,6 +103,7 @@
         "gravity_wave_p1_75x4-BiP75x4-4000x2000_ex1a_gnu_fast-debug-64bit",
         "gravity_wave_limited_spherical_50x50_LAM50x50-2x2_ex1a_gnu_fast-debug-64bit",
         "gravity_wave_limited_c24_rec-C24_ex1a_gnu_fast-debug-64bit",
+        "gravity_wave_unit_tests_ex1a_gnu_64bit",
         "gravity_wave_ex1a_canned",
     ],
     "gravity_wave_ex1a": [

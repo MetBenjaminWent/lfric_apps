@@ -26,6 +26,7 @@
 {# Azspice Groups #}
 {% do site_groups.update({
     "gungho_azspice_developer": [
+        "gungho_azspice_unit_tests",
         "gungho_azspice_integration_tests",
     ],
     "gungho_azspice": [
@@ -52,6 +53,23 @@
     ],
     "gungho_xc40_integration_tests": [
         "gungho_integration_tests_xc40_intel_64bit",
+    ],
+    }) %}
+
+{# EX1A Groups #}
+{% do site_groups.update({
+    "gungho_ex1a_developer": [
+        "gungho_ex1a_unit_tests",
+        "gungho_ex1a_integration_tests",
+    ],
+    "gungho_ex1a": [
+        "gungho_ex1a_developer",
+    ],
+    "gungho_ex1a_unit_tests": [
+        "gungho_unit_tests_ex1a_gnu_64bit",
+    ],
+    "gungho_ex1a_integration_tests": [
+        "gungho_integration_tests_ex1a_gnu_64bit",
     ],
     }) %}
 
@@ -84,17 +102,22 @@
         "gungho_developer": [
             "scripts",
             "gungho_azspice_developer",
+            "gungho_ex1a_developer",
             "gungho_integration_tests",
+            "gungho_unit_tests",
         ],
         "gungho": [
             "gungho_developer",
             "gungho_azspice",
+            "gungho_ex1a",
         ],
         "gungho_unit_tests": [
             "gungho_azspice_unit_tests",
+            "gungho_ex1a_unit_tests",
         ],
         "gungho_integration_tests": [
             "gungho_azspice_integration_tests",
+            "gungho_ex1a_integration_tests",
         ],
         }) %}
 {% endif %}
@@ -122,5 +145,11 @@
 {% do site_groups.xc40.extend(site_groups.gungho_xc40) %}
 {% do site_groups.xc40_unit_tests.extend(site_groups.gungho_xc40_unit_tests) %}
 {% do site_groups.xc40_integration_tests.extend(site_groups.gungho_xc40_integration_tests) %}
+
+{# EX1A Extends #}
+{% do site_groups.ex1a_developer.extend(site_groups.gungho_ex1a_developer) %}
+{% do site_groups.ex1a.extend(site_groups.gungho_ex1a) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.gungho_ex1a_unit_tests) %}
+{% do site_groups.ex1a_integration_tests.extend(site_groups.gungho_ex1a_integration_tests) %}
 
 {% do LOG.debug("Finished in site/meto/groups/groups_gungho.cylc") %}

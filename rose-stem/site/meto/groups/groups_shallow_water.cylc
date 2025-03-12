@@ -58,6 +58,7 @@
         "shallow_water_thermal_vi-BiP32x32-1x1_azspice_gnu_fast-debug-64bit",
         "shallow_water_williamson2_vi-C24_azspice_gnu_fast-debug-64bit",
         "shallow_water_williamson5_vi-C24_azspice_gnu_fast-debug-64bit",
+        "shallow_water_azspice_unit_tests",
         "shallow_water_azspice_canned",
     ],
     "shallow_water_azspice_extra": [
@@ -135,6 +136,7 @@
         "shallow_water_thermal_vi-BiP32x32-1x1_ex1a_gnu_fast-debug-64bit",
         "shallow_water_williamson2_vi-C24_ex1a_gnu_fast-debug-64bit",
         "shallow_water_williamson5_vi-C24_ex1a_gnu_fast-debug-64bit",
+        "shallow_water_ex1a_unit_tests",
         "shallow_water_ex1a_canned",
     ],
     "shallow_water_ex1a_extra": [

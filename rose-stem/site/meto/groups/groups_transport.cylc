@@ -136,6 +136,7 @@
         "transport_sbr_hori_cosine_mol-C32_azspice_gnu_full-debug-64bit",
         "transport_sbr_hori_cos_phi_ffsl_nirv_spt_edges-C32_azspice_gnu_fast-debug-64bit",
         "transport_sbr_hori_cos_phi_ffsl_ppm_spt_edges-C32_azspice_gnu_fast-debug-64bit",
+        "transport_azspice_unit_tests",
         "transport_azspice_canned",
     ],
     "transport_azspice": [
@@ -348,6 +349,7 @@
         "transport_sbr_hori_cosine_mol-C32_ex1a_gnu_full-debug-64bit",
         "transport_sbr_hori_cos_phi_ffsl_nirv_spt_edges-C32_ex1a_gnu_fast-debug-64bit",
         "transport_sbr_hori_cos_phi_ffsl_ppm_spt_edges-C32_ex1a_gnu_fast-debug-64bit",
+        "transport_ex1a_unit_tests",
         "transport_ex1a_canned",
     ],
     "transport_ex1a_unit_tests": [

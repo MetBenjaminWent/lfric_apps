@@ -21,6 +21,7 @@
 {# Azspice Groups #}
 {% do site_groups.update({
     "adjoint_azspice_developer": [
+        "adjoint_azspice_unit_tests"
     ],
     "adjoint_azspice": [
         "adjoint_azspice_developer"
@@ -39,6 +40,19 @@
         "adjoint_xc40_developer",
     ],
     "adjoint_xc40_unit_tests": [
+    ]
+    }) %}
+
+{# EX1A Groups #}
+{% do site_groups.update({
+    "adjoint_ex1a_developer": [
+        "adjoint_ex1a_unit_tests"
+    ],
+    "adjoint_ex1a": [
+        "adjoint_ex1a_developer"
+    ],
+    "adjoint_ex1a_unit_tests": [
+        "adjoint_unit_tests_ex1a_gnu_64bit",
     ]
     }) %}
 
@@ -66,13 +80,16 @@
         "adjoint_developer": [
             "scripts",
             "adjoint_azspice_developer",
+            "adjoint_ex1a_developer",
         ],
         "adjoint": [
             "adjoint_developer",
             "adjoint_azspice",
+            "adjoint_ex1a",
         ],
         "adjoint_unit_tests": [
             "adjoint_azspice_unit_tests",
+            "adjoint_ex1a_unit_tests",
         ]
         }) %}
 {% endif %}
@@ -96,5 +113,10 @@
 {% do site_groups.xc40_developer.extend(site_groups.adjoint_xc40_developer) %}
 {% do site_groups.xc40.extend(site_groups.adjoint_xc40) %}
 {% do site_groups.xc40_unit_tests.extend(site_groups.adjoint_xc40_unit_tests) %}
+
+{# EX1A Extends #}
+{% do site_groups.ex1a_developer.extend(site_groups.adjoint_ex1a_developer) %}
+{% do site_groups.ex1a.extend(site_groups.adjoint_ex1a) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.adjoint_ex1a_unit_tests) %}
 
 {% do LOG.debug("Finished in site/meto/groups/groups_adjoint.cylc") %}
