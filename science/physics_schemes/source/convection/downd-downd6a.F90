@@ -452,12 +452,13 @@ if (nddon  >  0) then
 
   end if
 
-  ! Allocate water tracer arrays
-  ! Note, these are size nddon (not nddon_a) which is the required size
-  ! for passing these arrays into ddraught
-  call wtrac_alloc_conv_dd2(nddon, n_wtrac, wtrac_dd2)
-
   if (l_wtrac_conv) then
+
+    ! Allocate water tracer arrays
+    ! Note, these are size nddon (not nddon_a) which is the required size
+    ! for passing these arrays into ddraught
+    call wtrac_alloc_conv_dd2(nddon, n_wtrac, wtrac_dd2)
+
     do i_wt = 1, n_wtrac
       do i=1,nddon
         wtrac_dd2(i_wt)%qdd_k(i)      = wtrac_dd(i_wt)%qdd_k(index1(i))
@@ -538,10 +539,10 @@ if (nddon  >  0) then
       end do
     end do
 
-  end if
+    ! Deallocate water tracer compressed arrays
+    call wtrac_dealloc_conv_dd2(n_wtrac, wtrac_dd2)
 
-  ! Deallocate water tracer compressed arrays
-  call wtrac_dealloc_conv_dd2(n_wtrac, wtrac_dd2)
+  end if
 
 end if   ! nddon > 0
 

@@ -316,8 +316,10 @@ ndd=nterm
 ! Allocate water tracer arrays
 ! Note, these must have size ndd (rather than nterm) for passing to
 ! downd (although ndd = nterm here)
-call wtrac_alloc_conv_dd(ndd, n_wtrac, wtrac_dd)
-call wtrac_alloc_conv_ev(ndd, n_wtrac, wtrac_ev)
+if (l_wtrac_conv) then
+  call wtrac_alloc_conv_dd(ndd, n_wtrac, wtrac_dd)
+  call wtrac_alloc_conv_ev(ndd, n_wtrac, wtrac_ev)
+end if
 
 do k=0,kct
   do i=1,ndd
@@ -619,8 +621,10 @@ do k = kct,2,-1
 end do    ! End of main level loop
 
 ! Deallocate water tracer arrays
-call wtrac_dealloc_conv_ev(n_wtrac, wtrac_ev)
-call wtrac_dealloc_conv_dd(n_wtrac, wtrac_dd)
+if (l_wtrac_conv) then
+  call wtrac_dealloc_conv_ev(n_wtrac, wtrac_ev)
+  call wtrac_dealloc_conv_dd(n_wtrac, wtrac_dd)
+end if
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return

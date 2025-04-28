@@ -14,7 +14,20 @@ use um_types, only: real_umphys
 
 implicit none
 
+! Description: Evaporation routine
+!              Carries out evaporation and updates precipitation
+!
+! Method: UM documentation paper 27
+!
+! Code Owner: Please refer to the UM file CodeOwners.txt
+! This file belongs in section: Convection
+!
+! Code Description:
+!   Language: Fortran 90.
+!   This code is written to UMDP 3 programming standards vn8.2.
+
 character(len=*), parameter, private :: ModuleName = 'DEVAP_MOD'
+
 contains
 
 subroutine devap(npnts, bddwt_km1                                              &
@@ -33,18 +46,6 @@ use parkind1, only: jprb, jpim
 use evp_mod, only: evp
 implicit none
 
-!
-! Description: Evaporation routine
-!              Carries out evaporation and updates precipitation
-!
-! Method: UM documentataion paper 27
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Convection
-!
-! Code Description:
-!   Language: Fortran 90.
-!   This code is written to UMDP 3 programming standards vn8.2.
 !----------------------------------------------------------------------
 ! Subroutine arguments
 !----------------------------------------------------------------------

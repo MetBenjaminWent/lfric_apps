@@ -630,6 +630,11 @@ subroutine wtrac_alloc_conv_dd(np_c, n_wtrac, wtrac_dd)
 ! Description:
 !   Allocate arrays used by water tracers in the downdraught part of the
 !   convection scheme
+!   Note, this routine is only called if  l_wtrac_conv=T.  This is because it
+!   was found that allocating these arrays (to size 1) caused an increase in
+!   run time in model runs without water tracers. This approach is acceptable
+!   as the whole structure, rather than individual arrays within the structure,
+!   are passed into lower-level routines.
 !
 
 use yomhook,  only: lhook, dr_hook
@@ -655,35 +660,19 @@ character(len=*), parameter :: RoutineName='WTRAC_ALLOC_CONV_DD'
 ! End of header
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
-if (l_wtrac_conv) then
-  do i_wt = 1, n_wtrac
-    allocate(wtrac_dd(i_wt)%precip_k(np_c))
-    allocate(wtrac_dd(i_wt)%q_k(np_c))
-    allocate(wtrac_dd(i_wt)%dqbydt_k(np_c))
-    allocate(wtrac_dd(i_wt)%qdd_k(np_c))
-    allocate(wtrac_dd(i_wt)%delqd(np_c))
-    allocate(wtrac_dd(i_wt)%qe_k(np_c))
-    allocate(wtrac_dd(i_wt)%qe_km1(np_c))
-    allocate(wtrac_dd(i_wt)%rain(np_c))
-    allocate(wtrac_dd(i_wt)%snow(np_c))
-    allocate(wtrac_dd(i_wt)%rain_dd(np_c))
-    allocate(wtrac_dd(i_wt)%snow_dd(np_c))
-  end do
-else
-  do i_wt = 1, n_wtrac
-    allocate(wtrac_dd(i_wt)%precip_k(1))
-    allocate(wtrac_dd(i_wt)%q_k(1))
-    allocate(wtrac_dd(i_wt)%dqbydt_k(1))
-    allocate(wtrac_dd(i_wt)%qdd_k(1))
-    allocate(wtrac_dd(i_wt)%delqd(1))
-    allocate(wtrac_dd(i_wt)%qe_k(1))
-    allocate(wtrac_dd(i_wt)%qe_km1(1))
-    allocate(wtrac_dd(i_wt)%rain(1))
-    allocate(wtrac_dd(i_wt)%snow(1))
-    allocate(wtrac_dd(i_wt)%rain_dd(1))
-    allocate(wtrac_dd(i_wt)%snow_dd(1))
-  end do
-end if
+do i_wt = 1, n_wtrac
+  allocate(wtrac_dd(i_wt)%precip_k(np_c))
+  allocate(wtrac_dd(i_wt)%q_k(np_c))
+  allocate(wtrac_dd(i_wt)%dqbydt_k(np_c))
+  allocate(wtrac_dd(i_wt)%qdd_k(np_c))
+  allocate(wtrac_dd(i_wt)%delqd(np_c))
+  allocate(wtrac_dd(i_wt)%qe_k(np_c))
+  allocate(wtrac_dd(i_wt)%qe_km1(np_c))
+  allocate(wtrac_dd(i_wt)%rain(np_c))
+  allocate(wtrac_dd(i_wt)%snow(np_c))
+  allocate(wtrac_dd(i_wt)%rain_dd(np_c))
+  allocate(wtrac_dd(i_wt)%snow_dd(np_c))
+end do
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
@@ -747,6 +736,11 @@ subroutine wtrac_alloc_conv_ev(np_c, n_wtrac, wtrac_ev)
 ! Description:
 !   Allocate arrays used by water tracers in the phase change and
 !   evaporation of precip in environment or below cloud base calculations
+!   Note, this routine is only called if  l_wtrac_conv=T.  This is because it
+!   was found that allocating these arrays (to size 1) caused an increase in
+!   run time in model runs without water tracers. This approach is acceptable
+!   as the whole structure, rather than individual arrays within the structure,
+!   are passed into lower-level routines.
 !
 
 use yomhook,  only: lhook, dr_hook
@@ -773,19 +767,11 @@ character(len=*), parameter :: RoutineName='WTRAC_ALLOC_CONV_EV'
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
 
-if (l_wtrac_conv) then
-  do i_wt = 1, n_wtrac
-    allocate(wtrac_ev(i_wt)%dqbydt_km1(np_c))
-    allocate(wtrac_ev(i_wt)%rain_env(np_c))
-    allocate(wtrac_ev(i_wt)%snow_env(np_c))
-  end do
-else
-  do i_wt = 1, n_wtrac
-    allocate(wtrac_ev(i_wt)%dqbydt_km1(1))
-    allocate(wtrac_ev(i_wt)%rain_env(1))
-    allocate(wtrac_ev(i_wt)%snow_env(1))
-  end do
-end if
+do i_wt = 1, n_wtrac
+  allocate(wtrac_ev(i_wt)%dqbydt_km1(np_c))
+  allocate(wtrac_ev(i_wt)%rain_env(np_c))
+  allocate(wtrac_ev(i_wt)%snow_env(np_c))
+end do
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
@@ -843,6 +829,11 @@ subroutine wtrac_alloc_conv_dd2(np_c, n_wtrac, wtrac_dd2)
 ! Description:
 !   Allocate 2nd compression arrays used by water tracers in the downdraught
 !   part of the convection scheme
+!   Note, this routine is only called if  l_wtrac_conv=T.  This is because it
+!   was found that allocating these arrays (to size 1) caused an increase in
+!   run time in model runs without water tracers. This approach is acceptable
+!   as the whole structure, rather than individual arrays within the structure,
+!   are passed into lower-level routines.
 !
 
 use yomhook,  only: lhook, dr_hook
@@ -868,29 +859,16 @@ character(len=*), parameter :: RoutineName='WTRAC_ALLOC_CONV_DD2'
 ! End of header
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
-if (l_wtrac_conv) then
-  do i_wt = 1, n_wtrac
-    allocate(wtrac_dd2(i_wt)%qdd_k(np_c))
-    allocate(wtrac_dd2(i_wt)%qe_k(np_c))
-    allocate(wtrac_dd2(i_wt)%qe_km1(np_c))
-    allocate(wtrac_dd2(i_wt)%dqbydt_k(np_c))
-    allocate(wtrac_dd2(i_wt)%dqbydt_km1(np_c))
-    allocate(wtrac_dd2(i_wt)%delqd(np_c))
-    allocate(wtrac_dd2(i_wt)%rain(np_c))
-    allocate(wtrac_dd2(i_wt)%snow(np_c))
-  end do
-else
-  do i_wt = 1, n_wtrac
-    allocate(wtrac_dd2(i_wt)%qdd_k(1))
-    allocate(wtrac_dd2(i_wt)%qe_k(1))
-    allocate(wtrac_dd2(i_wt)%qe_km1(1))
-    allocate(wtrac_dd2(i_wt)%dqbydt_k(1))
-    allocate(wtrac_dd2(i_wt)%dqbydt_km1(1))
-    allocate(wtrac_dd2(i_wt)%delqd(1))
-    allocate(wtrac_dd2(i_wt)%rain(1))
-    allocate(wtrac_dd2(i_wt)%snow(1))
-  end do
-end if
+do i_wt = 1, n_wtrac
+  allocate(wtrac_dd2(i_wt)%qdd_k(np_c))
+  allocate(wtrac_dd2(i_wt)%qe_k(np_c))
+  allocate(wtrac_dd2(i_wt)%qe_km1(np_c))
+  allocate(wtrac_dd2(i_wt)%dqbydt_k(np_c))
+  allocate(wtrac_dd2(i_wt)%dqbydt_km1(np_c))
+  allocate(wtrac_dd2(i_wt)%delqd(np_c))
+  allocate(wtrac_dd2(i_wt)%rain(np_c))
+  allocate(wtrac_dd2(i_wt)%snow(np_c))
+end do
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return

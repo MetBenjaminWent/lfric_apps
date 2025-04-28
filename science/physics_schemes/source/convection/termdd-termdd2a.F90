@@ -12,7 +12,20 @@ use um_types, only: real_umphys
 
 implicit none
 
+! Description: Calculate whether downdraught is able to continue
+!              Calculate buoyancy
+!
+! Method: UM documentation paper 27
+!
+! Code Owner: Please refer to the UM file CodeOwners.txt
+! This file belongs in section: Convection
+!
+! Code Description:
+!   Language: Fortran 90.
+!   This code is written to UMDP 3 programming standards vn8.2.
+
 character(len=*), parameter, private :: ModuleName = 'TERMDD_MOD'
+
 contains
 
 subroutine termdd (npnts, k, bdd_start                                         &
@@ -28,18 +41,7 @@ use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 
 implicit none
-!
-! Description: Calculate whether downdraught is able to continue
-!              Calculate buoyancy
-!
-! Method: UM documentataion paper 27
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Convection
-!
-! Code Description:
-!   Language: Fortran 90.
-!   This code is written to UMDP 3 programming standards vn8.2.
+
 !----------------------------------------------------------------------
 ! Subroutine arguments
 !----------------------------------------------------------------------

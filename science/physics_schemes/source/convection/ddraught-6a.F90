@@ -12,7 +12,23 @@ use um_types, only: real_umphys
 
 implicit none
 
+! Description: Downdraught routine
+!              Convective downdraught based on parcel theory.
+!              Carry out dry descent.
+!              Calculate subsaturation.
+!              Calculate effect on the environment.
+!
+! Method: UM documentation paper 27
+!
+! Code Owner: Please refer to the UM file CodeOwners.txt
+! This file belongs in section: Convection
+!
+! Code Description:
+!   Language: Fortran 90.
+!   This code is written to UMDP 3 programming standards vn8.2.
+
 character(len=*), parameter, private :: ModuleName = 'DDRAUGHT_6A_MOD'
+
 contains
 
 subroutine ddraught_6a (npnts, np_full, k, kct, ntra, n_wtrac,                 &
@@ -51,21 +67,6 @@ use wtrac_precip_evap_mod,     only: wtrac_precip_evap
 
 implicit none
 
-!
-! Description: Downdraught routine
-!              Convective downdraught based on parcel theory.
-!              Carry out dry descent.
-!              Calculate subsaturation.
-!              Calculate effect on the environment.
-!
-! Method: UM documentataion paper 27
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Convection
-!
-! Code Description:
-!   Language: Fortran 90.
-!   This code is written to UMDP 3 programming standards vn8.2.
 !----------------------------------------------------------------------
 ! Subroutine arguments
 !----------------------------------------------------------------------

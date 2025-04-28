@@ -10,13 +10,21 @@ use um_types, only: real_umphys
 
 implicit none
 
-! Description:
-! Calculate the effect of the downdraught on the large-scale atmosphere
+! Description: Downdraught routine
+!              Calculate the effect of the downdraught on the
+!              large-scale atmosphere
 !
-! Code Owner:  Please refer to the UM file CodeOwners.txt
+! Method: UM documentation paper 27
+!
+! Code Owner: Please refer to the UM file CodeOwners.txt
 ! This file belongs in section: Convection
+!
+! Code Description:
+!   Language: Fortran 90.
+!   This code is written to UMDP 3 programming standards vn8.2.
 
 character(len=*), parameter, private :: ModuleName = 'DD_ENV_6A_MOD'
+
 contains
 
 subroutine dd_env_6a(npnts, np_full, ntra, n_wtrac                             &
@@ -36,19 +44,6 @@ use parkind1, only: jprb, jpim
 
 implicit none
 
-!
-! Description: Downdraught routine
-!              Calculate the effect of the downdraught on the
-!              large-scale atmosphere
-!
-! Method: UM documentation paper 27
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Convection
-!
-! Code Description:
-!   Language: Fortran 90.
-!   This code is written to UMDP 3 programming standards vn8.2.
 !----------------------------------------------------------------------
 ! Subroutine arguments
 !----------------------------------------------------------------------
