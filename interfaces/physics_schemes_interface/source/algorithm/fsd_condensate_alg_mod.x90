@@ -42,19 +42,21 @@ contains
     type( field_collection_type ), intent(in)    :: cloud_fields
     type( field_collection_type ), intent(in)    :: convection_fields
 
-    type( field_type ), pointer :: dz_wth    => null()
-    type( field_type ), pointer :: delta     => null()
+    type( field_type ), pointer :: dz_wth
+    type( field_type ), pointer :: delta
 
-    type( field_type ), pointer :: area_fraction        => null()
-    type( field_type ), pointer :: sigma_mc             => null()
-    type( field_type ), pointer :: cca                  => null()
+    type( field_type ), pointer :: area_fraction
+    type( field_type ), pointer :: frozen_fraction
+    type( field_type ), pointer :: sigma_mc
+    type( field_type ), pointer :: cca
 
-    type( mesh_type), pointer :: mesh => null()
+    type( mesh_type), pointer :: mesh
 
     if ( subroutine_timers ) call timer("fsd_condensate_alg")
 
     ! Unpack fields
     call cloud_fields%get_field('area_fraction', area_fraction)
+    call cloud_fields%get_field('frozen_fraction', frozen_fraction)
     call cloud_fields%get_field('sigma_mc', sigma_mc)
     call convection_fields%get_field('cca', cca)
 
@@ -63,12 +65,13 @@ contains
     delta  => get_delta_at_wtheta(mesh%get_id())
     dz_wth => get_dz_at_wtheta(mesh%get_id())
 
-    call invoke ( fsd_condensate_kernel_type ( sigma_mc,      & ! fsd of condensate
-                                               f_arr,         & ! fsd parameters
-                                               area_fraction, & ! area cloud fraction
-                                               cca,           & ! convective cloud amount
-                                               dz_wth,        & ! dz at wtheta
-                                               delta ) )        ! edge length
+    call invoke ( fsd_condensate_kernel_type ( sigma_mc,        & ! fsd of condensate
+                                               f_arr,           & ! fsd parameters
+                                               area_fraction,   & ! area cloud fraction
+                                               frozen_fraction, &
+                                               cca,             & ! convective cloud amount
+                                               dz_wth,          & ! dz at wtheta
+                                               delta ) )          ! edge length
 
     nullify( mesh )
 

@@ -15,7 +15,8 @@ use argument_mod,         only: arg_type,              &
 use extrusion_config_mod, only: planet_radius
 use fs_continuity_mod,    only: WTHETA
 use kernel_mod,           only: kernel_type
-use cloud_config_mod,     only: use_fsd_eff_res, fsd_min_conv_frac, fsd_conv_const, fsd_nonconv_const
+use cloud_config_mod,     only: use_fsd_eff_res, fsd_min_conv_frac, &
+     fsd_conv_const, fsd_nonconv_liq_const, fsd_nonconv_ice_const
 use fsd_parameters_mod,   only: fsd_eff_lam, f_cons
 
 implicit none
@@ -29,10 +30,11 @@ private
 
 type, public, extends(kernel_type) :: fsd_condensate_kernel_type
   private
-  type(arg_type) :: meta_args(6) = (/                                   &
+  type(arg_type) :: meta_args(7) = (/                                   &
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                   & ! sigma_mc
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),& ! f_arr_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                   & ! acf_wth
+       arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                   & ! cff_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                   & ! cca_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                   & ! dz_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA)                    & ! delta
@@ -54,6 +56,7 @@ contains
 !> @param[in,out] sigma_mc   Fractional standard deviation of condensate
 !> @param[in,out] f_arr_wth  Parameters related to fractional standard deviation of condensate
 !> @param[in]     acf_wth    Area cloud fraction
+!> @param[in]     cff_wth    Frozen cloud fraction
 !> @param[in]     cca_wth    Convective cloud amount
 !> @param[in]     dz_wth     Delta z at wtheta levels
 !> @param[in]     delta      Edge length on wtheta points
@@ -70,6 +73,7 @@ subroutine fsd_condensate_code( nlayers,                    &
                                 f_arr_wth,                  &
                                            ! In
                                 acf_wth,                    &
+                                cff_wth,                    &
                                 cca_wth,                    &
                                 dz_wth,                     &
                                 delta,                      &
@@ -98,6 +102,7 @@ subroutine fsd_condensate_code( nlayers,                    &
     integer(kind=i_def), intent(in), dimension(ndf_farr)  :: map_farr
 
     real(kind=r_def), intent(in),    dimension(undf_wth)  :: acf_wth
+    real(kind=r_def), intent(in),    dimension(undf_wth)  :: cff_wth
     real(kind=r_def), intent(in),    dimension(undf_wth)  :: cca_wth
     real(kind=r_def), intent(in),    dimension(undf_wth)  :: dz_wth
     real(kind=r_def), intent(in),    dimension(undf_wth)  :: delta
@@ -108,6 +113,7 @@ subroutine fsd_condensate_code( nlayers,                    &
     real(kind=r_def), dimension(3,nlayers) :: f_arr   ! FSD parameters
     real(kind=r_def)                       :: conv_thick_part ! Convective contrib
     real(kind=r_def)                       :: cloud_scale     ! Size of cld
+    real(kind=r_def)                       :: col_max_cca     ! Maximum CCA
     real(kind=r_def), parameter            :: one_third       = 1.0_r_def/3.0_r_def
     real(kind=r_def), parameter            :: m_to_km         = 0.001_r_def
 
@@ -126,14 +132,25 @@ subroutine fsd_condensate_code( nlayers,                    &
       end do
     end if
 
+    ! Compute column max convective cloud amount
+    col_max_cca = cca_wth(map_wth(1) + 1)
+    do k = 2, nlayers
+      col_max_cca = max(col_max_cca, cca_wth(map_wth(1) + k))
+    end do
+
     ! Equations taken from Hill et al (2015, DOI: 10.1002/qj.2506)
+    ! modified to include different FSD in non-convective liquid and ice cloud
     do k = 1, nlayers
 
       if (cca_wth(map_wth(1) + k) > fsd_min_conv_frac) then
         conv_thick_part = fsd_conv_const * (x_in_km(k)**(-0.12_r_def))         &
                         * ( dz_wth(map_wth(1)+k) * m_to_km ) ** 0.07_r_def
+      else if (cff_wth(map_wth(1)+k) > 0.0_r_def .and.                         &
+               col_max_cca < 0.02_r_def) then
+        conv_thick_part = fsd_nonconv_ice_const * (x_in_km(k)**0.002_r_def)    &
+                        * ( dz_wth(map_wth(1)+k) * m_to_km ) ** 0.12_r_def
       else
-        conv_thick_part = fsd_nonconv_const * (x_in_km(k)**0.002_r_def)        &
+        conv_thick_part = fsd_nonconv_liq_const * (x_in_km(k)**0.002_r_def)    &
                         * ( dz_wth(map_wth(1)+k) * m_to_km ) ** 0.12_r_def
       end if
 
