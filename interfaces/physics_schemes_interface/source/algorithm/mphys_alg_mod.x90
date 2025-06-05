@@ -184,8 +184,6 @@ contains
     call microphysics_fields%get_field('ns_mphys',ns_mphys)
 
     call aerosol_fields%get_field('cloud_drop_no_conc', cloud_drop_no_conc)
-    call aerosol_fields%get_field('n_acc_ins', n_acc_ins)
-    call aerosol_fields%get_field('n_cor_ins', n_cor_ins)
     call aerosol_fields%get_field('murk', murk)
 
     call turbulence_fields%get_field('wvar', wvar)
@@ -210,10 +208,13 @@ contains
     end if
 
     if (prog_tnuc) then
-      call invoke ( lsp_prognostic_tnuc_kernel_type (n_acc_ins,           &
-                                                     n_cor_ins,           &
-                                                     theta,               &
-                                                     exner_in_wth,        &
+
+      call aerosol_fields%get_field('n_acc_ins', n_acc_ins)
+      call aerosol_fields%get_field('n_cor_ins', n_cor_ins)
+      call invoke ( lsp_prognostic_tnuc_kernel_type (n_acc_ins,      &
+                                                     n_cor_ins,      &
+                                                     theta,          &
+                                                     exner_in_wth,   &
                                                      tnuc)  )
     end if
 

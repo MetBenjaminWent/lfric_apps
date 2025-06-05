@@ -32,7 +32,8 @@ module radaer_alg_mod
                            only: get_ndata_val => get_multidata_field_dimension
   use fs_continuity_mod,   only: Wtheta, W3
   use intermesh_mappings_alg_mod, &
-                           only: map_scalar_intermesh
+                           only: map_scalar_intermesh, &
+                                 map_mr_intermesh
 
   use radaer_main_diags_mod, only: initialise_main_diags_for_radaer,           &
                                    output_main_diags_for_radaer
@@ -51,18 +52,24 @@ contains
   !>@brief         Run the UM RADAER scheme
   !>@details       The UM RADAER scheme calculates required fields for socrates.
   !>@param[in]     rho_in_wth            Rho in theta space
+  !>@param[in]     radiation_fields      RADAER radiation related fields
   !>@param[in]     theta_in_wth          Potential temperature (theta) wth space
   !>@param[in]     exner_in_wth          Exner Pressure in theta space
   !>@param[in]     exner_in_w3           Exner Pressure in w3 space
+  !>@param[in]     rho                   Density field
+  !>@param[in]     rho_aero              Density field on aerosol mesh
   !>@param[in]     trop_level            Level of tropopause
+  !>@param[in]     aerosol_mesh          Mesh for aerosol fields
+  !>@param[in]     aerosol_twod_mesh     Mesh for 2D aerosol fields
   !>@param[in]     timestep              Current timestep number
-
   subroutine radaer_alg( aerosol_fields,                                       &
                          radiation_fields,                                     &
                          rho_in_wth,                                           &
                          theta_in_wth,                                         &
                          exner_in_wth,                                         &
                          exner_in_w3,                                          &
+                         rho,                                                  &
+                         rho_aero,                                             &
                          trop_level,                                           &
                          aerosol_mesh,                                         &
                          aerosol_twod_mesh,                                    &
@@ -80,6 +87,8 @@ contains
     type( field_type ), intent( in )               :: theta_in_wth
     type( field_type ), intent( in )               :: exner_in_wth
     type( field_type ), intent( in )               :: exner_in_w3
+    type( field_type ), intent( in )               :: rho
+    type( field_type ), intent( in )               :: rho_aero
     type( integer_field_type ), intent( in )       :: trop_level
     type(mesh_type), intent( in ),        pointer  :: aerosol_mesh
     type(mesh_type), intent( in ),        pointer  :: aerosol_twod_mesh
@@ -166,6 +175,11 @@ contains
     type( field_type ), pointer  :: aer_lw_scattering_aero => null()
     type( field_type ), pointer  :: aer_lw_asymmetry_aero  => null()
 
+    type( field_type ), pointer :: n_acc_ins_aero => null()
+    type( field_type ), pointer :: acc_ins_du_aero => null()
+    type( field_type ), pointer :: n_cor_ins_aero => null()
+    type( field_type ), pointer :: cor_ins_du_aero => null()
+
     type( field_type ), target :: lit_fraction_rts_coarse,  &
                                   aer_mix_ratio_coarse,     &
                                   aer_sw_absorption_coarse, &
@@ -173,7 +187,11 @@ contains
                                   aer_sw_asymmetry_coarse,  &
                                   aer_lw_absorption_coarse, &
                                   aer_lw_scattering_coarse, &
-                                  aer_lw_asymmetry_coarse
+                                  aer_lw_asymmetry_coarse,  &
+                                  n_acc_ins_coarse,         &
+                                  acc_ins_du_coarse,        &
+                                  n_cor_ins_coarse,         &
+                                  cor_ins_du_coarse
 
     type( field_type ) :: aod_ukca_ait_sol
     type( field_type ) :: aaod_ukca_ait_sol
@@ -214,10 +232,6 @@ contains
       call aerosol_fields%get_field('n_ait_ins', n_ait_ins)
       call aerosol_fields%get_field('ait_ins_bc', ait_ins_bc)
       call aerosol_fields%get_field('ait_ins_om', ait_ins_om)
-      call aerosol_fields%get_field('n_acc_ins', n_acc_ins)
-      call aerosol_fields%get_field('acc_ins_du', acc_ins_du)
-      call aerosol_fields%get_field('n_cor_ins', n_cor_ins)
-      call aerosol_fields%get_field('cor_ins_du', cor_ins_du)
       call aerosol_fields%get_field('drydp_ait_sol', drydp_ait_sol)
       call aerosol_fields%get_field('drydp_acc_sol', drydp_acc_sol)
       call aerosol_fields%get_field('drydp_cor_sol', drydp_cor_sol)
@@ -265,6 +279,17 @@ contains
         ! If coarse RADAER, initialise new coarse fields, map data, and point to them
         w3_2d_aero => function_space_collection%get_fs( aerosol_twod_mesh,     &
                                                         0, 0, W3)
+        wth_aero => function_space_collection%get_fs( aerosol_mesh, &
+                                                      0, 0, WTHETA  )
+        call cor_ins_du_coarse%initialise(vector_space = wth_aero)
+        call acc_ins_du_coarse%initialise(vector_space = wth_aero)
+        call n_acc_ins_coarse%initialise(vector_space = wth_aero)
+        call n_cor_ins_coarse%initialise(vector_space = wth_aero)
+        call aerosol_fields%get_field('n_acc_ins', n_acc_ins)
+        call aerosol_fields%get_field('acc_ins_du', acc_ins_du)
+        call aerosol_fields%get_field('n_cor_ins', n_cor_ins)
+        call aerosol_fields%get_field('cor_ins_du', cor_ins_du)
+
         wth_aero => function_space_collection%get_fs( aerosol_mesh,            &
                                                       0, 0, WTHETA,            &
                                                       get_ndata_val('aero_modes') )
@@ -288,7 +313,7 @@ contains
 
         call invoke(setval_c(lit_fraction_rts_coarse, 1.0_r_def),   &
                     setval_c(aer_mix_ratio_coarse, 0.0_r_def),      &
-                    setval_c( aer_sw_absorption_coarse, 0.0_r_def), &
+                    setval_c(aer_sw_absorption_coarse, 0.0_r_def),  &
                     setval_c(aer_sw_scattering_coarse, 0.0_r_def),  &
                     setval_c(aer_sw_asymmetry_coarse, 0.0_r_def),   &
                     setval_c(aer_lw_absorption_coarse, 0.0_r_def),  &
@@ -296,6 +321,10 @@ contains
                     setval_c( aer_lw_asymmetry_coarse, 0.0_r_def)   )
 
         call map_scalar_intermesh(lit_fraction_rts_coarse, lit_fraction_rts)
+        call map_mr_intermesh(n_acc_ins_coarse, n_acc_ins, rho_aero, rho)
+        call map_mr_intermesh(acc_ins_du_coarse, acc_ins_du, rho_aero, rho)
+        call map_mr_intermesh(n_cor_ins_coarse, n_cor_ins, rho_aero, rho)
+        call map_mr_intermesh(cor_ins_du_coarse, cor_ins_du, rho_aero, rho)
 
         ! Point to fields
         aer_mix_ratio_aero =>  aer_mix_ratio_coarse
@@ -306,6 +335,10 @@ contains
         aer_lw_scattering_aero => aer_lw_scattering_coarse
         aer_lw_asymmetry_aero => aer_lw_asymmetry_coarse
         lit_fraction_rts_aero => lit_fraction_rts_coarse
+        n_acc_ins_aero => n_acc_ins_coarse
+        n_cor_ins_aero => n_cor_ins_coarse
+        acc_ins_du_aero => acc_ins_du_coarse
+        cor_ins_du_aero => cor_ins_du_coarse
       else
         ! Unpack RADAER fields for radiation
         call radiation_fields%get_field('lit_fraction_rts', lit_fraction_rts_aero)
@@ -316,6 +349,12 @@ contains
         call radiation_fields%get_field('aer_lw_absorption', aer_lw_absorption_aero)
         call radiation_fields%get_field('aer_lw_scattering', aer_lw_scattering_aero)
         call radiation_fields%get_field('aer_lw_asymmetry', aer_lw_asymmetry_aero)
+
+        ! Unpack RADAER fields for aerosol
+        call aerosol_fields%get_field('n_acc_ins', n_acc_ins_aero)
+        call aerosol_fields%get_field('acc_ins_du', acc_ins_du_aero)
+        call aerosol_fields%get_field('n_cor_ins', n_cor_ins_aero)
+        call aerosol_fields%get_field('cor_ins_du', cor_ins_du_aero)
       end if
 
       ! Initialise radaer diagnostics
@@ -357,10 +396,10 @@ contains
                                        n_ait_ins,                              &
                                        ait_ins_bc,                             &
                                        ait_ins_om,                             &
-                                       n_acc_ins,                              &
-                                       acc_ins_du,                             &
-                                       n_cor_ins,                              &
-                                       cor_ins_du,                             &
+                                       n_acc_ins_aero,                         &
+                                       acc_ins_du_aero,                        &
+                                       n_cor_ins_aero,                         &
+                                       cor_ins_du_aero,                        &
                                        drydp_ait_sol,                          &
                                        drydp_acc_sol,                          &
                                        drydp_cor_sol,                          &
