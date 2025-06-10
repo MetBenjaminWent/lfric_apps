@@ -18,8 +18,7 @@ module atl_advective_and_flux_alg_mod
   use transport_enumerated_types_mod,      only: direction_3d,                 &
                                                  direction_h,                  &
                                                  direction_v,                  &
-                                                 horizontal_monotone_clipping, &
-                                                 vertical_monotone_clipping
+                                                 monotone_clipping
   use transport_metadata_mod,              only: transport_metadata_type
   use w3h_advective_update_kernel_mod,     only: w3h_advective_update_kernel_type
   use w3v_advective_update_kernel_mod,     only: w3v_advective_update_kernel_type
@@ -114,8 +113,8 @@ contains
     mesh => density%get_mesh()
 
     ! Apply monotonicity (as if this is a full timestep)
-    if ( (transport_metadata%get_horizontal_monotone() == horizontal_monotone_clipping) .OR. &
-         (transport_metadata%get_vertical_monotone()   == vertical_monotone_clipping) ) then
+    if ( (transport_metadata%get_horizontal_monotone() == monotone_clipping) .OR. &
+         (transport_metadata%get_vertical_monotone()   == monotone_clipping) ) then
       call log_event( "ADJ: monotonicity not available", LOG_LEVEL_ERROR )
     end if
 
@@ -123,8 +122,8 @@ contains
     ! ADJOINT START
 
     ! Apply monotonicity (as if this is a full timestep)
-    if ( (transport_metadata%get_horizontal_monotone() == horizontal_monotone_clipping) .OR. &
-         (transport_metadata%get_vertical_monotone()   == vertical_monotone_clipping) ) then
+    if ( (transport_metadata%get_horizontal_monotone() == monotone_clipping) .OR. &
+         (transport_metadata%get_vertical_monotone()   == monotone_clipping) ) then
       call log_event( "TL: monotonicity not available", LOG_LEVEL_ERROR )
     end if
 

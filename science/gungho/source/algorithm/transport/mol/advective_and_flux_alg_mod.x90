@@ -20,8 +20,7 @@ module advective_and_flux_alg_mod
   use transport_enumerated_types_mod,  only: direction_3d,                 &
                                              direction_h,                  &
                                              direction_v,                  &
-                                             horizontal_monotone_clipping, &
-                                             vertical_monotone_clipping
+                                             monotone_clipping
   use transport_metadata_mod,          only: transport_metadata_type
   use w3h_advective_update_kernel_mod, only: w3h_advective_update_kernel_type
   use w3v_advective_update_kernel_mod, only: w3v_advective_update_kernel_type
@@ -220,12 +219,12 @@ contains
     if ( final_rk_stage .and. do_advective ) then
       do_horizontal_monotone = .false.
       if ( (direction == direction_h .or. direction == direction_3d ) .and. &
-            transport_metadata%get_horizontal_monotone() == horizontal_monotone_clipping ) &
+            transport_metadata%get_horizontal_monotone() == monotone_clipping ) &
         do_horizontal_monotone = .true.
 
       do_vertical_monotone = .false.
       if ( (direction == direction_v .or. direction == direction_3d ) .and. &
-            transport_metadata%get_vertical_monotone() == vertical_monotone_clipping ) &
+            transport_metadata%get_vertical_monotone() == monotone_clipping ) &
         do_vertical_monotone = .true.
 
       if ( do_horizontal_monotone .or. do_vertical_monotone ) then

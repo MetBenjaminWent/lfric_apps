@@ -18,8 +18,7 @@ module transport_metadata_collection_test
                                              scheme_split,                   &
                                              split_method_mol,               &
                                              split_method_sl,                &
-                                             horizontal_monotone_none,       &
-                                             vertical_monotone_none,         &
+                                             monotone_none,                  &
                                              vertical_monotone_order_linear, &
                                              special_edges_monotone_none,    &
                                              ffsl_splitting_swift
@@ -181,8 +180,8 @@ contains
                                        scheme_mol_3d,                  &
                                        split_method_mol,               &
                                        split_method_mol,               &
-                                       horizontal_monotone_none,       &
-                                       vertical_monotone_none,         &
+                                       monotone_none,                  &
+                                       monotone_none,                  &
                                        vertical_monotone_order_linear, &
                                        special_edges_monotone_none,    &
                                        no_enforce_min_value,           &
@@ -201,8 +200,8 @@ contains
                                        scheme_split,                   &
                                        split_method_mol,               &
                                        split_method_mol,               &
-                                       horizontal_monotone_none,       &
-                                       vertical_monotone_none,         &
+                                       monotone_none,                  &
+                                       monotone_none,                  &
                                        vertical_monotone_order_linear, &
                                        special_edges_monotone_none,    &
                                        no_enforce_min_value,           &
@@ -221,8 +220,8 @@ contains
                                        scheme_split,                   &
                                        split_method_mol,               &
                                        split_method_sl,                &
-                                       horizontal_monotone_none,       &
-                                       vertical_monotone_none,         &
+                                       monotone_none,                  &
+                                       monotone_none,                  &
                                        vertical_monotone_order_linear, &
                                        special_edges_monotone_none,    &
                                        enforce_min_value,              &

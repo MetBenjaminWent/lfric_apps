@@ -23,8 +23,8 @@ contains
     use funit
     use, intrinsic :: iso_fortran_env,   only: real64
     use vertical_quintic_sl_kernel_mod,  only: vertical_quintic_sl_code
-    use transport_enumerated_types_mod,  only: vertical_monotone_none,       &
-                                               vertical_monotone_strict,     &
+    use transport_enumerated_types_mod,  only: monotone_none,                  &
+                                               monotone_strict,                &
                                                vertical_monotone_order_high
 
     implicit none
@@ -78,7 +78,7 @@ contains
     field(:) = field_in(:)
     field_out(:) = field_in(:)
     log_space = .false.
-    monotone = vertical_monotone_none
+    monotone = monotone_none
     monotone_order = vertical_monotone_order_high
 
     call vertical_quintic_sl_code( nlayers,                          &

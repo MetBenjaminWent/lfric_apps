@@ -21,7 +21,7 @@ contains
     use, intrinsic :: iso_fortran_env,  only: real64
     use funit
     use horizontal_cubic_sl_kernel_mod, only: horizontal_cubic_sl_code
-    use transport_enumerated_types_mod, only: horizontal_monotone_none
+    use transport_enumerated_types_mod, only: monotone_none
 
     implicit none
 
@@ -31,27 +31,45 @@ contains
     integer(kind=i_def), parameter :: nlayers = 1
     integer(kind=i_def), parameter :: ndf_wf = 1
     integer(kind=i_def), parameter :: ndf_w2 = 4
-    integer(kind=i_def), parameter :: stencil_size = 9
-    integer(kind=i_def), parameter :: stencil_size_x = stencil_size
-    integer(kind=i_def), parameter :: stencil_size_y = stencil_size
-    integer(kind=i_def), parameter :: extent_size = (stencil_size-1)/4
-    integer(kind=i_def), parameter :: undf_w2  = ndf_w2*nlayers
-    integer(kind=i_def), parameter :: undf_wf  = ndf_wf*nlayers
-    integer(kind=i_def), parameter :: undf_wfs = ndf_wf*nlayers*stencil_size
+    integer(kind=i_def), parameter :: undf_w2 = ndf_w2*nlayers
+    integer(kind=i_def), parameter :: undf_wf = ndf_wf*nlayers
 
-    integer(kind=i_def), dimension(ndf_wf) :: map_wf
-    integer(kind=i_def), dimension(ndf_w2) :: map_w2
-    integer(kind=i_def), dimension(ndf_wf,stencil_size_x) :: stencil_map_x
-    integer(kind=i_def), dimension(ndf_wf,stencil_size_y) :: stencil_map_y
-
+    integer(kind=i_def), dimension(ndf_wf)   :: map_wf
+    integer(kind=i_def), dimension(ndf_w2)   :: map_w2
     real(kind=r_tran),   dimension(undf_wf)  :: increment_x
     real(kind=r_tran),   dimension(undf_wf)  :: increment_y
-    real(kind=r_tran),   dimension(undf_wfs) :: field_x
-    real(kind=r_tran),   dimension(undf_wfs) :: field_y
-    real(kind=r_tran),   dimension(undf_w2)  :: dep_pts
+    real(kind=r_tran),   dimension(undf_w2)  :: dep_pts_xy
 
-    real(kind=r_tran)   :: dt
+    real(kind=r_tran),   allocatable :: x(:)
+    real(kind=r_tran),   allocatable :: y(:)
+    real(kind=r_tran),   allocatable :: field_x(:)
+    real(kind=r_tran),   allocatable :: field_y(:)
+    integer(kind=i_def), allocatable :: stencil_map_x(:,:)
+    integer(kind=i_def), allocatable :: stencil_map_y(:,:)
+
+    real(kind=r_tran)   :: dep_disp
     integer(kind=i_def) :: monotone
+    integer(kind=i_def) :: stencil_size
+    integer(kind=i_def) :: stencil_size_x
+    integer(kind=i_def) :: stencil_size_y
+    integer(kind=i_def) :: extent_size
+    integer(kind=i_def) :: undf_wfs
+
+    map_w2(:) = (/ 1, 2, 3, 4 /)
+    map_wf(1) = 1
+
+    ! Set no monotonicity
+    monotone = monotone_none
+
+    ! Get correct tolerance
+    if ( r_tran == real64 ) then
+      use_tol = tol
+    else
+      use_tol = 1.0e-6_r_tran
+    end if
+
+    ! TEST 1: Fractional dep dist, positive dep dists --------------------------
+    ! Stencil extent of 2
 
     ! Stencil map has form
     !         | 9 |
@@ -60,30 +78,41 @@ contains
     !         | 4 |
     !         | 5 |
 
+    stencil_size = 9
+    undf_wfs = ndf_wf*nlayers*stencil_size
+    stencil_size_x = stencil_size
+    stencil_size_y = stencil_size
+    extent_size = (stencil_size-1)/4
+
+    allocate(field_x(undf_wfs))
+    allocate(field_y(undf_wfs))
+    allocate(x(undf_wfs))
+    allocate(y(undf_wfs))
+    allocate(stencil_map_x(ndf_wf,stencil_size))
+    allocate(stencil_map_y(ndf_wf,stencil_size))
+
     ! Set up maps
     stencil_map_x(1,:) = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9 /)
     stencil_map_y(1,:) = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9 /)
-    map_w2(:) = (/ 1, 2, 3, 4 /)
-    map_wf(1) = 1
 
-    ! Set no monotonicity
-    monotone = horizontal_monotone_none
+    x = (/ 0.0_r_tran, -1.0_r_tran, -2.0_r_tran, &
+           0.0_r_tran, 0.0_r_tran, 1.0_r_tran, &
+           2.0_r_tran, 0.0_r_tran, 0.0_r_tran /)
+    y = (/ 0.0_r_tran, 0.0_r_tran, 0.0_r_tran, &
+           1.0_r_tran, 2.0_r_tran, 0.0_r_tran, &
+           0.0_r_tran, -1.0_r_tran, -2.0_r_tran /)
 
-    ! Set up field y to vary and field x to be constant
-    field_y(:) = (/ 27.0_r_tran, 8.0_r_tran, 1.0_r_tran, &
-                    1.0_r_tran, 1.0_r_tran, 8.0_r_tran, &
-                    1.0_r_tran, 1.0_r_tran, 1.0_r_tran /)
-    field_x(:) = (/ 4.0_r_tran, 4.0_r_tran, 4.0_r_tran, &
-                    4.0_r_tran, 4.0_r_tran, 4.0_r_tran, &
-                    4.0_r_tran, 4.0_r_tran, 4.0_r_tran /)
+    ! Set up field y and field_x to be cubic in the appropriate directions
+    field_y(:) = (x(:) - 3.0_r_tran)**3
+    field_x(:) = (3.0_r_tran*y(:) - 2.0_r_tran)**3
 
     ! Initialise increment to zero before each test
     increment_x = 0.0_r_tran
     increment_y = 0.0_r_tran
 
-    ! Test with fractional departure distance on one panel
-    dep_pts(:) = 0.5_r_tran
-    dt = 1.0_r_tran
+    ! Test with positive fractional departure distance
+    dep_disp = 0.25_r_tran
+    dep_pts_xy(:) = dep_disp
 
     call horizontal_cubic_sl_code( nlayers,        &
                                    increment_x,    &
@@ -94,10 +123,9 @@ contains
                                    field_y,        &
                                    stencil_size_y, &
                                    stencil_map_y,  &
-                                   dep_pts,        &
+                                   dep_pts_xy,     &
                                    monotone,       &
                                    extent_size,    &
-                                   dt,             &
                                    ndf_wf,         &
                                    undf_wfs,       &
                                    map_wf,         &
@@ -105,18 +133,168 @@ contains
                                    undf_w2,        &
                                    map_w2 )
 
-    ! Get correct tolerance
-    if ( r_tran == real64 ) then
-      use_tol = tol
-    else
-      use_tol = 1.0e-6_r_tran
-    end if
+    ! Test increment
+    answer = (-dep_disp - 3.0_r_tran)**3 - field_y(1)
+    @assertEqual(answer, increment_x, use_tol)
+    answer = (-3.0_r_tran*dep_disp - 2.0_r_tran)**3 - field_x(1)
+    @assertEqual(answer, increment_y, use_tol)
+
+    ! TEST 2: Fractional dep dist, negative dep dists --------------------------
+
+    ! Initialise increment to zero before each test
+    increment_x = 0.0_r_tran
+    increment_y = 0.0_r_tran
+
+    ! Test with negative fractional departure distance
+    dep_disp = -0.25_r_tran
+    dep_pts_xy(:) = dep_disp
+
+    call horizontal_cubic_sl_code( nlayers,        &
+                                   increment_x,    &
+                                   increment_y,    &
+                                   field_x,        &
+                                   stencil_size_x, &
+                                   stencil_map_x,  &
+                                   field_y,        &
+                                   stencil_size_y, &
+                                   stencil_map_y,  &
+                                   dep_pts_xy,     &
+                                   monotone,       &
+                                   extent_size,    &
+                                   ndf_wf,         &
+                                   undf_wfs,       &
+                                   map_wf,         &
+                                   ndf_w2,         &
+                                   undf_w2,        &
+                                   map_w2 )
 
     ! Test increment
-    answer = 7.875_r_tran
+    answer = (-dep_disp - 3.0_r_tran)**3 - field_y(1)
     @assertEqual(answer, increment_x, use_tol)
-    answer = 0.0_r_tran
+    answer = (-3.0_r_tran*dep_disp - 2.0_r_tran)**3 - field_x(1)
     @assertEqual(answer, increment_y, use_tol)
+
+    deallocate(x)
+    deallocate(y)
+    deallocate(field_x)
+    deallocate(field_y)
+    deallocate(stencil_map_x)
+    deallocate(stencil_map_y)
+
+    ! TEST 3: Integer dep dist, positive dep dists -----------------------------
+    ! Stencil extent of 3
+
+    ! Stencil map has form
+    !         | 9 |
+    !         | 8 |
+    ! | 3 | 2 | 1 | 6 | 7 |
+    !         | 4 |
+    !         | 5 |
+
+    stencil_size = 13
+    undf_wfs = ndf_wf*nlayers*stencil_size
+    stencil_size_x = stencil_size
+    stencil_size_y = stencil_size
+    extent_size = (stencil_size-1)/4
+
+    allocate(field_x(undf_wfs))
+    allocate(field_y(undf_wfs))
+    allocate(x(undf_wfs))
+    allocate(y(undf_wfs))
+    allocate(stencil_map_x(ndf_wf,stencil_size))
+    allocate(stencil_map_y(ndf_wf,stencil_size))
+
+    ! Set up maps
+    stencil_map_x(1,:) = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 /)
+    stencil_map_y(1,:) = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 /)
+
+    x = (/ 0.0_r_tran, -1.0_r_tran, -2.0_r_tran, -3.0_r_tran, &
+           0.0_r_tran, 0.0_r_tran, 0.0_r_tran, &
+           1.0_r_tran,  2.0_r_tran, 3.0_r_tran, &
+           0.0_r_tran, 0.0_r_tran, 0.0_r_tran /)
+    y = (/ 0.0_r_tran, 0.0_r_tran, 0.0_r_tran, 0.0_r_tran, &
+           1.0_r_tran, 2.0_r_tran, 3.0_r_tran, &
+           0.0_r_tran, 0.0_r_tran, 0.0_r_tran, &
+           -1.0_r_tran, -2.0_r_tran, -3.0_r_tran /)
+
+    ! Set up field y and field_x to be cubic in the appropriate directions
+    field_y(:) = (0.5_r_tran*x(:) - 3.0_r_tran)**3
+    field_x(:) = (3.0_r_tran*y(:) - 2.0_r_tran)**3
+
+    ! Initialise increment to zero before each test
+    increment_x = 0.0_r_tran
+    increment_y = 0.0_r_tran
+
+    ! Test with positive integer departure distance
+    dep_disp = 1.25_r_tran
+    dep_pts_xy(:) = dep_disp
+
+    call horizontal_cubic_sl_code( nlayers,        &
+                                   increment_x,    &
+                                   increment_y,    &
+                                   field_x,        &
+                                   stencil_size_x, &
+                                   stencil_map_x,  &
+                                   field_y,        &
+                                   stencil_size_y, &
+                                   stencil_map_y,  &
+                                   dep_pts_xy,     &
+                                   monotone,       &
+                                   extent_size,    &
+                                   ndf_wf,         &
+                                   undf_wfs,       &
+                                   map_wf,         &
+                                   ndf_w2,         &
+                                   undf_w2,        &
+                                   map_w2 )
+
+    ! Test increment
+    answer = (-0.5_r_tran*dep_disp - 3.0_r_tran)**3 - field_y(1)
+    @assertEqual(answer, increment_x, use_tol)
+    answer = (-3.0_r_tran*dep_disp - 2.0_r_tran)**3 - field_x(1)
+    @assertEqual(answer, increment_y, use_tol)
+
+    ! TEST 4: Integer dep dist, negative dep dists -----------------------------
+
+    ! Initialise increment to zero before each test
+    increment_x = 0.0_r_tran
+    increment_y = 0.0_r_tran
+
+    ! Test with negative integer departure distance
+    dep_disp = -1.75_r_tran
+    dep_pts_xy(:) = dep_disp
+
+    call horizontal_cubic_sl_code( nlayers,        &
+                                   increment_x,    &
+                                   increment_y,    &
+                                   field_x,        &
+                                   stencil_size_x, &
+                                   stencil_map_x,  &
+                                   field_y,        &
+                                   stencil_size_y, &
+                                   stencil_map_y,  &
+                                   dep_pts_xy,     &
+                                   monotone,       &
+                                   extent_size,    &
+                                   ndf_wf,         &
+                                   undf_wfs,       &
+                                   map_wf,         &
+                                   ndf_w2,         &
+                                   undf_w2,        &
+                                   map_w2 )
+
+    ! Test increment
+    answer = (-0.5_r_tran*dep_disp - 3.0_r_tran)**3 - field_y(1)
+    @assertEqual(answer, increment_x, use_tol)
+    answer = (-3.0_r_tran*dep_disp - 2.0_r_tran)**3 - field_x(1)
+    @assertEqual(answer, increment_y, use_tol)
+
+    deallocate(x)
+    deallocate(y)
+    deallocate(field_x)
+    deallocate(field_y)
+    deallocate(stencil_map_x)
+    deallocate(stencil_map_y)
 
   end subroutine horizontal_cubic_sl_kernel_test
 

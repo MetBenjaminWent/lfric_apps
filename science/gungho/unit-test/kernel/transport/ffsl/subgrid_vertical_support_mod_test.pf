@@ -14,7 +14,7 @@ module subgrid_vertical_support_mod_test
 
 contains
 
-  !------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
 
   @test
   subroutine second_order_vertical_edge_test()
@@ -80,7 +80,7 @@ contains
 
   end subroutine second_order_vertical_edge_test
 
-  !------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
 
   @test
   subroutine third_order_vertical_edge_test()
@@ -90,9 +90,17 @@ contains
 
     implicit none
 
-    real(kind=r_tran)   :: rho(1:3), dz(1:3), edge_below, edge_above, tol
-    real(kind=r_tran)   :: answer_below(1:3), answer_above(1:3)
-    integer(kind=i_def) :: cell
+    integer(kind=i_def), parameter :: nlayers = 3
+    logical(kind=l_def), parameter :: log_space = .false.
+    real(kind=r_tran),   parameter :: sixth = 1.0_r_tran/6.0_r_tran
+    real(kind=r_tran),   parameter :: third  = 1.0_r_tran/3.0_r_tran
+    real(kind=r_tran),   parameter :: twelfth = 1.0_r_tran/12.0_r_tran
+
+    real(kind=r_tran)   :: rho(nlayers), dz(nlayers), tol
+    real(kind=r_tran)   :: edge_below(nlayers), edge_above(nlayers)
+    real(kind=r_tran)   :: answer_below(nlayers), answer_above(nlayers)
+    real(kind=r_tran)   :: dla_dz_1(nlayers), dla_dz_2(nlayers), dla_dz_3(nlayers)
+    real(kind=r_tran)   :: dlb_dz_1(nlayers), dlb_dz_2(nlayers), dlb_dz_3(nlayers)
 
     ! Set tolerance
     if ( r_tran == real64 ) then
@@ -116,21 +124,20 @@ contains
     answer_above(2) = 2.5_r_tran
     answer_above(3) = 3.5_r_tran
 
-    ! Loop over all cells
-    do cell = 1, 3
+    dla_dz_1 = (/ -0.5_r_tran,  -1.0_r_tran,  1.5_r_tran /)
+    dla_dz_2 = (/ 1.0_r_tran,  0.5_r_tran,  -3.0_r_tran /)
+    dla_dz_3 = (/ -sixth,  third,  2.0_r_tran-sixth /)
+    dlb_dz_1 = (/ 3.0_r_tran,  -0.5_r_tran,  -1.0_r_tran /)
+    dlb_dz_2 = (/ -1.5_r_tran,  1.0_r_tran,  0.5_r_tran /)
+    dlb_dz_3 = (/ third,  -sixth,  third /)
 
-      edge_above = 0.0_r_tran
-      edge_below = 0.0_r_tran
-      call third_order_vertical_edge(rho,        &
-                                     dz,         &
-                                     cell,       &
-                                     edge_above, &
-                                     edge_below)
+    call third_order_vertical_edge(                                            &
+            rho, dla_dz_1, dla_dz_2, dla_dz_3, dlb_dz_1, dlb_dz_2, dlb_dz_3,   &
+            dz, edge_above, edge_below, log_space, nlayers                     &
+    )
 
-      @assertEqual(answer_above(cell), edge_above, tol)
-      @assertEqual(answer_below(cell), edge_below, tol)
-
-    end do
+    @assertEqual(answer_above, edge_above, tol)
+    @assertEqual(answer_below, edge_below, tol)
 
     ! Test on non-uniform grid with linear function
     dz(1)  = 1.0_r_tran
@@ -147,21 +154,20 @@ contains
     answer_above(2) = 6.0_r_tran
     answer_above(3) = 10.0_r_tran
 
-    ! Loop over all cells
-    do cell = 1, 3
+    dla_dz_1 = (/ 0.25_r_tran, -0.75_r_tran, 1.25_r_tran /)
+    dla_dz_2 = (/ third, third, -2.0_r_tran+third /)
+    dla_dz_3 = (/ -0.05_r_tran, 0.15_r_tran, 0.95_r_tran /)
+    dlb_dz_1 = (/ 1.875_r_tran, 0.25_r_tran, -0.75_r_tran /)
+    dlb_dz_2 = (/ -third-twelfth, third, third /)
+    dlb_dz_3 = (/ 0.075_r_tran, -0.05_r_tran, 0.15_r_tran /)
 
-      edge_above = 0.0_r_tran
-      edge_below = 0.0_r_tran
-      call third_order_vertical_edge(rho,        &
-                                     dz,         &
-                                     cell,       &
-                                     edge_above, &
-                                     edge_below)
+    call third_order_vertical_edge(                                            &
+            rho, dla_dz_1, dla_dz_2, dla_dz_3, dlb_dz_1, dlb_dz_2, dlb_dz_3,   &
+            dz, edge_above, edge_below, log_space, nlayers                     &
+    )
 
-      @assertEqual(answer_above(cell), edge_above, tol)
-      @assertEqual(answer_below(cell), edge_below, tol)
-
-    end do
+    @assertEqual(answer_above, edge_above, tol)
+    @assertEqual(answer_below, edge_below, tol)
 
     ! Test on non-uniform grid with non-linear function
     dz(1)  = 1.0_r_tran
@@ -178,25 +184,24 @@ contains
     answer_above(2) = 34.0_r_tran
     answer_above(3) = 140.0_r_tran
 
-    ! Loop over all cells
-    do cell = 1, 3
+    dla_dz_1 = (/ 0.3_r_tran, -0.9_r_tran, 1.8_r_tran /)
+    dla_dz_2 = (/ 5.0_r_tran/18.0_r_tran, 0.5_r_tran, -2.0_r_tran+third /)
+    dla_dz_3 = (/ -1.0_r_tran/45.0_r_tran, 1.0_r_tran/15.0_r_tran, 0.7_r_tran /)
+    dlb_dz_1 = (/ 1.8_r_tran, 0.3_r_tran, -0.9_r_tran /)
+    dlb_dz_2 = (/ -third, 5.0_r_tran/18.0_r_tran, 0.5_r_tran /)
+    dlb_dz_3 = (/ 1.0_r_tran/30.0_r_tran, -1.0_r_tran/45.0_r_tran, 1.0_r_tran/15.0_r_tran /)
 
-      edge_above = 0.0_r_tran
-      edge_below = 0.0_r_tran
-      call third_order_vertical_edge(rho,        &
-                                     dz,         &
-                                     cell,       &
-                                     edge_above, &
-                                     edge_below)
+    call third_order_vertical_edge(                                            &
+            rho, dla_dz_1, dla_dz_2, dla_dz_3, dlb_dz_1, dlb_dz_2, dlb_dz_3,   &
+            dz, edge_above, edge_below, log_space, nlayers                     &
+    )
 
-      @assertEqual(answer_above(cell), edge_above, tol)
-      @assertEqual(answer_below(cell), edge_below, tol)
-
-    end do
+    @assertEqual(answer_above, edge_above, tol)
+    @assertEqual(answer_below, edge_below, tol)
 
   end subroutine third_order_vertical_edge_test
 
-  !------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
 
   @test
   subroutine fourth_order_vertical_edge_test()
@@ -206,9 +211,19 @@ contains
 
     implicit none
 
-    real(kind=r_tran)   :: rho(1:4), dz(1:4), edge_value, tol
-    real(kind=r_tran)   :: answer(1:5)
-    integer(kind=i_def) :: edge_to_do
+    integer(kind=i_def), parameter :: nlayers = 4
+    logical(kind=l_def), parameter :: log_space = .false.
+    real(kind=r_tran),   parameter :: sixth = 1.0_r_tran/6.0_r_tran
+    real(kind=r_tran),   parameter :: third  = 1.0_r_tran/3.0_r_tran
+    real(kind=r_tran),   parameter :: twelfth = 1.0_r_tran/12.0_r_tran
+    real(kind=r_tran),   parameter :: ninth = 1.0_r_tran/9.0_r_tran
+    real(kind=r_tran),   parameter :: fifteenth = 1.0_r_tran/15.0_r_tran
+    real(kind=r_tran),   parameter :: eleventh = 1.0_r_tran/11.0_r_tran
+
+    real(kind=r_tran)   :: rho(nlayers), dz(nlayers), tol
+    real(kind=r_tran)   :: edge_value(nlayers+1), answer(nlayers+1)
+    real(kind=r_tran)   :: dl_dz_1(nlayers+1), dl_dz_2(nlayers+1)
+    real(kind=r_tran)   :: dl_dz_3(nlayers+1), dl_dz_4(nlayers+1)
 
     ! Set tolerance
     if ( r_tran == real64 ) then
@@ -233,18 +248,17 @@ contains
     answer(4) = 3.5_r_tran
     answer(5) = 4.5_r_tran
 
-    ! Loop over all edges on the rho stencil
-    do edge_to_do = 0, 4
+    dl_dz_1 = (/ 4.0_r_tran, -1.0_r_tran+sixth, -2.0_r_tran*third, 0.5_r_tran, -1.0_r_tran-third /)
+    dl_dz_2 = (/ -3.0_r_tran, 1.5_r_tran, 0.0_r_tran, -1.5_r_tran, 3.0_r_tran /)
+    dl_dz_3 = (/ 1.0_r_tran+third, -0.5_r_tran, 2.0_r_tran*third, 1.0_r_tran-sixth, -4.0_r_tran /)
+    dl_dz_4 = (/ -0.25_r_tran, twelfth, -twelfth, 0.25_r_tran, 2.0_r_tran+twelfth /)
 
-      edge_value = 0.0_r_tran
-      call fourth_order_vertical_edge(rho,        &
-                                      dz,         &
-                                      edge_to_do, &
-                                      edge_value)
+    call fourth_order_vertical_edge(                                           &
+            rho, dl_dz_1, dl_dz_2, dl_dz_3, dl_dz_4, dz, edge_value,           &
+            log_space, nlayers                                                 &
+    )
 
-      @assertEqual(answer(edge_to_do+1), edge_value, tol)
-
-    end do
+    @assertEqual(answer, edge_value, tol)
 
     ! Test on non-uniform grid with linear function
     dz(1)  = 1.0_r_tran
@@ -262,18 +276,17 @@ contains
     answer(4) = 10.0_r_tran
     answer(5) = 12.0_r_tran
 
-    ! Loop over all edges on the rho stencil
-    do edge_to_do = 0, 4
+    dl_dz_1 = (/ 2.25_r_tran, 0.05_r_tran, -0.45_r_tran, 0.25_r_tran, -0.45_r_tran /)
+    dl_dz_2 = (/ -1.0_r_tran+sixth, 5.0_r_tran*ninth, 0.0_r_tran, -5.0_r_tran*ninth, 1.0_r_tran-sixth /)
+    dl_dz_3 = (/ 0.45_r_tran, -0.25_r_tran, 0.45_r_tran, -0.05_r_tran, -2.25_r_tran /)
+    dl_dz_4 = (/ -sixth, 4.0_r_tran/45.0_r_tran, -2.0_r_tran*fifteenth, 4.0_r_tran*ninth, 1.7_r_tran /)
 
-      edge_value = 0.0_r_tran
-      call fourth_order_vertical_edge(rho,        &
-                                      dz,         &
-                                      edge_to_do, &
-                                      edge_value)
+    call fourth_order_vertical_edge(                                           &
+            rho, dl_dz_1, dl_dz_2, dl_dz_3, dl_dz_4, dz, edge_value,           &
+            log_space, nlayers                                                 &
+    )
 
-      @assertEqual(answer(edge_to_do+1), edge_value, tol)
-
-    end do
+    @assertEqual(answer, edge_value, tol)
 
     ! Test on non-uniform grid with non-linear function
     dz(1)  = 1.0_r_tran
@@ -291,36 +304,43 @@ contains
     answer(4) = 99.2_r_tran
     answer(5) = 144.2_r_tran
 
-    ! Loop over all edges on the rho stencil
-    do edge_to_do = 0, 4
+    dl_dz_1 = (/ 2.25_r_tran, 0.05_r_tran, -0.45_r_tran, 0.25_r_tran, -0.45_r_tran /)
+    dl_dz_2 = (/ -1.0_r_tran+sixth, 5.0_r_tran*ninth, 0.0_r_tran, -5.0_r_tran*ninth, 1.0_r_tran-sixth /)
+    dl_dz_3 = (/ 0.45_r_tran, -0.25_r_tran, 0.45_r_tran, -0.05_r_tran, -2.25_r_tran /)
+    dl_dz_4 = (/ -sixth, 4.0_r_tran/45.0_r_tran, -2.0_r_tran*fifteenth, 4.0_r_tran*ninth, 1.7_r_tran /)
 
-      edge_value = 0.0_r_tran
-      call fourth_order_vertical_edge(rho,        &
-                                      dz,         &
-                                      edge_to_do, &
-                                      edge_value)
+    call fourth_order_vertical_edge(                                           &
+            rho, dl_dz_1, dl_dz_2, dl_dz_3, dl_dz_4, dz, edge_value,           &
+            log_space, nlayers                                                 &
+    )
 
-      @assertEqual(answer(edge_to_do+1), edge_value, tol)
-
-    end do
+    @assertEqual(answer, edge_value, tol)
 
   end subroutine fourth_order_vertical_edge_test
 
-  !------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
 
   @test
-  subroutine fourth_order_vertical_mono_test()
+  subroutine third_precompute_height_test()
     use funit
     use, intrinsic :: iso_fortran_env,  only: real64
-    use subgrid_vertical_support_mod,   only: fourth_order_vertical_edge, &
-                                              fourth_order_vertical_mono, &
-                                              fourth_order_vertical_quasi_mono
+    use subgrid_vertical_support_mod,   only: third_precompute_height
 
     implicit none
 
-    real(kind=r_tran)   :: rho(1:4), dz(1:4), edge_value, tol
-    real(kind=r_tran)   :: answer(1:5), answer_qm, dep, min_val
-    integer(kind=i_def) :: edge_to_do
+    integer(kind=i_def), parameter :: nlayers = 3
+
+    real(kind=r_tran), parameter :: sixth = 1.0_r_tran/6.0_r_tran
+    real(kind=r_tran), parameter :: third  = 1.0_r_tran/3.0_r_tran
+    real(kind=r_tran), parameter :: twelfth = 1.0_r_tran/12.0_r_tran
+
+    real(kind=r_tran)   :: dz(nlayers), tol
+    real(kind=r_tran)   :: answer_below_1(nlayers), answer_above_1(nlayers)
+    real(kind=r_tran)   :: answer_below_2(nlayers), answer_above_2(nlayers)
+    real(kind=r_tran)   :: answer_below_3(nlayers), answer_above_3(nlayers)
+    real(kind=r_tran)   :: dla_dz_1(nlayers), dla_dz_2(nlayers), dla_dz_3(nlayers)
+    real(kind=r_tran)   :: dlb_dz_1(nlayers), dlb_dz_2(nlayers), dlb_dz_3(nlayers)
+    integer(kind=i_def) :: k
 
     ! Set tolerance
     if ( r_tran == real64 ) then
@@ -329,253 +349,143 @@ contains
       tol = 1.0e-6_r_tran
     end if
 
-    ! Unlimited fourth order edge tested above, so just test monotonicity
-    ! using a uniform grid with a non-linear function
+    ! Test on uniform grid with linear function
+    dz(1)  = 1.0_r_tran
+    dz(2)  = 1.0_r_tran
+    dz(3)  = 1.0_r_tran
+
+    answer_above_1 = (/ -0.5_r_tran,  -1.0_r_tran,  1.5_r_tran /)
+    answer_above_2 = (/ 1.0_r_tran,  0.5_r_tran,  -3.0_r_tran /)
+    answer_above_3 = (/ -sixth,  third,  2.0_r_tran-sixth /)
+    answer_below_1 = (/ 3.0_r_tran,  -0.5_r_tran,  -1.0_r_tran /)
+    answer_below_2 = (/ -1.5_r_tran,  1.0_r_tran,  0.5_r_tran /)
+    answer_below_3 = (/ third,  -sixth,  third /)
+
+    do k = 1, 3
+      ! Calculate coefficients for interpolation
+      call third_precompute_height(                                            &
+              dla_dz_1(k), dla_dz_2(k), dla_dz_3(k),                           &
+              dlb_dz_1(k), dlb_dz_2(k), dlb_dz_3(k),                           &
+              dz, k                                                            &
+      )
+    end do
+
+    @assertEqual(answer_above_1, dla_dz_1, tol)
+    @assertEqual(answer_below_1, dlb_dz_1, tol)
+    @assertEqual(answer_above_2, dla_dz_2, tol)
+    @assertEqual(answer_below_2, dlb_dz_2, tol)
+    @assertEqual(answer_above_3, dla_dz_3, tol)
+    @assertEqual(answer_below_3, dlb_dz_3, tol)
+
+    ! Test on non-uniform grid with linear function
+    dz(1)  = 1.0_r_tran
+    dz(2)  = 2.0_r_tran
+    dz(3)  = 3.0_r_tran
+
+    answer_above_1 = (/ 0.3_r_tran, -0.9_r_tran, 1.8_r_tran /)
+    answer_above_2 = (/ 5.0_r_tran/18.0_r_tran, 0.5_r_tran, -2.0_r_tran+third /)
+    answer_above_3 = (/ -1.0_r_tran/45.0_r_tran, 1.0_r_tran/15.0_r_tran, 0.7_r_tran /)
+    answer_below_1 = (/ 1.8_r_tran, 0.3_r_tran, -0.9_r_tran /)
+    answer_below_2 = (/ -third, 5.0_r_tran/18.0_r_tran, 0.5_r_tran /)
+    answer_below_3 = (/ 1.0_r_tran/30.0_r_tran, -1.0_r_tran/45.0_r_tran, 1.0_r_tran/15.0_r_tran /)
+
+    do k = 1, 3
+      ! Calculate coefficients for interpolation
+      call third_precompute_height(                                            &
+              dla_dz_1(k), dla_dz_2(k), dla_dz_3(k),                           &
+              dlb_dz_1(k), dlb_dz_2(k), dlb_dz_3(k),                           &
+              dz, k                                                            &
+      )
+    end do
+
+    @assertEqual(answer_above_1, dla_dz_1, tol)
+    @assertEqual(answer_below_1, dlb_dz_1, tol)
+    @assertEqual(answer_above_2, dla_dz_2, tol)
+    @assertEqual(answer_below_2, dlb_dz_2, tol)
+    @assertEqual(answer_above_3, dla_dz_3, tol)
+    @assertEqual(answer_below_3, dlb_dz_3, tol)
+
+  end subroutine third_precompute_height_test
+
+  !-----------------------------------------------------------------------------
+
+  @test
+  subroutine fourth_precompute_height_test()
+    use funit
+    use, intrinsic :: iso_fortran_env,  only: real64
+    use subgrid_vertical_support_mod,   only: fourth_precompute_height
+
+    implicit none
+
+    integer(kind=i_def), parameter :: nlayers = 4
+
+    real(kind=r_tran), parameter :: sixth = 1.0_r_tran/6.0_r_tran
+    real(kind=r_tran), parameter :: third  = 1.0_r_tran/3.0_r_tran
+    real(kind=r_tran), parameter :: twelfth = 1.0_r_tran/12.0_r_tran
+    real(kind=r_tran), parameter :: ninth = 1.0_r_tran/9.0_r_tran
+    real(kind=r_tran), parameter :: fifteenth = 1.0_r_tran/15.0_r_tran
+    real(kind=r_tran), parameter :: eleventh = 1.0_r_tran/11.0_r_tran
+
+    real(kind=r_tran)   :: dz(nlayers), tol
+    real(kind=r_tran)   :: answer_1(nlayers+1), answer_2(nlayers+1)
+    real(kind=r_tran)   :: answer_3(nlayers+1), answer_4(nlayers+1)
+    real(kind=r_tran)   :: dl_dz_1(nlayers+1), dl_dz_2(nlayers+1)
+    real(kind=r_tran)   :: dl_dz_3(nlayers+1), dl_dz_4(nlayers+1)
+    integer(kind=i_def) :: k
+
+    ! Set tolerance
+    if ( r_tran == real64 ) then
+      tol = 1.0e-12_r_tran
+    else
+      tol = 1.0e-6_r_tran
+    end if
+
+    ! Test on uniform grid with linear function
     dz(1)  = 1.0_r_tran
     dz(2)  = 1.0_r_tran
     dz(3)  = 1.0_r_tran
     dz(4)  = 1.0_r_tran
-    rho(1) = 0.0_r_tran
-    rho(2) = 12.0_r_tran
-    rho(3) = 7.0_r_tran
-    rho(4) = 4.0_r_tran
 
-    answer(1) = 0.0_r_tran
-    answer(2) = 125.0_r_tran/12.0_r_tran
-    answer(3) = 10.75_r_tran
-    answer(4) = 4.0_r_tran
-    answer(5) = 7.0_r_tran
+    answer_1 = (/ 4.0_r_tran, -1.0_r_tran+sixth, -2.0_r_tran*third, 0.5_r_tran, -1.0_r_tran-third /)
+    answer_2 = (/ -3.0_r_tran, 1.5_r_tran, 0.0_r_tran, -1.5_r_tran, 3.0_r_tran /)
+    answer_3 = (/ 1.0_r_tran+third, -0.5_r_tran, 2.0_r_tran*third, 1.0_r_tran-sixth, -4.0_r_tran /)
+    answer_4 = (/ -0.25_r_tran, twelfth, -twelfth, 0.25_r_tran, 2.0_r_tran+twelfth /)
 
-    ! Loop over all edges on the rho stencil
-    do edge_to_do = 0, 4
-
-      edge_value = 0.0_r_tran
-      call fourth_order_vertical_edge(rho,        &
-                                      dz,         &
-                                      edge_to_do, &
-                                      edge_value)
-
-      call fourth_order_vertical_mono(rho,        &
-                                      edge_to_do, &
-                                      edge_value)
-
-      @assertEqual(answer(edge_to_do+1), edge_value, tol)
-
+    do k = 0, 4
+      ! Compute interpolation coefficients
+      call fourth_precompute_height(                                           &
+              dl_dz_1(k+1), dl_dz_2(k+1), dl_dz_3(k+1), dl_dz_4(k+1), dz, k    &
+      )
     end do
 
-    ! Now test quasi-monotone edge value - this only applies to
-    ! edge = 2
+    @assertEqual(answer_1, dl_dz_1, tol)
+    @assertEqual(answer_2, dl_dz_2, tol)
+    @assertEqual(answer_3, dl_dz_3, tol)
+    @assertEqual(answer_4, dl_dz_4, tol)
 
-    answer_qm = 10.75_r_tran
-    dep = 1.0_r_tran
-    min_val = 0.0_r_tran
-    edge_to_do = 2
+    ! Test on non-uniform grid with linear function
+    dz(1)  = 1.0_r_tran
+    dz(2)  = 2.0_r_tran
+    dz(3)  = 2.0_r_tran
+    dz(4)  = 1.0_r_tran
 
-    edge_value = 0.0_r_tran
-    call fourth_order_vertical_edge(rho,        &
-                                    dz,         &
-                                    edge_to_do, &
-                                    edge_value)
+    answer_1 = (/ 2.25_r_tran, 0.05_r_tran, -0.45_r_tran, 0.25_r_tran, -0.45_r_tran /)
+    answer_2 = (/ -1.0_r_tran+sixth, 5.0_r_tran*ninth, 0.0_r_tran, -5.0_r_tran*ninth, 1.0_r_tran-sixth /)
+    answer_3 = (/ 0.45_r_tran, -0.25_r_tran, 0.45_r_tran, -0.05_r_tran, -2.25_r_tran /)
+    answer_4 = (/ -sixth, 4.0_r_tran/45.0_r_tran, -2.0_r_tran*fifteenth, 4.0_r_tran*ninth, 1.7_r_tran /)
 
-    call fourth_order_vertical_quasi_mono(rho,     &
-                                          dep,     &
-                                          min_val, &
-                                          edge_value)
+    do k = 0, 4
+      ! Compute interpolation coefficients
+      call fourth_precompute_height(                                           &
+              dl_dz_1(k+1), dl_dz_2(k+1), dl_dz_3(k+1), dl_dz_4(k+1), dz, k    &
+      )
+    end do
 
-    @assertEqual(answer_qm, edge_value, tol)
+    @assertEqual(answer_1, dl_dz_1, tol)
+    @assertEqual(answer_2, dl_dz_2, tol)
+    @assertEqual(answer_3, dl_dz_3, tol)
+    @assertEqual(answer_4, dl_dz_4, tol)
 
-  end subroutine fourth_order_vertical_mono_test
-
-  !------------------------------------------------------------------
-
-  @test
-  subroutine vertical_ppm_recon_test()
-    use funit
-    use, intrinsic :: iso_fortran_env,  only: real64
-    use subgrid_vertical_support_mod,   only: vertical_ppm_recon
-
-    implicit none
-
-    real(kind=r_tran)   :: rho, rho_L, rho_R, tol
-    real(kind=r_tran)   :: answer, recon, dep_pt
-
-    ! Set tolerance
-    if ( r_tran == real64 ) then
-      tol = 1.0e-12_r_tran
-    else
-      tol = 1.0e-6_r_tran
-    end if
-
-    ! Test a quadratic function
-    rho_L    = 0.0_r_tran
-    rho_R    = 8.0_r_tran
-    rho      = 1.0_r_tran
-    dep_pt   = 0.5_r_tran
-
-    answer = 3.0_r_tran
-
-    call vertical_ppm_recon(recon,    &
-                            dep_pt,   &
-                            rho,      &
-                            rho_L,    &
-                            rho_R)
-
-    @assertEqual(answer, recon, tol)
-
-    ! Test a non-linear function
-    rho_L    = 0.0_r_tran
-    rho_R    = 1.0_r_tran
-    rho      = 2.0_r_tran
-    dep_pt   = 0.5_r_tran
-
-    answer = 2.25_r_tran
-
-    call vertical_ppm_recon(recon,    &
-                            dep_pt,   &
-                            rho,      &
-                            rho_L,    &
-                            rho_R)
-
-    @assertEqual(answer, recon, tol)
-
-  end subroutine vertical_ppm_recon_test
-
-  !------------------------------------------------------------------
-
-  @test
-  subroutine vertical_ppm_mono_strict_test()
-    use funit
-    use, intrinsic :: iso_fortran_env,  only: real64
-    use subgrid_vertical_support_mod,   only: vertical_ppm_recon, &
-                                              vertical_ppm_mono_strict
-
-    implicit none
-
-    real(kind=r_tran)   :: rho, rho_L, rho_R, tol
-    real(kind=r_tran)   :: answer, recon, dep_pt
-
-    ! Set tolerance
-    if ( r_tran == real64 ) then
-      tol = 1.0e-12_r_tran
-    else
-      tol = 1.0e-6_r_tran
-    end if
-
-    ! Test a non-linear function with strict monotonicity
-    rho_L    = 0.0_r_tran
-    rho_R    = 1.0_r_tran
-    rho      = 2.0_r_tran
-    dep_pt   = 0.5_r_tran
-
-    answer = 2.0_r_tran
-
-    call vertical_ppm_recon(recon,  &
-                            dep_pt, &
-                            rho,    &
-                            rho_L,  &
-                            rho_R)
-
-    call vertical_ppm_mono_strict(recon,  &
-                                  rho,    &
-                                  rho_L,  &
-                                  rho_R)
-
-    @assertEqual(answer, recon, tol)
-
-  end subroutine vertical_ppm_mono_strict_test
-
-  !------------------------------------------------------------------
-
-  @test
-  subroutine vertical_ppm_mono_relax_test()
-    use funit
-    use, intrinsic :: iso_fortran_env,  only: real64
-    use subgrid_vertical_support_mod,   only: vertical_ppm_recon, &
-                                              vertical_ppm_mono_relax
-
-    implicit none
-
-    real(kind=r_tran)   :: rho, rho_L, rho_R, tol
-    real(kind=r_tran)   :: answer, recon, dep_pt
-
-    ! Set tolerance
-    if ( r_tran == real64 ) then
-      tol = 1.0e-12_r_tran
-    else
-      tol = 1.0e-6_r_tran
-    end if
-
-    ! Test a non-linear function with relaxed monotonicity
-    rho_L    = 0.0_r_tran
-    rho_R    = 1.0_r_tran
-    rho      = 2.0_r_tran
-    dep_pt   = 0.5_r_tran
-
-    answer = 2.0_r_tran
-
-    call vertical_ppm_recon(recon,  &
-                            dep_pt, &
-                            rho,    &
-                            rho_L,  &
-                            rho_R)
-
-    call vertical_ppm_mono_relax(recon,  &
-                                 dep_pt, &
-                                 rho,    &
-                                 rho_L,  &
-                                 rho_R)
-
-    @assertEqual(answer, recon, tol)
-
-  end subroutine vertical_ppm_mono_relax_test
-
-  !------------------------------------------------------------------
-
-  @test
-  subroutine vertical_ppm_positive_test()
-    use funit
-    use, intrinsic :: iso_fortran_env,  only: real64
-    use subgrid_vertical_support_mod,   only: vertical_ppm_recon, &
-                                              vertical_ppm_positive
-
-    implicit none
-
-    real(kind=r_tran)   :: rho, rho_L, rho_R, tol
-    real(kind=r_tran)   :: answer, recon, dep_pt
-
-    ! Set tolerance
-    if ( r_tran == real64 ) then
-      tol = 1.0e-12_r_tran
-    else
-      tol = 1.0e-6_r_tran
-    end if
-
-    ! Test a non-linear function with positivity
-    rho_L    = 1.0_r_tran
-    rho_R    = 1.0_r_tran
-    rho      = 0.1_r_tran
-    dep_pt   = 0.1_r_tran
-
-    ! Without positivity the recon=0.7480, with positivty the
-    ! recon should revert to the rho value of 0.1
-    answer = 0.1_r_tran
-
-    call vertical_ppm_recon(recon,  &
-                            dep_pt, &
-                            rho,    &
-                            rho_L,  &
-                            rho_R)
-
-    call vertical_ppm_positive(recon,  &
-                               dep_pt, &
-                               rho,    &
-                               rho_L,  &
-                               rho_R)
-
-    @assertEqual(answer, recon, tol)
-
-  end subroutine vertical_ppm_positive_test
-
-  !------------------------------------------------------------------
+  end subroutine fourth_precompute_height_test
 
 end module subgrid_vertical_support_mod_test

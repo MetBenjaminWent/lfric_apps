@@ -15,17 +15,18 @@ module transport_constants_mod
 
   ! Infrastructure
   use constants_mod,                      only: i_def, r_def, l_def, str_def,  &
-                                                radians_to_degrees
+                                                r_tran, radians_to_degrees
   use copy_field_alg_mod,                 only: copy_field
   use domain_mod,                         only: domain_type
   use extrusion_mod,                      only: TWOD
   use sci_geometric_constants_mod,        only: get_coordinates,               &
                                                 get_panel_id,                  &
                                                 get_extended_coordinates,      &
-                                                get_height
+                                                get_height,                    &
+                                                get_dz_w3
   use sci_fem_constants_mod,              only: get_qr
   use field_mod,                          only: field_type
-  use fs_continuity_mod,                  only: W2, W2H, W2V, W3, Wtheta
+  use fs_continuity_mod,                  only: W2, W2H, W2V, W3, Wtheta, Wchi
   use function_space_collection_mod,      only: function_space_collection
   use function_space_mod,                 only: function_space_type
   use integer_field_mod,                  only: integer_field_type
@@ -33,7 +34,9 @@ module transport_constants_mod
   use inventory_by_local_mesh_mod,        only: inventory_by_local_mesh_type
   use io_config_mod,                      only: subroutine_timers
   use local_mesh_mod,                     only: local_mesh_type
-  use log_mod,                            only: log_event, LOG_LEVEL_ERROR
+  use log_mod,                            only: log_event, log_scratch_space,  &
+                                                LOG_LEVEL_ERROR,               &
+                                                LOG_LEVEL_WARNING
   use mesh_collection_mod,                only: mesh_collection
   use mesh_mod,                           only: mesh_type
   use operator_mod,                       only: operator_type, &
@@ -49,9 +52,9 @@ module transport_constants_mod
   use timer_mod,                          only: timer
 
   ! Kernels
-
   use sci_operator_algebra_kernel_mod,    only: operator_setval_x_kernel_type
   use sci_operator_x_times_y_kernel_mod,  only: operator_x_times_y_kernel_type
+  use panel_edge_support_mod,             only: FAR_AWAY
 
   implicit none
 
@@ -78,6 +81,11 @@ module transport_constants_mod
   type(inventory_by_mesh_type) :: detj_at_w2_above_inventory
   type(inventory_by_mesh_type) :: detj_at_w2_below_inventory
 
+  ! The vertical FFSL constants
+  type(inventory_by_mesh_type) :: third_dla_dz_inventory
+  type(inventory_by_mesh_type) :: third_dlb_dz_inventory
+  type(inventory_by_mesh_type) :: fourth_dl_dz_inventory
+
   ! W3 mass matrix and its inverse
   type(inventory_by_mesh_type), target :: mm_w3_r_tran_inventory
   type(inventory_by_mesh_type), target :: mm_w3_inv_r_tran_inventory
@@ -90,6 +98,7 @@ module transport_constants_mod
   ! Relating to the extended mesh
   type(inventory_by_local_mesh_type), target :: ext_mesh_weights_inventory
   type(inventory_by_local_mesh_type), target :: ext_mesh_indices_inventory
+  type(inventory_by_local_mesh_type), target :: panel_edge_dist_inventory
 
   ! MoL coefficients
   type(inventory_by_mesh_type) :: hori_wt_mol_coeffs_inventory
@@ -111,8 +120,12 @@ module transport_constants_mod
   public :: get_detj_at_w3_r_tran
   public :: get_detj_at_w2_above
   public :: get_detj_at_w2_below
+  public :: get_third_dla_dz
+  public :: get_third_dlb_dz
+  public :: get_fourth_dl_dz
   public :: get_extended_mesh_weights
   public :: get_extended_mesh_indices
+  public :: get_panel_edge_dist
   public :: get_hori_w3_mol_coeffs
   public :: get_vert_w3_mol_coeffs
   public :: get_reversible_vert_w3_mol_coeffs
@@ -124,6 +137,7 @@ module transport_constants_mod
 
   ! Private routines for creating constants
   private :: initialise_remap_on_extended_mesh
+  private :: compute_panel_edge_dists
 
 contains
 
@@ -196,6 +210,132 @@ contains
     if ( subroutine_timers ) call timer('runtime_constants.transport')
 
   end subroutine initialise_remap_on_extended_mesh
+
+  !> @brief Computes the panel edge mask fields, indicating cells neighbouring
+  !!        cubed-sphere panel edges
+  !> @param[in] mesh_id The ID of the mesh to compute the mask for
+  subroutine compute_panel_edge_dists(mesh_id)
+
+    use base_mesh_config_mod,        only: geometry,                           &
+                                           geometry_spherical,                 &
+                                           topology,                           &
+                                           topology_fully_periodic
+    use panel_edge_dist_kernel_mod,  only: panel_edge_dist_kernel_type
+    use sci_field_minmax_alg_mod,    only: get_local_field_minmax
+
+    implicit none
+
+    integer(kind=i_def),       intent(in) :: mesh_id
+    integer(kind=i_def)                   :: stencil_extent
+    integer(kind=i_def)                   :: depth
+    integer(kind=i_def)                   :: field_depth
+    type(mesh_type),              pointer :: mesh
+    type(mesh_type),              pointer :: twod_mesh
+    type(local_mesh_type),        pointer :: local_mesh
+    type(function_space_type),    pointer :: fs
+    type(integer_field_type),     pointer :: panel_edge_dist(:)
+    type(field_type),             pointer :: panel_id
+    integer(kind=i_def)                   :: ncolumns_1d
+    integer(kind=i_def),        parameter :: MINUS_FAR_AWAY = -FAR_AWAY
+
+    if ( subroutine_timers ) call timer('runtime_constants.transport')
+
+    ! Initialise inventories if they haven't already been
+    if (.not. panel_edge_dist_inventory%is_initialised()) then
+      call panel_edge_dist_inventory%initialise(name="panel_edge_dist")
+    end if
+
+    mesh => mesh_collection%get_mesh(mesh_id)
+    local_mesh => mesh%get_local_mesh()
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+    fs => function_space_collection%get_fs(twod_mesh, 0, 0, W3)
+    panel_id => get_panel_id(mesh_id)
+    stencil_extent = mesh%get_halo_depth()
+    depth = stencil_extent
+    field_depth = mesh%get_halo_depth()
+
+    call panel_edge_dist_inventory%add_field_array(                            &
+        panel_edge_dist, fs, 4, local_mesh, halo_depth=field_depth             &
+    )
+
+    if (geometry == geometry_spherical .and. topology == topology_fully_periodic) then
+      ! Check if the mesh is too coarse for this stencil
+      ! If the stencil is too long for the mesh, it could overlap with
+      ! two panel edges, and will not give a sensible answer
+      ncolumns_1d = INT(                                                       &
+        SQRT(REAL(local_mesh%get_ncells_global_mesh(), r_tran) / 6.0_r_tran),  &
+      i_def)
+      if (ncolumns_1d < stencil_extent+1) then
+        write(log_scratch_space,'(A,I8,A,I8,A,I8)')                            &
+          'Halo depth ', stencil_extent, 'is too long for this mesh, ' //      &
+          'which has ', ncolumns_1d, 'cells along each panel edge. ' //        &
+          'Any calculations that need information about panel edges ' //       &
+          'may not be correct for depths greater than ', ncolumns_1d
+        call log_event(log_scratch_space, LOG_LEVEL_WARNING)
+        stencil_extent = ncolumns_1d
+      end if
+      call invoke( panel_edge_dist_kernel_type(panel_edge_dist,                &
+                                               panel_id,                       &
+                                               stencil_extent) )
+    else
+      ! There are no panel edges, so set the distances to be a large negative
+      ! number
+      call invoke( int_setval_c(panel_edge_dist(1), MINUS_FAR_AWAY),           &
+                   int_setval_c(panel_edge_dist(2), MINUS_FAR_AWAY),           &
+                   int_setval_c(panel_edge_dist(3), MINUS_FAR_AWAY),           &
+                   int_setval_c(panel_edge_dist(4), MINUS_FAR_AWAY) )
+    end if
+
+    if ( subroutine_timers ) call timer('runtime_constants.transport')
+
+  end subroutine compute_panel_edge_dists
+
+  !> @brief Computes the two sets of coefficients for the third-order FFSL
+  !!        edge reconstruction
+  !> @param[in] mesh_id The ID of the mesh to compute the coefficients for
+  subroutine compute_third_dl_dz(mesh_id)
+
+    use ffsl_third_dldz_kernel_mod,    only: ffsl_third_dldz_kernel_type
+
+    implicit none
+
+    integer(kind=i_def),       intent(in) :: mesh_id
+    type(mesh_type),              pointer :: mesh
+    type(r_tran_field_type),      pointer :: dla_dz(:)
+    type(r_tran_field_type),      pointer :: dlb_dz(:)
+    type(r_tran_field_type)               :: dz_w3_rtran
+    type(field_type),             pointer :: dz_w3_rdef
+    type(function_space_type),    pointer :: w3_fs
+
+    ! Check inventory is initialised
+    if (.not. third_dla_dz_inventory%is_initialised()) then
+      ! Initialise all inventories together
+      call third_dla_dz_inventory%initialise(name='third_dla_dz')
+    end if
+    ! Check inventory is initialised
+    if (.not. third_dlb_dz_inventory%is_initialised()) then
+      ! Initialise all inventories together
+      call third_dlb_dz_inventory%initialise(name='third_dlb_dz')
+    end if
+
+    mesh => mesh_collection%get_mesh(mesh_id)
+
+    if ( subroutine_timers ) call timer('runtime_constants.transport')
+
+    w3_fs => function_space_collection%get_fs(mesh, 0, 0, W3)
+
+    dz_w3_rdef => get_dz_w3(mesh_id)
+    call dz_w3_rtran%initialise( dz_w3_rdef%get_function_space() )
+    call copy_field(dz_w3_rdef, dz_w3_rtran)
+
+    call third_dla_dz_inventory%add_field_array(dla_dz, w3_fs, 3, mesh)
+    call third_dlb_dz_inventory%add_field_array(dlb_dz, w3_fs, 3, mesh)
+
+    call invoke( ffsl_third_dldz_kernel_type(dla_dz, dlb_dz, dz_w3_rtran) )
+
+    if ( subroutine_timers ) call timer('runtime_constants.transport')
+
+  end subroutine compute_third_dl_dz
 
   ! ========================================================================== !
   ! GETTERS FOR R_TRAN FORMS OF GEOMETRIC OBJECTS
@@ -378,6 +518,119 @@ contains
   end function get_detj_at_w2_below
 
   ! ========================================================================== !
+  ! GETTERS FOR VERTICAL FFSL CONSTANTS
+  ! ========================================================================== !
+
+  !> @brief Returns the coefficients for third-order edge above interpolation
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The required coefficients
+  function get_third_dla_dz(mesh_id) result(dla_dz)
+
+    implicit none
+
+    integer(kind=i_def),       intent(in) :: mesh_id
+    type(mesh_type),              pointer :: mesh
+    logical(kind=l_def)                   :: constant_exists
+    type(r_tran_field_type),      pointer :: dla_dz(:)
+
+    ! Check inventory is initialised
+    if (.not. third_dla_dz_inventory%is_initialised()) then
+      ! Initialise all inventories together
+      call third_dla_dz_inventory%initialise(name='third_dla_dz')
+    end if
+
+    mesh => mesh_collection%get_mesh(mesh_id)
+    constant_exists = third_dla_dz_inventory%paired_object_exists(mesh_id)
+
+    if (.not. constant_exists) then
+      call compute_third_dl_dz(mesh_id)
+    end if
+
+    ! Get existing constant
+    call third_dla_dz_inventory%get_field_array(mesh, dla_dz)
+
+  end function get_third_dla_dz
+
+  !> @brief Returns the coefficients for third-order edge above interpolation
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The required coefficients
+  function get_third_dlb_dz(mesh_id) result(dlb_dz)
+
+    implicit none
+
+    integer(kind=i_def),       intent(in) :: mesh_id
+    type(mesh_type),              pointer :: mesh
+    logical(kind=l_def)                   :: constant_exists
+    type(r_tran_field_type),      pointer :: dlb_dz(:)
+
+    ! Check inventory is initialised
+    if (.not. third_dlb_dz_inventory%is_initialised()) then
+      ! Initialise all inventories together
+      call third_dlb_dz_inventory%initialise(name='third_dlb_dz')
+    end if
+
+    mesh => mesh_collection%get_mesh(mesh_id)
+    constant_exists = third_dlb_dz_inventory%paired_object_exists(mesh_id)
+
+    if (.not. constant_exists) then
+      call compute_third_dl_dz(mesh_id)
+    end if
+
+    ! Get existing constant
+    call third_dlb_dz_inventory%get_field_array(mesh, dlb_dz)
+
+  end function get_third_dlb_dz
+
+  !> @brief Returns the constants for fourth-order edge interpolation
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The required constant
+  function get_fourth_dl_dz(mesh_id) result(dl_dz)
+
+    use ffsl_fourth_dldz_kernel_mod,    only: ffsl_fourth_dldz_kernel_type
+
+    implicit none
+
+    integer(kind=i_def),       intent(in) :: mesh_id
+    type(mesh_type),              pointer :: mesh
+    logical(kind=l_def)                   :: constant_exists
+    type(r_tran_field_type),      pointer :: dl_dz(:)
+    type(r_tran_field_type)               :: dz_w3_rtran
+    type(field_type),             pointer :: dz_w3_rdef
+    type(function_space_type),    pointer :: w2v_fs
+
+    ! Check inventory is initialised
+    if (.not. fourth_dl_dz_inventory%is_initialised()) then
+      ! Initialise all inventories together
+      call fourth_dl_dz_inventory%initialise(name='fourth_dl_dz')
+    end if
+
+    mesh => mesh_collection%get_mesh(mesh_id)
+    constant_exists = fourth_dl_dz_inventory%paired_object_exists(mesh_id)
+
+    if (.not. constant_exists) then
+
+      ! Create the object as it doesn't exist yet
+      if ( subroutine_timers ) call timer('runtime_constants.transport')
+
+      w2v_fs => function_space_collection%get_fs(mesh, 0, 0, W2v)
+
+      dz_w3_rdef => get_dz_w3(mesh_id)
+      call dz_w3_rtran%initialise( dz_w3_rdef%get_function_space() )
+      call copy_field(dz_w3_rdef, dz_w3_rtran)
+
+      call fourth_dl_dz_inventory%add_field_array(dl_dz, w2v_fs, 4, mesh)
+
+      call invoke( ffsl_fourth_dldz_kernel_type(dl_dz, dz_w3_rtran) )
+
+      if ( subroutine_timers ) call timer('runtime_constants.transport')
+    end if
+
+    ! Get existing constant
+    call fourth_dl_dz_inventory%get_field_array(mesh, dl_dz)
+
+  end function get_fourth_dl_dz
+
+  ! ========================================================================== !
   ! GETTERS FOR R_TRAN FORMS OF FINITE ELEMENT OPERATORS
   ! ========================================================================== !
 
@@ -443,6 +696,7 @@ contains
   end function get_mass_matrix_r_tran
 
   !> @brief Returns a pointer to the r_tran inverse mass matrix operator
+  !> @param[in] space   Enumerator for the function space of the operator
   !> @param[in] mesh_id The ID of the mesh to get the object for
   !> @return The inverse mass matrix operator at r_tran precision
   function get_inverse_mass_matrix_r_tran(space, mesh_id) result(mm_inv_r_tran)
@@ -506,8 +760,8 @@ contains
   ! implemented with r_tran precision. As it depends on transport direction,
   ! it must be in this module rather than fem_constants
   !> @brief Points to the inv_m3 * div operator for a particular direction
-  !> @param[in] mesh_id The ID of the mesh to get the object for
-  !> @param[in] mesh_id The enumerator for the direction
+  !> @param[in] mesh_id   The ID of the mesh to get the object for
+  !> @param[in] direction The enumerator for the direction
   !> @return The inv_m3 * div operator
   function get_directional_im3_div(mesh_id, direction) result(div_op)
 
@@ -530,8 +784,8 @@ contains
   end function get_directional_im3_div
 
   !> @brief Returns a pointer to the inv_m3 * div operator for a particular direction
-  !> @param[in] mesh_id The ID of the mesh to get the object for
-  !> @param[in] mesh_id The enumerator for the direction
+  !> @param[in] mesh_id   The ID of the mesh to get the object for
+  !> @param[in] direction The enumerator for the direction
   !> @return The inv_m3 * div operator
   function get_directional_im3_div_r_tran(mesh_id, direction) result(im3_div_r_tran)
 
@@ -696,6 +950,38 @@ contains
     call inventory_local%get_field(local_mesh, ext_mesh_indices)
 
   end function get_extended_mesh_indices
+
+  !> @brief Returns a pointer to the mask for cells on cubed-sphere panel edges
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The mask for cells on cubed-sphere panel edges
+  function get_panel_edge_dist(mesh_id) result(panel_edge_dist)
+
+    implicit none
+
+    integer(kind=i_def),             intent(in) :: mesh_id
+    type(mesh_type),                    pointer :: mesh
+    type(local_mesh_type),              pointer :: local_mesh
+    type(integer_field_type),           pointer :: panel_edge_dist(:)
+    logical(kind=l_def)                         :: constant_exists
+
+    mesh => mesh_collection%get_mesh(mesh_id)
+    local_mesh => mesh%get_local_mesh()
+
+    ! Initialise inventory if this is the first time getting this constant
+    if (.not. panel_edge_dist_inventory%is_initialised()) then
+      call panel_edge_dist_inventory%initialise(name="panel_edge_dist")
+    end if
+
+    constant_exists = panel_edge_dist_inventory%paired_object_exists(local_mesh%get_id())
+
+    if (.not. constant_exists) then
+      call compute_panel_edge_dists(mesh_id)
+    end if
+
+    ! Return existing constant
+    call panel_edge_dist_inventory%get_field_array(local_mesh, panel_edge_dist)
+
+  end function get_panel_edge_dist
 
   ! ========================================================================== !
   ! GETTERS FOR MOL COEFFICIENTS
@@ -944,7 +1230,7 @@ contains
 
       ! Set up function space
       multidata_fs => function_space_collection%get_fs(                        &
-              mesh, 0, 0, Wtheta, ndata_v, ndata_first =.true.                    &
+              mesh, 0, 0, Wtheta, ndata_v, ndata_first =.true.                 &
       )
       ! Create field object
       call vert_w3_mol_coeffs_inventory%add_field(                             &
@@ -1008,7 +1294,7 @@ contains
       qr = quadrature_xyoz_type(nqp_xyz, gaussian_quadrature)
       ! Set up function space
       multidata_fs => function_space_collection%get_fs(                        &
-              mesh, 0, 0, Wtheta, ndata_v, ndata_first =.true.                    &
+              mesh, 0, 0, Wtheta, ndata_v, ndata_first =.true.                 &
       )
       ! Create field object
       call rev_vert_w3_mol_coeffs_inventory%add_field(                         &
@@ -1271,7 +1557,7 @@ contains
       ndata_v = 2*(vertical_order + 1)
       ! Set up function space
       multidata_fs => function_space_collection%get_fs(                        &
-              mesh, 0, 0, Wtheta, ndata_v, ndata_first =.true.                    &
+              mesh, 0, 0, Wtheta, ndata_v, ndata_first =.true.                 &
       )
       ! Create field object
       call vert_wt_mol_coeffs_inventory%add_field(                             &
@@ -1402,12 +1688,16 @@ contains
     call mm_w3_r_tran_inventory%clear()
     call ext_mesh_weights_inventory%clear()
     call ext_mesh_indices_inventory%clear()
+    call panel_edge_dist_inventory%clear()
     call hori_wt_mol_coeffs_inventory%clear()
     call vert_wt_mol_coeffs_inventory%clear()
     call rev_vert_wt_mol_coeffs_inventory%clear()
     call hori_w3_mol_coeffs_inventory%clear()
     call vert_w3_mol_coeffs_inventory%clear()
     call rev_vert_w3_mol_coeffs_inventory%clear()
+    call third_dla_dz_inventory%clear()
+    call third_dlb_dz_inventory%clear()
+    call fourth_dl_dz_inventory%clear()
 
   end subroutine final_transport_constants
 

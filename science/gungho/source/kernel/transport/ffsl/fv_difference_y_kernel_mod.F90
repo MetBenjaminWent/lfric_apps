@@ -82,7 +82,7 @@ contains
     real(kind=r_tran),   dimension(undf_w3),  intent(inout) :: difference
     real(kind=r_tran),   dimension(undf_w2h), intent(in)    :: mass_flux
 
-    integer(kind=i_def) :: k
+    integer(kind=i_def) :: nl, w3_idx, N_idx, S_idx
 
     ! This is based on the lowest order W2h dof map
     !
@@ -92,10 +92,14 @@ contains
     !    |     |
     !    ---2---
 
-    do k = 0,nlayers-1
-      difference( map_w3(1)+k ) =                                              &
-        ( mass_flux(map_w2h(2)+k) - mass_flux(map_w2h(4)+k) )
-    end do
+    w3_idx = map_w3(1)
+    S_idx  = map_w2h(2)
+    N_idx  = map_w2h(4)
+    nl = nlayers - 1
+
+    difference(w3_idx : w3_idx+nl) = (                                         &
+        mass_flux(S_idx : S_idx+nl) - mass_flux(N_idx : N_idx+nl)              &
+    )
 
   end subroutine fv_difference_y_code
 

@@ -1,8 +1,8 @@
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! (C) Crown copyright 2024 Met Office. All rights reserved.
 ! The file LICENCE, distributed with this code, contains details of the terms
 ! under which the code may be used.
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 !
 !-------------------------------------------------------------------------------
 
@@ -12,8 +12,8 @@
 !!          arrival point is the cell face and the departure point is calculated
 !!          and stored as a field.
 !!          The departure points are a dimensionless displacement, corresponding
-!!          to the number of cells moved by a fluid parcel. The fractional wind
-!!          or dry flux is also computed.
+!!          to the number of cells moved by a fluid parcel. The fractional flux
+!!          is also computed.
 
 module hori_dep_dist_ffsl_kernel_mod
 
@@ -25,6 +25,7 @@ use argument_mod,                only : arg_type,                  &
                                         GH_LOGICAL, CELL_COLUMN,   &
                                         ANY_DISCONTINUOUS_SPACE_2, &
                                         ANY_DISCONTINUOUS_SPACE_3, &
+                                        ANY_DISCONTINUOUS_SPACE_4, &
                                         GH_READWRITE
 use fs_continuity_mod,           only : W3, W2h
 use constants_mod,               only : r_tran, i_def, l_def
@@ -41,19 +42,22 @@ private
 !> The type declaration for the kernel. Contains the metadata needed by the Psy layer
 type, public, extends(kernel_type) :: hori_dep_dist_ffsl_kernel_type
   private
-  type(arg_type) :: meta_args(10) = (/                                      &
-       arg_type(GH_FIELD,  GH_REAL, GH_WRITE,   ANY_DISCONTINUOUS_SPACE_2), & ! dep_dist
-       arg_type(GH_FIELD,  GH_REAL, GH_WRITE,   ANY_DISCONTINUOUS_SPACE_2), & ! frac_dry_flux
-       arg_type(GH_FIELD,  GH_REAL, GH_READ,    ANY_DISCONTINUOUS_SPACE_2), & ! dry_flux
-       arg_type(GH_FIELD,  GH_REAL, GH_READ,    W3, STENCIL(X1D)),          & ! dry_mass_for_x
-       arg_type(GH_FIELD,  GH_REAL, GH_READ,    W3, STENCIL(Y1D)),          & ! dry_mass_for_y
-       arg_type(GH_FIELD,  GH_INTEGER, GH_READ, ANY_DISCONTINUOUS_SPACE_3), & ! face_selector ew
-       arg_type(GH_FIELD,  GH_INTEGER, GH_READ, ANY_DISCONTINUOUS_SPACE_3), & ! face_selector ns
-       arg_type(GH_FIELD,  GH_INTEGER, GH_READWRITE,                        &
-                                                ANY_DISCONTINUOUS_SPACE_3), & ! error_flag
-       arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                            & ! stencil_extent
-       arg_type(GH_SCALAR, GH_LOGICAL, GH_READ)                             & ! cap_dep_points
-       /)
+  type(arg_type) :: meta_args(13) = (/                                         &
+      arg_type(GH_FIELD,  GH_REAL, GH_WRITE,    ANY_DISCONTINUOUS_SPACE_2),    & ! dep_dist
+      arg_type(GH_FIELD,  GH_REAL, GH_WRITE,    ANY_DISCONTINUOUS_SPACE_2),    & ! frac_ref_flux
+      arg_type(GH_FIELD,  GH_REAL, GH_READ,     ANY_DISCONTINUOUS_SPACE_2),    & ! ref_flux
+      arg_type(GH_FIELD,  GH_REAL, GH_READ,     W3, STENCIL(X1D)),             & ! ref_mass_for_x
+      arg_type(GH_FIELD,  GH_REAL, GH_READ,     W3, STENCIL(Y1D)),             & ! ref_mass_for_y
+      arg_type(GH_FIELD,  GH_INTEGER, GH_WRITE, ANY_DISCONTINUOUS_SPACE_4),    & ! dep_lowest_k
+      arg_type(GH_FIELD,  GH_INTEGER, GH_WRITE, ANY_DISCONTINUOUS_SPACE_4),    & ! dep_highest_k
+      arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_3),    & ! face_selector ew
+      arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_3),    & ! face_selector ns
+      arg_type(GH_FIELD,  GH_INTEGER, GH_READWRITE,                            &
+                                                ANY_DISCONTINUOUS_SPACE_3),    & ! error_flag
+      arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                & ! stencil_extent
+      arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                & ! ndep
+      arg_type(GH_SCALAR, GH_LOGICAL, GH_READ)                                 & ! cap_dep_points
+  /)
   integer :: operates_on = CELL_COLUMN
 contains
   procedure, nopass :: hori_dep_dist_ffsl_code
@@ -63,24 +67,30 @@ end type
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
 public :: hori_dep_dist_ffsl_code
+public :: hori_dep_dist_ffsl_1d
 
 contains
 
 !> @brief Kernel to compute the horizontal departure distances for FFSL.
 !> @param[in]     nlayers           The number of layers in the mesh
 !> @param[in,out] dep_dist          Field with dep distances
-!> @param[in,out] frac_dry_flux     Fractional part of the dry flux in the local
-!!                                  x direction, to be computed here
-!> @param[in]     dry_flux          The mass flux used in a one-dimensional
-!!                                  transport step for the dry density
-!> @param[in]     dry_mass_for_x    The dry mass field before the y-direction
-!!                                  transport step
+!> @param[in,out] frac_ref_flux     Fractional part of the reference flux
+!> @param[in]     ref_flux          The mass flux used in a one-dimensional
+!!                                  transport step for the reference density
+!> @param[in]     ref_mass_for_x    The reference mass field to be used in
+!!                                  calculating the departure distance in x
 !> @param[in]     stencil_size_x    Size of the X1D stencil for the mass field
 !> @param[in]     stencil_map_x     Map of DoFs in the stencil for mass field
-!> @param[in]     dry_mass_for_y    The dry mass field before the x-direction
-!!                                  transport step
+!> @param[in]     ref_mass_for_y    The reference mass field to be used in
+!!                                  calculating the departure distance in y
 !> @param[in]     stencil_size_y    Size of the Y1D stencil for the mass field
 !> @param[in]     stencil_map_y     Map of DoFs in the stencil for mass field
+!> @param[in,out] dep_lowest_k      2D integer multidata W2H field, storing
+!!                                  the lowest model level to use in each
+!!                                  integer flux sum, for each column
+!> @param[in,out] dep_highest_k     2D integer multidata W2H field, storing
+!!                                  the highest model level to use in each
+!!                                  integer flux sum, for each column
 !> @param[in]     face_selector_ew  2D field indicating which faces to loop over in x
 !> @param[in]     face_selector_ns  2D field indicating which faces to loop over in y
 !> @param[in,out] error_flag        2D field for storing error flag, only used
@@ -88,29 +98,38 @@ contains
 !> @param[in]     stencil_extent    Max number of stencil cells in one direction
 !> @param[in]     cap_dep_points    Flag for whether departure points should be
 !!                                  capped if they exceed the stencil depth
+!> @param[in]     ndep              Number of multidata points for departure
+!!                                  index fields
 !> @param[in]     ndf_w2h           Number of DoFs per cell for W2H
 !> @param[in]     undf_w2h          Num of W2H DoFs in memory for this partition
 !> @param[in]     map_w2h           Map of lowest-cell W2H DoFs
 !> @param[in]     ndf_w3            Number of DoFs per cell for W3
 !> @param[in]     undf_w3           Num of W3 DoFs in memory for this partition
 !> @param[in]     map_w3            Map of lowest-cell W3 DoFs
+!> @param[in]     ndf_depk          Num of DoFs for dep idx fields per cell
+!> @param[in]     undf_depk         Num of DoFs for this partition for dep
+!!                                  idx fields
+!> @param[in]     map_depk          Map for departure index fields
 !> @param[in]     ndf_w3_2d         Number of DoFs for 2D W3 per cell
 !> @param[in]     undf_w3_2d        Number of DoFs for this partition for 2D W3
 !> @param[in]     map_w3_2d         Map for 2D W3
 subroutine hori_dep_dist_ffsl_code( nlayers,             &
                                     dep_dist,            &
-                                    frac_dry_flux,       &
-                                    dry_flux,            &
-                                    dry_mass_for_x,      &
+                                    frac_ref_flux,       &
+                                    ref_flux,            &
+                                    ref_mass_for_x,      &
                                     stencil_size_x,      &
                                     stencil_map_x,       &
-                                    dry_mass_for_y,      &
+                                    ref_mass_for_y,      &
                                     stencil_size_y,      &
                                     stencil_map_y,       &
+                                    dep_lowest_k,        &
+                                    dep_highest_k,       &
                                     face_selector_ew,    &
                                     face_selector_ns,    &
                                     error_flag,          &
                                     stencil_extent,      &
+                                    ndep,                &
                                     cap_dep_points,      &
                                     ndf_w2h,             &
                                     undf_w2h,            &
@@ -118,6 +137,9 @@ subroutine hori_dep_dist_ffsl_code( nlayers,             &
                                     ndf_w3,              &
                                     undf_w3,             &
                                     map_w3,              &
+                                    ndf_depk,            &
+                                    undf_depk,           &
+                                    map_depk,            &
                                     ndf_w3_2d,           &
                                     undf_w3_2d,          &
                                     map_w3_2d )
@@ -125,56 +147,194 @@ subroutine hori_dep_dist_ffsl_code( nlayers,             &
   implicit none
 
   ! Arguments
-  integer(kind=i_def), intent(in)    :: nlayers
+  integer(kind=i_def), intent(in)    :: nlayers, ndep
   logical(kind=l_def), intent(in)    :: cap_dep_points
-  integer(kind=i_def), intent(in)    :: ndf_w2h, ndf_w3, ndf_w3_2d
-  integer(kind=i_def), intent(in)    :: undf_w2h, undf_w3, undf_w3_2d
+  integer(kind=i_def), intent(in)    :: ndf_w2h, ndf_w3, ndf_w3_2d, ndf_depk
+  integer(kind=i_def), intent(in)    :: undf_w2h, undf_w3, undf_w3_2d, undf_depk
   integer(kind=i_def), intent(in)    :: stencil_size_x
   integer(kind=i_def), intent(in)    :: stencil_size_y
   integer(kind=i_def), intent(in)    :: stencil_extent
   integer(kind=i_def), intent(in)    :: map_w2h(ndf_w2h)
   integer(kind=i_def), intent(in)    :: map_w3(ndf_w3)
+  integer(kind=i_def), intent(in)    :: map_depk(ndf_depk)
   integer(kind=i_def), intent(in)    :: map_w3_2d(ndf_w3_2d)
   integer(kind=i_def), intent(in)    :: stencil_map_x(ndf_w3, stencil_size_x)
   integer(kind=i_def), intent(in)    :: stencil_map_y(ndf_w3, stencil_size_y)
   integer(kind=i_def), intent(in)    :: face_selector_ew(undf_w3_2d)
   integer(kind=i_def), intent(in)    :: face_selector_ns(undf_w3_2d)
   integer(kind=i_def), intent(inout) :: error_flag(undf_w3_2d)
-  real(kind=r_tran),   intent(in)    :: dry_mass_for_x(undf_w3)
-  real(kind=r_tran),   intent(in)    :: dry_mass_for_y(undf_w3)
-  real(kind=r_tran),   intent(in)    :: dry_flux(undf_w2h)
+  integer(kind=i_def), intent(inout) :: dep_lowest_k(undf_depk)
+  integer(kind=i_def), intent(inout) :: dep_highest_k(undf_depk)
+  real(kind=r_tran),   intent(in)    :: ref_mass_for_x(undf_w3)
+  real(kind=r_tran),   intent(in)    :: ref_mass_for_y(undf_w3)
+  real(kind=r_tran),   intent(in)    :: ref_flux(undf_w2h)
   real(kind=r_tran),   intent(inout) :: dep_dist(undf_w2h)
-  real(kind=r_tran),   intent(inout) :: frac_dry_flux(undf_w2h)
+  real(kind=r_tran),   intent(inout) :: frac_ref_flux(undf_w2h)
 
-  integer(kind=i_def) :: df, df_idx, idx_w2h, j, k, num_int_cells
-  integer(kind=i_def) :: sign_flux, sign_offset, dof_offset
-  integer(kind=i_def) :: stencil_idx, col_idx, rel_idx
-  real(kind=r_tran)   :: flux_face_i, running_flux_i, flux_cell_j
-  real(kind=r_tran)   :: frac_dep_dist, frac_flux_face_i
+  ! X direction ----------------------------------------------------------------
+  call hori_dep_dist_ffsl_1d( nlayers,             &
+                              .true.,              &
+                              dep_dist,            &
+                              frac_ref_flux,       &
+                              ref_flux,            &
+                              ref_mass_for_x,      &
+                              stencil_size_x,      &
+                              stencil_map_x,       &
+                              dep_lowest_k,        &
+                              dep_highest_k,       &
+                              face_selector_ew,    &
+                              error_flag,          &
+                              stencil_extent,      &
+                              ndep,                &
+                              cap_dep_points,      &
+                              ndf_w2h,             &
+                              undf_w2h,            &
+                              map_w2h,             &
+                              ndf_w3,              &
+                              undf_w3,             &
+                              map_w3,              &
+                              ndf_depk,            &
+                              undf_depk,           &
+                              map_depk,            &
+                              ndf_w3_2d,           &
+                              undf_w3_2d,          &
+                              map_w3_2d )
+
+  ! Y direction ----------------------------------------------------------------
+  call hori_dep_dist_ffsl_1d( nlayers,             &
+                              .false.,             &
+                              dep_dist,            &
+                              frac_ref_flux,       &
+                              ref_flux,            &
+                              ref_mass_for_y,      &
+                              stencil_size_y,      &
+                              stencil_map_y,       &
+                              dep_lowest_k,        &
+                              dep_highest_k,       &
+                              face_selector_ns,    &
+                              error_flag,          &
+                              stencil_extent,      &
+                              ndep,                &
+                              cap_dep_points,      &
+                              ndf_w2h,             &
+                              undf_w2h,            &
+                              map_w2h,             &
+                              ndf_w3,              &
+                              undf_w3,             &
+                              map_w3,              &
+                              ndf_depk,            &
+                              undf_depk,           &
+                              map_depk,            &
+                              ndf_w3_2d,           &
+                              undf_w3_2d,          &
+                              map_w3_2d )
+
+end subroutine hori_dep_dist_ffsl_code
+
+! ============================================================================ !
+! SINGLE UNDERLYING 1D ROUTINE
+! ============================================================================ !
+
+!> @brief Computes the horizontal departure distances for FFSL in one direction
+subroutine hori_dep_dist_ffsl_1d( nlayers,             &
+                                  x_direction,         &
+                                  dep_dist,            &
+                                  frac_ref_flux,       &
+                                  ref_flux,            &
+                                  ref_mass,            &
+                                  stencil_size,        &
+                                  stencil_map,         &
+                                  dep_lowest_k,        &
+                                  dep_highest_k,       &
+                                  face_selector,       &
+                                  error_flag,          &
+                                  stencil_extent,      &
+                                  ndep,                &
+                                  cap_dep_points,      &
+                                  ndf_w2h,             &
+                                  undf_w2h,            &
+                                  map_w2h,             &
+                                  ndf_w3,              &
+                                  undf_w3,             &
+                                  map_w3,              &
+                                  ndf_depk,            &
+                                  undf_depk,           &
+                                  map_depk,            &
+                                  ndf_w3_2d,           &
+                                  undf_w3_2d,          &
+                                  map_w3_2d )
+
+  implicit none
+
+  ! Arguments
+  integer(kind=i_def), intent(in)    :: nlayers, ndep
+  logical(kind=l_def), intent(in)    :: cap_dep_points
+  integer(kind=i_def), intent(in)    :: ndf_w2h, ndf_w3, ndf_w3_2d, ndf_depk
+  integer(kind=i_def), intent(in)    :: undf_w2h, undf_w3, undf_w3_2d, undf_depk
+  integer(kind=i_def), intent(in)    :: stencil_size
+  integer(kind=i_def), intent(in)    :: stencil_extent
+  integer(kind=i_def), intent(in)    :: map_w2h(ndf_w2h)
+  integer(kind=i_def), intent(in)    :: map_w3(ndf_w3)
+  integer(kind=i_def), intent(in)    :: map_depk(ndf_depk)
+  integer(kind=i_def), intent(in)    :: map_w3_2d(ndf_w3_2d)
+  integer(kind=i_def), intent(in)    :: stencil_map(ndf_w3, stencil_size)
+  integer(kind=i_def), intent(in)    :: face_selector(undf_w3_2d)
+  integer(kind=i_def), intent(inout) :: error_flag(undf_w3_2d)
+  integer(kind=i_def), intent(inout) :: dep_lowest_k(undf_depk)
+  integer(kind=i_def), intent(inout) :: dep_highest_k(undf_depk)
+  real(kind=r_tran),   intent(in)    :: ref_mass(undf_w3)
+  real(kind=r_tran),   intent(in)    :: ref_flux(undf_w2h)
+  real(kind=r_tran),   intent(inout) :: dep_dist(undf_w2h)
+  real(kind=r_tran),   intent(inout) :: frac_ref_flux(undf_w2h)
+  logical(kind=l_def), intent(in)    :: x_direction
+
+  ! Local arrays
+  integer(kind=i_def) :: local_dofs(2)
+  integer(kind=i_def) :: sign_flux(nlayers)
+  integer(kind=i_def) :: sign_switch(nlayers)
+  integer(kind=i_def) :: running_num_cells(nlayers)
+  integer(kind=i_def) :: rel_idx(nlayers)
+  integer(kind=i_def) :: stencil_idx(nlayers)
+  integer(kind=i_def) :: sign_offset(nlayers)
+  real(kind=r_tran)   :: frac_flux_tmp(nlayers)
+  real(kind=r_tran)   :: running_int_flux(nlayers)
+  real(kind=r_tran)   :: swept_mass(nlayers)
+  real(kind=r_tran)   :: frac_dep_dist(nlayers)
+  integer(kind=i_def) :: rounding_factor(nlayers)
+  integer(kind=i_def) :: int_cell_switch(nlayers)
+  integer(kind=i_def) :: k_low, k_high, k_low_prev, k_high_prev
+  integer(kind=i_def) :: stencil_sign, sign_offset_k
+
+  ! Local scalars
+  integer(kind=i_def) :: j, k
+  integer(kind=i_def) :: df, df_idx, w2h_idx, depk_idx, depk_idx_l
+  integer(kind=i_def) :: dof_offset
+  integer(kind=i_def) :: stencil_idx_k, col_idx, rel_idx_k
   integer(kind=i_def) :: stencil_half, lam_edge_size
-  integer(kind=i_def) :: local_dofs_x(2), local_dofs_y(2)
+  integer(kind=i_def) :: ndep_half
+  real(kind=r_tran)   :: direction
 
-  ! Factor used to ensure consistency of fractional flux if
-  ! there are any floating point rounding errors
-  integer(kind=i_def) :: rounding_factor
-
-  ! x-direction
-  local_dofs_x = (/ W, E /)
-  local_dofs_y = (/ S, N /)
+  if (x_direction) then
+    local_dofs = (/ W, E /)
+    direction = 1.0_r_tran
+  else
+    ! y-direction
+    local_dofs = (/ S, N /)
+    direction = -1.0_r_tran
+  end if
 
   ! Set stencil info -----------------------------------------------------------
-  stencil_half = (stencil_size_x + 1_i_def) / 2_i_def
+  stencil_half = (stencil_size - 1_i_def) / 2_i_def
+  ndep_half = (ndep - 1_i_def) / 2_i_def
   lam_edge_size = 2_i_def*stencil_extent+1_i_def
 
-  ! = X Calculation ========================================================== !
-
   ! Calculation near LAM boundaries --------------------------------------------
-  if (lam_edge_size > stencil_size_x) then
+  if (lam_edge_size > stencil_size) then
     ! Set output to zero
-    do df_idx = 1, face_selector_ew(map_w3_2d(1))
-      df = local_dofs_x(df_idx)
+    do df_idx = 1, face_selector(map_w3_2d(1))
+      df = local_dofs(df_idx)
       do k = 0, nlayers - 1
-        frac_dry_flux(map_w2h(df) + k) = 0.0_r_tran
+        frac_ref_flux(map_w2h(df) + k) = 0.0_r_tran
         dep_dist(map_w2h(df) + k) = 0.0_r_tran
       end do
     end do
@@ -185,84 +345,184 @@ subroutine hori_dep_dist_ffsl_code( nlayers,             &
   else
     ! Not at edge of LAM so compute fluxes
 
-    ! Loop through horizontal x DoFs
-    do df_idx = 1, face_selector_ew(map_w3_2d(1))
-      df = local_dofs_x(df_idx)
-      dof_offset = (df+1)/2 - 1 ! 0 for W, 1 for E
+    ! Loop through horizontal DoFs
+    do df_idx = 1, face_selector(map_w3_2d(1))
+      df = local_dofs(df_idx)
+
+      ! Set a local offset, dependent on the face we are looping over
+      select case (df)
+      case (W, S)
+        dof_offset = 0
+      case (E, N)
+        dof_offset = 1
+      end select
 
       ! Pull out index to avoid multiple indirections
-      idx_w2h = map_w2h(df)
+      w2h_idx = map_w2h(df)
+      depk_idx = map_depk(df) + ndep_half
 
-      ! Loop through layers
-      do k = 0, nlayers - 1
+      ! NB: the y-direction for stencils runs in the opposite direction to the
+      ! direction used for the winds. Compensate for this with a minus sign
+      sign_flux(:) = INT(SIGN(                                                 &
+          1.0_r_tran, direction * ref_flux(w2h_idx : w2h_idx + nlayers - 1)    &
+      ), i_def)
 
-        flux_face_i = dry_flux(idx_w2h+k)
+      ! Set an offset for the stencil index, based on dep point sign
+      sign_offset = (1 - sign_flux) / 2   ! 0 if sign == 1, 1 if sign == -1
 
-        sign_flux = INT(SIGN(1.0_r_tran, flux_face_i))
+      running_num_cells(:) = 0
+      running_int_flux(:) = 0.0_r_tran
+
+      ! Loop over both potential signs of the wind (so both sides of stencil)
+      do stencil_sign = -1, 1, 2
 
         ! Set an offset for the stencil index, based on dep point sign
-        sign_offset = (1 - sign_flux) / 2   ! 0 if sign == 1, 1 if sign == -1
+        sign_offset_k = (1 - stencil_sign) / 2   ! 0 if sign == 1, 1 if sign == -1
 
-        ! -------------------------------------------------------------------- !
-        ! Find departure point
-        ! -------------------------------------------------------------------- !
-        num_int_cells = 0
-        running_flux_i = 0.0_r_tran
+        swept_mass(:) = 0.0_r_tran
+
+        ! Initialise indices for lowest and highest levels
+        k_low = 0
+        k_high = nlayers - 1
 
         ! Step backwards through flux to find the dimensionless departure point:
-        ! First, the integer part of departure point (num_int_cells)
         do j = 1, stencil_extent
 
+          ! Get index for this column ------------------------------------------
           ! If this column has idx 0, find relative index along column of
           ! the departure cell, between - stencil_half and stencil_half
-          rel_idx = dof_offset - (j - 1) * sign_flux + sign_offset - 1
+          rel_idx_k = dof_offset - (j - 1) * stencil_sign + sign_offset_k - 1
 
-          ! Determine the index in the stencil from rel_idx
+          ! Determine the index in the stencil from rel_idx_k
           ! e.g. for extent 4:
           ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
           ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-          stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-          col_idx = stencil_map_x(1,stencil_idx)
+          stencil_idx_k = (                                                    &
+            1 + ABS(rel_idx_k) + stencil_half * (1 - SIGN(1, -rel_idx_k))/2    &
+          )
+          col_idx = stencil_map(1,stencil_idx_k)
 
-          ! Get mass for the next cell
-          flux_cell_j = dry_mass_for_x(col_idx + k)
+          ! Calculate mask for whether to include each cell in the calculation
+          ! This is 1 if:
+          ! (a) the wind sign is correct, and
+          ! (b) the departure cell has not yet been found before considering
+          !     this column, and
+          ! (c) when including the volume/mass of the cell for this column in
+          !     the running flux total, the total is still less than the flux
+          sign_switch(k_low+1 : k_high+1) = (                                  &
+            ABS((sign_flux(k_low+1 : k_high+1) + stencil_sign) / 2)            &
+          )
+          int_cell_switch(k_low+1 : k_high+1) = (                              &
+            ! 1 if the wind sign is correct, 0 otherwise
+            sign_switch(k_low+1 : k_high+1)                                    &
+            ! 1 if dep cell has not been found prior to this column, 0 otherwise
+            * ABS(                                                             &
+              (SIGN(1, running_num_cells(k_low+1 : k_high+1) + 2 - j) + 1) / 2 &
+            )                                                                  &
+            ! 1 if this cell is not yet the dep cell, 0 otherwise
+            * ABS(                                                             &
+              (INT(SIGN(1.0_r_tran,                                            &
+                ABS(ref_flux(w2h_idx + k_low : w2h_idx + k_high))              &
+                - swept_mass(k_low+1 : k_high+1)                               &
+                - ref_mass(col_idx + k_low : col_idx + k_high)                 &
+            ), i_def) + 1) / 2)                                                &
+          )
+          ! We need to keep track of the total swept mass, to determine if the
+          ! total mass has been swept through or not
+          swept_mass(k_low+1 : k_high+1) = (                                   &
+            swept_mass(k_low+1 : k_high+1)                                     &
+            + sign_switch(k_low+1 : k_high+1)                                  &
+            * ref_mass(col_idx + k_low : col_idx + k_high)                     &
+          )
+          ! Increment running counts of integer flux and num cells
+          running_int_flux(k_low+1 : k_high+1) = (                             &
+            running_int_flux(k_low+1 : k_high+1)                               &
+            + int_cell_switch(k_low+1 : k_high+1)                              &
+            * ref_mass(col_idx + k_low : col_idx + k_high)                     &
+          )
+          running_num_cells(k_low+1 : k_high+1) = (                            &
+            running_num_cells(k_low+1 : k_high+1)                              &
+            + int_cell_switch(k_low+1 : k_high+1)                              &
+          )
 
-          ! Check if the mass swept up to this cell now exceeds the flux:
-          ! if so, the we have found integer number of cells and the departure
-          ! point will lie in cell (num_int_cells + 1), so exit do-loop
-          if (running_flux_i + flux_cell_j > abs(flux_face_i)) EXIT
+          ! Set new lowest and highest levels ----------------------------------
+          ! Convert rel_idx_k into multidata index for storing these values
+          depk_idx_l = depk_idx + rel_idx_k
 
-          ! Increment running values, if we have not exited loop
-          running_flux_i = running_flux_i + flux_cell_j
-          num_int_cells = num_int_cells + 1
-        end do
+          ! These indices are the bounds of the array to include in the next
+          ! calculation (these will also be saved for use in flux calculations)
+          if (MAXVAL(int_cell_switch(k_low+1 : k_high+1)) > 0_i_def) then
+            k_low_prev = k_low
+            k_high_prev = k_high
 
-        ! Second, the fractional part of departure point
-        if (num_int_cells < stencil_extent) then
-          ! Departure point is within stencil: determine fractional departure
-          ! distance and fractional flux
+            ! Find lowest index
+            do k = k_low_prev, k_high_prev
+              if (int_cell_switch(k+1) == 1) then
+                k_low = k
+                EXIT
+              end if
+            end do
 
-          ! Set fractional flux. running_flux_i is now the integer flux
-          frac_flux_face_i = sign_flux*(abs(flux_face_i) - running_flux_i)
+            ! Find highest index
+            do k = k_high_prev, k_low_prev, -1
+              if (int_cell_switch(k+1) == 1) then
+                k_high = k
+                EXIT
+              end if
+            end do
 
-          ! If this column has idx 0, find relative index along column of
-          ! the departure cell, between - stencil_half and stencil_half
-          rel_idx = dof_offset - num_int_cells * sign_flux + sign_offset - 1
+            dep_lowest_k(depk_idx_l) = k_low
+            dep_highest_k(depk_idx_l) = k_high
 
-          ! Determine the index in the stencil from rel_idx
-          ! e.g. for extent 4:
-          ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
-          ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-          stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-          col_idx = stencil_map_x(1,stencil_idx)
+          else
+            ! All of the departure cells have now been found for this sweep
+            k_low = 0
+            k_high = -1
+            dep_lowest_k(depk_idx_l) = k_low
+            dep_highest_k(depk_idx_l) = k_high
+            ! We don't need to continue find dep distances in this direction,
+            ! so we can exit this sweep's loop
+            EXIT
+          end if
+        end do  ! Loop through columns (on one side of stencil)
+      end do  ! Loop through possible wind directions
 
-          frac_dep_dist = frac_flux_face_i / dry_mass_for_x(col_idx + k)
+      ! ====================================================================== !
+      ! FRACTIONAL PART OF DEPARTURE DISTANCE
+      ! ====================================================================== !
+
+      frac_flux_tmp(:) = sign_flux(:)*(                                        &
+        ABS(ref_flux(w2h_idx : w2h_idx+nlayers-1)) - running_int_flux(:)       &
+      )
+
+      ! If this column has idx 0, find relative index along column of
+      ! the departure cell, between - stencil_half and stencil_half
+      rel_idx(:) = (                                                           &
+        dof_offset - running_num_cells(:) * sign_flux(:) + sign_offset - 1     &
+      )
+
+      ! Determine the index in the stencil from rel_idx_k
+      ! e.g. for extent 4:
+      ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
+      ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
+      stencil_idx(:) = (                                                       &
+        1 + ABS(rel_idx(:)) + stencil_half * (1 - SIGN(1, -rel_idx(:)))/2      &
+      )
+
+      do k = 1, nlayers
+        col_idx = stencil_map(1, stencil_idx(k))
+
+        if (running_num_cells(k) < stencil_extent) then
+          ! It is safe to set the fractional departure distance
+          frac_dep_dist(k) = (                                                 &
+            frac_flux_tmp(k) / ref_mass(col_idx + k - 1)                       &
+          )
 
         else if (cap_dep_points) then
           ! Departure point has exceeded stencil, but the user has specified
           ! to cap the departure point so set fractional parts to be zero
-          frac_flux_face_i = 0.0_r_tran
-          frac_dep_dist = 0.0_r_tran
+          frac_flux_tmp(k) = 0.0_r_tran
+          frac_dep_dist(k) = 0.0_r_tran
 
         else
           ! Departure point has exceeded stencil depth so indicate that an
@@ -270,139 +530,55 @@ subroutine hori_dep_dist_ffsl_code( nlayers,             &
           ! having the model fail ungracefully at a later point
           error_flag(map_w3_2d(1)) = error_flag(map_w3_2d(1)) + 1_i_def
         end if
-
-        ! Set the values of the output fields
-        dep_dist(idx_w2h+k) = real(sign_flux*num_int_cells, r_tran) + frac_dep_dist
-
-        ! If floating point rounding puts the dep_dist into the next integer value
-        ! then set the fractional part back to zero with rounding_factor
-        rounding_factor = 1 - (abs(int(dep_dist(idx_w2h+k), i_def)) - abs(num_int_cells))
-        frac_dry_flux(idx_w2h+k) = frac_flux_face_i*rounding_factor
       end do
-    end do
-  end if
 
-  ! = Y Calculation ========================================================== !
-  stencil_half = (stencil_size_y + 1_i_def) / 2_i_def
+      ! NB: Y calculation has a minus sign to return to conventional y-direction
+      dep_dist(w2h_idx : w2h_idx+nlayers-1) = (                                &
+        direction                                                              &
+        * (REAL(sign_flux(:)*running_num_cells(:), r_tran) + frac_dep_dist(:)) &
+      )
 
-  ! Calculation near LAM boundaries --------------------------------------------
-  if (lam_edge_size > stencil_size_y) then
-    ! Set output to zero
-    do df_idx = 1, face_selector_ns(map_w3_2d(1))
-      df = local_dofs_y(df_idx)
-      do k = 0, nlayers - 1
-        frac_dry_flux(map_w2h(df) + k) = 0.0_r_tran
-        dep_dist(map_w2h(df) + k) = 0.0_r_tran
-      end do
-    end do
+      ! ====================================================================== !
+      ! FRACTIONAL FLUX
+      ! ====================================================================== !
 
-  else
+      ! If floating point rounding puts the dep_dist into the next integer value
+      ! then set the fractional part back to zero with rounding factor
+      rounding_factor(:) = (                                                   &
+        1_i_def + ABS(running_num_cells(:))                                    &
+        - ABS(INT(dep_dist(w2h_idx : w2h_idx+nlayers-1), i_def))               &
+      )
 
-  ! ========================================================================== !
-  ! Calculation in domain interior
-  ! ========================================================================== !
-
-    ! Loop through horizontal y DoFs
-    do df_idx = 1, face_selector_ns(map_w3_2d(1))
-      df = local_dofs_y(df_idx)
-      dof_offset = (df+1)/2 - 1 ! 0 for S, 1 for N
-
-      ! Pull out index to avoid multiple indirections
-      idx_w2h = map_w2h(df)
-
-      ! Loop through layers
-      do k = 0, nlayers - 1
-
-        flux_face_i = dry_flux(idx_w2h+k)
-
-        ! NB: the y-direction for stencils runs in the opposite direction to the
-        ! direction used for the winds. Compensate for this with a minus sign
-        sign_flux = -INT(SIGN(1.0_r_tran, flux_face_i))
-
-        ! Set an offset for the stencil index, based on dep point sign
-        sign_offset = (1 - sign_flux) / 2   ! 0 if sign == 1, 1 if sign == -1
-
-        ! -------------------------------------------------------------------- !
-        ! Find departure point
-        ! -------------------------------------------------------------------- !
-        num_int_cells = 0
-        running_flux_i = 0.0_r_tran
-
-        ! Step backwards through flux to find the dimensionless departure point:
-        ! First, the integer part of departure point (num_int_cells)
-        do j = 1, stencil_extent
-
-          ! If this column has idx 0, find relative index along column of
-          ! the departure cell, between - stencil_half and stencil_half
-          rel_idx = dof_offset - (j - 1) * sign_flux + sign_offset - 1
-
-          ! Determine the index in the stencil from rel_idx
-          ! e.g. for extent 4:
-          ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
-          ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-          stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-          col_idx = stencil_map_y(1,stencil_idx)
-
-          ! Get mass for the next cell
-          flux_cell_j = dry_mass_for_y(col_idx + k)
-
-          ! Check if the mass swept up to this cell now exceeds the flux:
-          ! if so, the we have found integer number of cells and the departure
-          ! point will lie in cell (num_int_cells + 1), so exit do-loop
-          if (running_flux_i + flux_cell_j > abs(flux_face_i)) EXIT
-
-          ! Increment running values, if we have not exited loop
-          running_flux_i = running_flux_i + flux_cell_j
-          num_int_cells = num_int_cells + 1
+      ! If the rounding factor is 0, correct the dep_low/highest_k fields, as
+      ! these may no longer be right as the dep point crosses into a new cell
+      if (MINVAL(rounding_factor) == 0_i_def) then
+        do k = 1, nlayers
+          if (rounding_factor(k) == 0_i_def) then
+            ! Use the Courant number to get the index of dep_low/highest field
+            rel_idx_k = MIN(ndep_half, MAX(-ndep_half,                         &
+              dof_offset - sign_flux(k)                                        &
+              * (running_num_cells(k) + 1_i_def - sign_offset(k))              &
+            ))
+            depk_idx_l = depk_idx + rel_idx_k
+            ! If this level is now the low/highest level, update the fields
+            if (k - 1 < dep_lowest_k(depk_idx_l)) then
+              dep_lowest_k(depk_idx_l) = k - 1
+            end if
+            if (k - 1 > dep_highest_k(depk_idx_l)) then
+              dep_highest_k(depk_idx_l) = k - 1
+            end if
+          end if
         end do
+      end if
 
-        ! Second, the fractional part of departure point
-        if (num_int_cells < stencil_extent) then
-          ! Departure point is within stencil: determine fractional departure
-          ! distance and fractional flux
+      ! Fractional flux is the difference between the total and integer fluxes
+      ! NB: Y calculation has a minus sign to return to conventional y-direction
+      frac_ref_flux(w2h_idx : w2h_idx+nlayers-1) = (                           &
+        direction * rounding_factor(:) * frac_flux_tmp(:)                      &
+      )
+    end do  ! DoF
+  end if  ! At edge of LAM
 
-          ! Set fractional flux. running_flux_i is now the integer flux
-          frac_flux_face_i = sign_flux*(abs(flux_face_i) - running_flux_i)
-
-          ! If this column has idx 0, find relative index along column of
-          ! the departure cell, between - stencil_half and stencil_half
-          rel_idx = dof_offset - num_int_cells * sign_flux + sign_offset - 1
-
-          ! Determine the index in the stencil from rel_idx
-          ! e.g. for extent 4:
-          ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
-          ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-          stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-          col_idx = stencil_map_y(1,stencil_idx)
-
-          frac_dep_dist = frac_flux_face_i / dry_mass_for_y(col_idx + k)
-
-        else if (cap_dep_points) then
-          ! Departure point has exceeded stencil, but the user has specified
-          ! to cap the departure point so set fractional parts to be zero
-          frac_flux_face_i = 0.0_r_tran
-          frac_dep_dist = 0.0_r_tran
-
-        else
-          ! Departure point has exceeded stencil depth so indicate that an
-          ! error needs to be thrown, rather than either seg-faulting or
-          ! having the model fail ungracefully at a later point
-          error_flag(map_w3_2d(1)) = error_flag(map_w3_2d(1)) + 1_i_def
-        end if
-
-        ! Set the values of the output fields
-        ! NB: minus signs to return to conventional y-direction
-        dep_dist(idx_w2h+k) = - (real(sign_flux*num_int_cells, r_tran) + frac_dep_dist)
-
-        ! If floating point rounding puts the dep_dist into the next integer value
-        ! then set the fractional part back to zero with rounding factor
-        rounding_factor = 1 - (abs(int(dep_dist(idx_w2h+k), i_def)) - abs(num_int_cells))
-        frac_dry_flux(idx_w2h+k) = -frac_flux_face_i*rounding_factor
-      end do
-    end do
-
-  end if
-
-end subroutine hori_dep_dist_ffsl_code
+end subroutine hori_dep_dist_ffsl_1d
 
 end module hori_dep_dist_ffsl_kernel_mod

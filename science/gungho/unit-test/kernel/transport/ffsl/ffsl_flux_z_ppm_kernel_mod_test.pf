@@ -24,10 +24,10 @@ contains
 
     use, intrinsic :: iso_fortran_env,      only : real64
     use ffsl_flux_z_ppm_kernel_mod,         only : ffsl_flux_z_ppm_code
-    use transport_enumerated_types_mod,     only : vertical_monotone_strict,   &
-                                                   vertical_monotone_relaxed,  &
-                                                   vertical_monotone_positive, &
-                                                   vertical_monotone_none
+    use transport_enumerated_types_mod,     only : monotone_strict,            &
+                                                   monotone_relaxed,           &
+                                                   monotone_positive,          &
+                                                   monotone_none
 
     implicit none
 
@@ -46,12 +46,17 @@ contains
 
     real(r_tran), dimension(undf_w2v) :: flux
     real(r_tran), dimension(undf_w2v) :: frac_wind
+    real(r_tran), dimension(undf_w2v) :: dl_dz_1, dl_dz_2, dl_dz_3, dl_dz_4
+
+    real(r_tran), parameter :: sixth = 1.0_r_tran/6.0_r_tran
+    real(r_tran), parameter :: third  = 1.0_r_tran/3.0_r_tran
+    real(r_tran), parameter :: twelfth = 1.0_r_tran/12.0_r_tran
 
     real(r_tran) :: field(5)
     real(r_tran) :: dz(5)
     real(r_tran) :: detj(5)
     real(r_tran) :: dep_pts(6)
-    real(r_tran) :: answer(1:6)
+    real(r_tran) :: answer(6)
 
     real(r_tran)   :: use_tol
     integer(i_def) :: monotone
@@ -64,6 +69,12 @@ contains
     dz = (/ 1.0_r_tran, 1.0_r_tran, 1.0_r_tran, 1.0_r_tran, 1.0_r_tran /)
     detj(:) = dz(:)*area
 
+    ! Compute edge reconstruction coefficients
+    dl_dz_1 = (/ 4.0_r_tran,  -1.0_r_tran+sixth, -2.0_r_tran*third, -2.0_r_tran*third,  0.5_r_tran, -1.0_r_tran-third /)
+    dl_dz_2 = (/ -3.0_r_tran,  1.5_r_tran,  0.0_r_tran, 0.0_r_tran,  -1.5_r_tran,  3.0_r_tran /)
+    dl_dz_3 = (/ 1.0_r_tran+third,  -0.5_r_tran,  2.0_r_tran*third, 2.0_r_tran*third, 1.0_r_tran-sixth, -4.0_r_tran /)
+    dl_dz_4 = (/ -0.25_r_tran,  twelfth, -twelfth, -twelfth, 0.25_r_tran, 2.0_r_tran+twelfth /)
+
     ! Use linear field
     field = (/ 1.0_r_tran, 2.0_r_tran, 3.0_r_tran, 4.0_r_tran, 5.0_r_tran /)
     dep_pts = (/ 0.0_r_tran, 0.2_r_tran, 0.5_r_tran, -1.2_r_tran, -0.2_r_tran, 0.0_r_tran /)
@@ -71,12 +82,16 @@ contains
     answer = (/ 0.0_r_tran,  0.35_r_tran,  1.125_r_tran, -4.3_r_tran,  -1.15_r_tran,  0.0_r_tran /)
 
     ! No limiter
-    monotone = vertical_monotone_none
+    monotone = monotone_none
     call ffsl_flux_z_ppm_code( nlayers,   &
                                flux,      &
                                frac_wind, &
                                dep_pts,   &
                                field,     &
+                               dl_dz_1,   &
+                               dl_dz_2,   &
+                               dl_dz_3,   &
+                               dl_dz_4,   &
                                dz,        &
                                detj,      &
                                dt,        &
@@ -106,12 +121,16 @@ contains
     answer = (/ 0.0_r_tran,  0.25_r_tran,  2.8125_r_tran, -0.5_r_tran,  -0.25_r_tran,  0.0_r_tran /)
 
     ! Relaxed limiter
-    monotone = vertical_monotone_relaxed
+    monotone = monotone_relaxed
     call ffsl_flux_z_ppm_code( nlayers,   &
                                flux,      &
                                frac_wind, &
                                dep_pts,   &
                                field,     &
+                               dl_dz_1,   &
+                               dl_dz_2,   &
+                               dl_dz_3,   &
+                               dl_dz_4,   &
                                dz,        &
                                detj,      &
                                dt,        &
@@ -135,12 +154,16 @@ contains
     @assertEqual(answer, flux, use_tol)
 
     ! Strict limiter should produce same answers as relaxed for this data
-    monotone = vertical_monotone_strict
+    monotone = monotone_strict
     call ffsl_flux_z_ppm_code( nlayers,   &
                                flux,      &
                                frac_wind, &
                                dep_pts,   &
                                field,     &
+                               dl_dz_1,   &
+                               dl_dz_2,   &
+                               dl_dz_3,   &
+                               dl_dz_4,   &
                                dz,        &
                                detj,      &
                                dt,        &
@@ -164,7 +187,7 @@ contains
     @assertEqual(answer, flux, use_tol)
 
     ! Positivity should only limit when subgrid reconstruction has negatives
-    monotone = vertical_monotone_positive
+    monotone = monotone_positive
     answer = (/ 0.0_r_tran, 0.25_r_tran, 17.0_r_tran/6.0_r_tran, &
                -0.5_r_tran, -0.25_r_tran, 0.0_r_tran /)
     call ffsl_flux_z_ppm_code( nlayers,   &
@@ -172,6 +195,10 @@ contains
                                frac_wind, &
                                dep_pts,   &
                                field,     &
+                               dl_dz_1,   &
+                               dl_dz_2,   &
+                               dl_dz_3,   &
+                               dl_dz_4,   &
                                dz,        &
                                detj,      &
                                dt,        &

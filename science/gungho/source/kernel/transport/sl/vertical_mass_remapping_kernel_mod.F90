@@ -22,9 +22,9 @@ use kernel_mod,           only : kernel_type
 ! TODO #3011: these config options should be passed through as arguments
 use transport_config_mod, only : slice_order_constant, slice_order_linear, &
                                  slice_order_parabola, slice_order_cubic
-use transport_enumerated_types_mod, only : vertical_monotone_none,           &
-                                           vertical_monotone_strict,         &
-                                           vertical_monotone_relaxed,        &
+use transport_enumerated_types_mod, only : monotone_none,                    &
+                                           monotone_strict,                  &
+                                           monotone_relaxed,                 &
                                            vertical_monotone_order_constant, &
                                            vertical_monotone_order_linear,   &
                                            vertical_monotone_order_high
@@ -266,7 +266,7 @@ contains
       end do
 
 
-      if ( (vertical_monotone /= vertical_monotone_none) .or. enforce_min_value ) then
+      if ( (vertical_monotone /= monotone_none) .or. enforce_min_value ) then
          call monotone_edge_values(rho_left_cv_all,rho_bar,dx, &
                    vertical_monotone,enforce_min_value, ns, nf )
       end if
@@ -314,7 +314,7 @@ contains
             a1(j) = -c4*rho_left_cv(j) - c2*rho_right_cv(j) + c6*rho_bar(j)
             a2(j) =  c3*rho_left_cv(j) + c3*rho_right_cv(j) - c6*rho_bar(j)
          end do
-         if ( vertical_monotone /= vertical_monotone_none )  then
+         if ( vertical_monotone /= monotone_none )  then
             call monotone_quadratic_coeffs(rho_left_cv, rho_right_cv, rho_bar,    &
                                            a0,a1,a2,ns,nf,vertical_monotone_order )
          end if
@@ -326,7 +326,7 @@ contains
                    - c6*rho_bar(j)     + c6*slope_rho(j)
             a3(j) = -c4*rho_left_cv(j) + c4*rho_right_cv(j) - c4*slope_rho(j)
          end do
-         if ( vertical_monotone /= vertical_monotone_none )  then
+         if ( vertical_monotone /= monotone_none )  then
             call monotone_cubic_coeffs(rho_left_cv, rho_right_cv, rho_bar,       &
                                        a0,a1,a2,a3,ns,nf,vertical_monotone_order )
          end if
@@ -691,7 +691,7 @@ contains
 
   select case( vertical_monotone )
 
-   case ( vertical_monotone_strict )
+   case ( monotone_strict )
      do i = ns, nf + 1_i_def
         im1 = i - 1_i_def
         minv = min( fbe(i), fbe(im1)  )
@@ -699,7 +699,7 @@ contains
         fl(i) = max( minv, min(fl(i), maxv) )
      end do
 
-   case ( vertical_monotone_relaxed )
+   case ( monotone_relaxed )
      do i = ns - 1, nf
         df(i) = fbe(i+1) - fbe(i)
      end do

@@ -24,10 +24,10 @@ contains
 
     use, intrinsic :: iso_fortran_env,      only : real64
     use ffsl_flux_z_rev_nirvana_kernel_mod, only : ffsl_flux_z_rev_nirvana_code
-    use transport_enumerated_types_mod,     only : vertical_monotone_strict,   &
-                                                   vertical_monotone_relaxed,  &
-                                                   vertical_monotone_positive, &
-                                                   vertical_monotone_none
+    use transport_enumerated_types_mod,     only : monotone_strict,            &
+                                                   monotone_relaxed,           &
+                                                   monotone_positive,          &
+                                                   monotone_none
 
     implicit none
 
@@ -37,6 +37,7 @@ contains
     integer(i_def), parameter :: ndf_w2v   = 2
     integer(i_def), parameter :: undf_w3   = nlayers
     integer(i_def), parameter :: undf_w2v  = nlayers+1
+    real(r_tran),   parameter :: min_val   = -1000.0_r_tran
     logical(l_def), parameter :: log_space = .false.
     real(r_tran),   parameter :: area = 2.0_r_tran
     real(r_tran),   parameter :: dt = 4.0_r_tran
@@ -71,7 +72,7 @@ contains
     answer = (/ 0.0_r_tran,  0.35_r_tran,  1.125_r_tran, -4.3_r_tran,  -1.15_r_tran,  0.0_r_tran /)
 
     ! No monotone
-    monotone = vertical_monotone_none
+    monotone = monotone_none
     call ffsl_flux_z_rev_nirvana_code( nlayers,   &
                                        flux,      &
                                        frac_wind, &
@@ -81,6 +82,7 @@ contains
                                        detj,      &
                                        dt,        &
                                        monotone,  &
+                                       min_val,   &
                                        log_space, &
                                        ndf_w2v,   &
                                        undf_w2v,  &
@@ -102,10 +104,10 @@ contains
     field = (/ 1.0_r_tran, 4.0_r_tran, 9.0_r_tran, 0.0_r_tran, 1.0_r_tran /)
     dep_pts = (/ 0.0_r_tran, 0.2_r_tran, 0.5_r_tran, -1.2_r_tran, -0.2_r_tran, 0.0_r_tran /)
     frac_wind = (/ 0.0_r_tran, 1.0_r_tran, 2.0_r_tran, -2.0_r_tran, -1.0_r_tran, 0.0_r_tran /)
-    answer = (/ 0.0_r_tran,  0.55_r_tran,  2.5_r_tran, -0.3_r_tran,  -0.15_r_tran,  0.0_r_tran /)
+    answer = (/ 0.0_r_tran,  0.25_r_tran,  2.5_r_tran, -0.5_r_tran,  -0.25_r_tran,  0.0_r_tran /)
 
     ! Strict monotonicity
-    monotone = vertical_monotone_strict
+    monotone = monotone_strict
     call ffsl_flux_z_rev_nirvana_code( nlayers,   &
                                        flux,      &
                                        frac_wind, &
@@ -115,6 +117,7 @@ contains
                                        detj,      &
                                        dt,        &
                                        monotone,  &
+                                       min_val,   &
                                        log_space, &
                                        ndf_w2v,   &
                                        undf_w2v,  &
@@ -130,16 +133,16 @@ contains
       use_tol = 10.0_r_tran*spacing( maxval(field(:)) )
     endif
 
-    @assertEqual( answer, flux, use_tol)
+    @assertEqual(answer, flux, use_tol)
 
     ! Use field to generate extrema
     field = (/ 1.0_r_tran, 4.0_r_tran, 9.0_r_tran, 0.0_r_tran, 1.0_r_tran /)
     dep_pts = (/ 0.0_r_tran, 0.2_r_tran, 0.5_r_tran, -1.2_r_tran, -0.2_r_tran, 0.0_r_tran /)
     frac_wind = (/ 0.0_r_tran, 1.0_r_tran, 2.0_r_tran, -2.0_r_tran, -1.0_r_tran, 0.0_r_tran /)
-    answer = (/ 0.0_r_tran,  0.55_r_tran,  2.5_r_tran, -0.3_r_tran,  -0.15_r_tran,  0.0_r_tran /)
+    answer = (/ 0.0_r_tran,  0.25_r_tran,  2.5_r_tran, -0.5_r_tran,  -0.25_r_tran,  0.0_r_tran /)
 
     ! Relaxed monotonicity
-    monotone = vertical_monotone_relaxed
+    monotone = monotone_relaxed
     call ffsl_flux_z_rev_nirvana_code( nlayers,   &
                                        flux,      &
                                        frac_wind, &
@@ -149,6 +152,7 @@ contains
                                        detj,      &
                                        dt,        &
                                        monotone,  &
+                                       min_val,   &
                                        log_space, &
                                        ndf_w2v,   &
                                        undf_w2v,  &
@@ -164,16 +168,16 @@ contains
       use_tol = 10.0_r_tran*spacing( maxval(field(:)) )
     endif
 
-    @assertEqual( answer, flux, use_tol)
+    @assertEqual(answer, flux, use_tol)
 
     ! Use field to generate negative field values
     field = (/ 1.0_r_tran, 4.0_r_tran, 9.0_r_tran, 0.0_r_tran, 1.0_r_tran /)
     dep_pts = (/ 0.0_r_tran, 0.2_r_tran, 0.5_r_tran, -1.2_r_tran, -0.2_r_tran, 0.0_r_tran /)
     frac_wind = (/ 0.0_r_tran, 1.0_r_tran, 2.0_r_tran, -2.0_r_tran, -1.0_r_tran, 0.0_r_tran /)
-    answer = (/ 0.0_r_tran,  0.55_r_tran,  2.5_r_tran, -0.3_r_tran,  -0.15_r_tran,  0.0_r_tran /)
+    answer = (/ 0.0_r_tran,  0.53_r_tran,  2.5_r_tran, -0.3_r_tran,  -0.15_r_tran,  0.0_r_tran /)
 
-    ! Relaxed monotonicity
-    monotone = vertical_monotone_positive
+    ! Positivity
+    monotone = monotone_positive
     call ffsl_flux_z_rev_nirvana_code( nlayers,   &
                                        flux,      &
                                        frac_wind, &
@@ -183,6 +187,7 @@ contains
                                        detj,      &
                                        dt,        &
                                        monotone,  &
+                                       min_val,   &
                                        log_space, &
                                        ndf_w2v,   &
                                        undf_w2v,  &
@@ -198,7 +203,7 @@ contains
       use_tol = 10.0_r_tran*spacing( maxval(field(:)) )
     endif
 
-    @assertEqual( answer, flux, use_tol)
+    @assertEqual(answer, flux, use_tol)
 
   end subroutine test_all
 

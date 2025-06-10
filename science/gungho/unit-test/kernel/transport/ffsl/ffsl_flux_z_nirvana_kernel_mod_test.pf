@@ -24,10 +24,10 @@ contains
 
     use, intrinsic :: iso_fortran_env,  only : real64
     use ffsl_flux_z_nirvana_kernel_mod, only : ffsl_flux_z_nirvana_code
-    use transport_enumerated_types_mod, only : vertical_monotone_strict,   &
-                                               vertical_monotone_relaxed,  &
-                                               vertical_monotone_positive, &
-                                               vertical_monotone_none
+    use transport_enumerated_types_mod, only : monotone_strict,                &
+                                               monotone_relaxed,               &
+                                               monotone_positive,              &
+                                               monotone_none
 
     implicit none
 
@@ -39,12 +39,17 @@ contains
     integer(i_def), parameter :: undf_w2v  = nlayers+1
     real(r_tran),   parameter :: dt        = 4.0_r_tran
     real(r_tran),   parameter :: area      = 2.0_r_tran
+    real(r_tran),   parameter :: min_val   = -1000.0_r_tran
     logical(l_def), parameter :: log_space = .false.
-    integer(i_def), dimension(ndf_w3)  :: map_w3
-    integer(i_def), dimension(ndf_w2v) :: map_w2v
+    real(r_tran),   parameter :: sixth = 1.0_r_tran/6.0_r_tran
+    real(r_tran),   parameter :: third  = 1.0_r_tran/3.0_r_tran
 
-    real(r_tran), dimension(undf_w2v) :: flux
-    real(r_tran), dimension(undf_w2v) :: frac_wind
+    integer(i_def), dimension(ndf_w3)   :: map_w3
+    integer(i_def), dimension(ndf_w2v)  :: map_w2v
+    real(r_tran),   dimension(undf_w2v) :: flux
+    real(r_tran),   dimension(undf_w2v) :: frac_wind
+    real(r_tran),   dimension(undf_w3)  :: dla_dz_1, dla_dz_2, dla_dz_3
+    real(r_tran),   dimension(undf_w3)  :: dlb_dz_1, dlb_dz_2, dlb_dz_3
 
     real(r_tran) :: field(5)
     real(r_tran) :: dz(5)
@@ -63,22 +68,37 @@ contains
     dz = (/ 1.0_r_tran, 1.0_r_tran, 1.0_r_tran, 1.0_r_tran, 1.0_r_tran /)
     detj(:) = dz(:)*area
 
+    ! Compute edge reconstruction coefficients
+    dla_dz_1 = (/ -0.5_r_tran,  -1.0_r_tran,  -1.0_r_tran, -1.0_r_tran,  1.5_r_tran /)
+    dla_dz_2 = (/ 1.0_r_tran,  0.5_r_tran,  0.5_r_tran, 0.5_r_tran,  -3.0_r_tran /)
+    dla_dz_3 = (/ -sixth,  third,  third, third,  2.0_r_tran-sixth /)
+    dlb_dz_1 = (/ 3.0_r_tran,  -0.5_r_tran,  -0.5_r_tran, -0.5_r_tran,  -1.0_r_tran /)
+    dlb_dz_2 = (/ -1.5_r_tran,  1.0_r_tran,  1.0_r_tran, 1.0_r_tran,  0.5_r_tran /)
+    dlb_dz_3 = (/ third,  -sixth,  -sixth, -sixth,  third /)
+
     ! Set up data
     field = (/ 1.0_r_tran, 2.0_r_tran, 3.0_r_tran, 4.0_r_tran, 5.0_r_tran /)
     dep_pts = (/ 0.0_r_tran, 0.1_r_tran, 0.5_r_tran, -1.2_r_tran, -0.1_r_tran, 0.0_r_tran /)
     frac_wind = (/ 0.0_r_tran, 1.0_r_tran, 2.0_r_tran, -2.0_r_tran, -1.0_r_tran, 0.0_r_tran /)
     answer = (/ 0.0_r_tran,  0.3625_r_tran,  1.125_r_tran, -4.3_r_tran,  -1.1375_r_tran,  0.0_r_tran /)
 
-    monotone = vertical_monotone_none
+    monotone = monotone_none
     call ffsl_flux_z_nirvana_code( nlayers,   &
                                    flux,      &
                                    frac_wind, &
                                    dep_pts,   &
                                    field,     &
+                                   dla_dz_1,  &
+                                   dla_dz_2,  &
+                                   dla_dz_3,  &
+                                   dlb_dz_1,  &
+                                   dlb_dz_2,  &
+                                   dlb_dz_3,  &
                                    dz,        &
                                    detj,      &
                                    dt,        &
                                    monotone,  &
+                                   min_val,   &
                                    log_space, &
                                    ndf_w2v,   &
                                    undf_w2v,  &
@@ -102,16 +122,23 @@ contains
     frac_wind = (/ 0.0_r_tran, 1.0_r_tran, 2.0_r_tran, -2.0_r_tran, -1.0_r_tran, 0.0_r_tran /)
     answer = (/ 0.0_r_tran,  0.25_r_tran,  2.5_r_tran, 0.0_r_tran,  -0.25_r_tran,  0.0_r_tran /)
 
-    monotone = vertical_monotone_relaxed
+    monotone = monotone_relaxed
     call ffsl_flux_z_nirvana_code( nlayers,   &
                                    flux,      &
                                    frac_wind, &
                                    dep_pts,   &
                                    field,     &
+                                   dla_dz_1,  &
+                                   dla_dz_2,  &
+                                   dla_dz_3,  &
+                                   dlb_dz_1,  &
+                                   dlb_dz_2,  &
+                                   dlb_dz_3,  &
                                    dz,        &
                                    detj,      &
                                    dt,        &
                                    monotone,  &
+                                   min_val,   &
                                    log_space, &
                                    ndf_w2v,   &
                                    undf_w2v,  &
@@ -135,16 +162,23 @@ contains
     frac_wind = (/ 0.0_r_tran, 1.0_r_tran, 2.0_r_tran, -2.0_r_tran, -1.0_r_tran, 0.0_r_tran /)
     answer = (/ 0.0_r_tran,  0.25_r_tran,  2.5_r_tran, 0.0_r_tran,  -0.25_r_tran,  0.0_r_tran /)
 
-    monotone = vertical_monotone_strict
+    monotone = monotone_strict
     call ffsl_flux_z_nirvana_code( nlayers,   &
                                    flux,      &
                                    frac_wind, &
                                    dep_pts,   &
                                    field,     &
+                                   dla_dz_1,  &
+                                   dla_dz_2,  &
+                                   dla_dz_3,  &
+                                   dlb_dz_1,  &
+                                   dlb_dz_2,  &
+                                   dlb_dz_3,  &
                                    dz,        &
                                    detj,      &
                                    dt,        &
                                    monotone,  &
+                                   min_val,   &
                                    log_space, &
                                    ndf_w2v,   &
                                    undf_w2v,  &
@@ -168,16 +202,23 @@ contains
     frac_wind = (/ 0.0_r_tran, 1.0_r_tran, 2.0_r_tran, -2.0_r_tran, -1.0_r_tran, 0.0_r_tran /)
     answer = (/ 0.0_r_tran,  0.47_r_tran,  2.5_r_tran, -0.5_r_tran,  -0.25_r_tran,  0.0_r_tran /)
 
-    monotone = vertical_monotone_positive
+    monotone = monotone_positive
     call ffsl_flux_z_nirvana_code( nlayers,   &
                                    flux,      &
                                    frac_wind, &
                                    dep_pts,   &
                                    field,     &
+                                   dla_dz_1,  &
+                                   dla_dz_2,  &
+                                   dla_dz_3,  &
+                                   dlb_dz_1,  &
+                                   dlb_dz_2,  &
+                                   dlb_dz_3,  &
                                    dz,        &
                                    detj,      &
                                    dt,        &
                                    monotone,  &
+                                   min_val,   &
                                    log_space, &
                                    ndf_w2v,   &
                                    undf_w2v,  &

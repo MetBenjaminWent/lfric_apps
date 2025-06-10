@@ -5,7 +5,7 @@
 !-----------------------------------------------------------------------------
 !> @brief Calculates the horizontal mass flux for FFSL.
 !> @details This kernel computes the flux in the x and y directions. A choice of
-!!          constant, Nirvana, or PPM is used to compute the edge reconstruction.
+!!          constant, Nirvana or PPM is used to compute the edge reconstruction.
 !!          This is multiplied by the fractional velocity to give
 !!          the flux. For CFL > 1 the field values multiplied by the mass
 !!          are summed between the flux point and the departure cell.
@@ -24,8 +24,9 @@ module ffsl_flux_xy_kernel_mod
                                     STENCIL, X1D, GH_INTEGER,  &
                                     ANY_DISCONTINUOUS_SPACE_2, &
                                     ANY_DISCONTINUOUS_SPACE_3, &
+                                    ANY_DISCONTINUOUS_SPACE_4, &
                                     Y1D
-  use constants_mod,         only : i_def, r_tran
+  use constants_mod,         only : i_def, r_tran, l_def
   use fs_continuity_mod,     only : W3, W2h
   use kernel_mod,            only : kernel_type
   use reference_element_mod, only : W, E, N, S
@@ -40,22 +41,25 @@ module ffsl_flux_xy_kernel_mod
   !> The type declaration for the kernel. Contains the metadata needed by the PSy layer
   type, public, extends(kernel_type) :: ffsl_flux_xy_kernel_type
     private
-    type(arg_type) :: meta_args(14) = (/                                       &
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, ANY_DISCONTINUOUS_SPACE_2), & ! flux
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(X1D)),          & ! field_for_x
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(X1D)),          & ! dry_mass_for_x
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(Y1D)),          & ! field_for_y
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(Y1D)),          & ! dry_mass_for_y
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  ANY_DISCONTINUOUS_SPACE_2), & ! dep_dist
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  ANY_DISCONTINUOUS_SPACE_2), & ! frac_dry_flux
-         arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_3), & ! face selector ew
-         arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_3), & ! face selector ns
-         arg_type(GH_SCALAR, GH_INTEGER, GH_READ     ),                        & ! order
-         arg_type(GH_SCALAR, GH_INTEGER, GH_READ     ),                        & ! monotone
-         arg_type(GH_SCALAR, GH_REAL,    GH_READ     ),                        & ! min_val
-         arg_type(GH_SCALAR, GH_INTEGER, GH_READ     ),                        & ! extent_size
-         arg_type(GH_SCALAR, GH_REAL,    GH_READ     )                         & ! dt
-         /)
+    type(arg_type) :: meta_args(17) = (/                                       &
+        arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, ANY_DISCONTINUOUS_SPACE_2),  & ! flux
+        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(X1D)),           & ! field_for_x
+        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(X1D)),           & ! dry_mass_for_x
+        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(Y1D)),           & ! field_for_y
+        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(Y1D)),           & ! dry_mass_for_y
+        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  ANY_DISCONTINUOUS_SPACE_2),  & ! dep_dist
+        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  ANY_DISCONTINUOUS_SPACE_2),  & ! frac_dry_flux
+        arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_4),  & ! dep_lowest_k
+        arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_4),  & ! dep_highest_k
+        arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_3),  & ! face selector ew
+        arg_type(GH_FIELD,  GH_INTEGER, GH_READ,  ANY_DISCONTINUOUS_SPACE_3),  & ! face selector ns
+        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                              & ! order
+        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                              & ! monotone
+        arg_type(GH_SCALAR, GH_REAL,    GH_READ),                              & ! min_val
+        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                              & ! extent_size
+        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                              & ! ndep
+        arg_type(GH_SCALAR, GH_REAL,    GH_READ)                               & ! dt
+    /)
     integer :: operates_on = CELL_COLUMN
   contains
     procedure, nopass :: ffsl_flux_xy_code
@@ -65,6 +69,7 @@ module ffsl_flux_xy_kernel_mod
   ! Contained functions/subroutines
   !-------------------------------------------------------------------------------
   public :: ffsl_flux_xy_code
+  public :: ffsl_flux_xy_1d
 
 contains
 
@@ -87,6 +92,12 @@ contains
   !> @param[in]     stencil_map_mass_y  Dofmap for the mass y-stencil
   !> @param[in]     dep_dist            Horizontal departure distances
   !> @param[in]     frac_dry_flux       Fractional part of the dry flux or wind
+  !> @param[in]     dep_lowest_k        2D integer multidata W2H field, storing
+  !!                                    the lowest model level to use in each
+  !!                                    integer flux sum, for each column
+  !> @param[in]     dep_highest_k       2D integer multidata W2H field, storing
+  !!                                    the highest model level to use in each
+  !!                                    integer flux sum, for each column
   !> @param[in]     face_selector_ew    2D field indicating which W/E faces to
   !!                                    loop over for this column
   !> @param[in]     face_selector_ns    2D field indicating which N/S faces to
@@ -96,6 +107,8 @@ contains
   !> @param[in]     min_val             Minimum value to enforce when using
   !!                                    quasi-monotone limiter
   !> @param[in]     extent_size         Stencil extent needed for the LAM edge
+  !> @param[in]     ndep                Number of multidata points for departure
+  !!                                    index fields
   !> @param[in]     dt                  Time step
   !> @param[in]     ndf_w2h             Num of DoFs for W2h per cell
   !> @param[in]     undf_w2h            Num of DoFs for W2h in this partition
@@ -103,6 +116,10 @@ contains
   !> @param[in]     ndf_w3              Num of DoFs for W3 per cell
   !> @param[in]     undf_w3             Num of DoFs for W3 in this partition
   !> @param[in]     map_w3              Map for W3
+  !> @param[in]     ndf_depk            Num of DoFs for dep idx fields per cell
+  !> @param[in]     undf_depk           Num of DoFs for this partition for dep
+  !!                                    idx fields
+  !> @param[in]     map_depk            Map for departure index fields
   !> @param[in]     ndf_w3_2d           Num of DoFs for 2D W3 per cell
   !> @param[in]     undf_w3_2d          Num of DoFs for this partition for 2D W3
   !> @param[in]     map_w3_2d           Map for 2D W3
@@ -122,12 +139,15 @@ contains
                                 stencil_map_mass_y,  &
                                 dep_dist,            &
                                 frac_dry_flux,       &
+                                dep_lowest_k,        &
+                                dep_highest_k,       &
                                 face_selector_ew,    &
                                 face_selector_ns,    &
                                 order,               &
                                 monotone,            &
                                 min_val,             &
                                 extent_size,         &
+                                ndep,                &
                                 dt,                  &
                                 ndf_w2h,             &
                                 undf_w2h,            &
@@ -135,13 +155,16 @@ contains
                                 ndf_w3,              &
                                 undf_w3,             &
                                 map_w3,              &
+                                ndf_depk,            &
+                                undf_depk,           &
+                                map_depk,            &
                                 ndf_w3_2d,           &
                                 undf_w3_2d,          &
                                 map_w3_2d )
 
-    use subgrid_horizontal_support_mod, only: fourth_order_horizontal_edge, &
-                                              nirvana_horizontal_edge,      &
-                                              monotonic_horizontal_edge,    &
+    use subgrid_horizontal_support_mod, only: fourth_order_horizontal_edge,    &
+                                              nirvana_horizontal_edge
+    use subgrid_common_support_mod,     only: monotonic_edge,                  &
                                               subgrid_quadratic_recon
 
     implicit none
@@ -154,6 +177,9 @@ contains
     integer(kind=i_def), intent(in) :: ndf_w2h
     integer(kind=i_def), intent(in) :: undf_w3_2d
     integer(kind=i_def), intent(in) :: ndf_w3_2d
+    integer(kind=i_def), intent(in) :: ndf_depk
+    integer(kind=i_def), intent(in) :: undf_depk
+    integer(kind=i_def), intent(in) :: ndep
     integer(kind=i_def), intent(in) :: stencil_size_x
     integer(kind=i_def), intent(in) :: stencil_size_mass_x
     integer(kind=i_def), intent(in) :: stencil_size_y
@@ -162,6 +188,7 @@ contains
     ! Arguments: Maps
     integer(kind=i_def), intent(in) :: map_w3(ndf_w3)
     integer(kind=i_def), intent(in) :: map_w2h(ndf_w2h)
+    integer(kind=i_def), intent(in) :: map_depk(ndf_depk)
     integer(kind=i_def), intent(in) :: map_w3_2d(ndf_w3_2d)
     integer(kind=i_def), intent(in) :: stencil_map_x(ndf_w3,stencil_size_x)
     integer(kind=i_def), intent(in) :: stencil_map_mass_x(ndf_w3,stencil_size_mass_x)
@@ -183,310 +210,374 @@ contains
     real(kind=r_tran),   intent(in)    :: dt
     integer(kind=i_def), intent(in)    :: face_selector_ew(undf_w3_2d)
     integer(kind=i_def), intent(in)    :: face_selector_ns(undf_w3_2d)
-
-    ! Integers
-    integer(kind=i_def) :: local_dofs_x(2), local_dofs_y(2)
-    integer(kind=i_def) :: dof_iterator
-    integer(kind=i_def) :: stencil_idx, col_idx
-    integer(kind=i_def) :: sign_displacement, int_displacement
-    integer(kind=i_def) :: rel_idx, dep_cell_idx, rel_dep_cell_idx
-    integer(kind=i_def) :: dof_offset, sign_offset
-    integer(kind=i_def) :: k, j, idx_3d
-    integer(kind=i_def) :: stencil_half, lam_edge_size, recon_size
-
-    ! Reals
-    real(kind=r_tran)   :: displacement, frac_dist
-    real(kind=r_tran)   :: recon_field, int_mass
-    real(kind=r_tran)   :: field_edge_left, field_edge_right
-
-    real(kind=r_tran), allocatable :: field_local(:)
-
-    ! x-direction
-    local_dofs_x = (/ W, E /)
-    local_dofs_y = (/ S, N /)
-
-    ! set size of array for reconstruction
-    recon_size = 1 + 2*order
-    allocate(field_local(recon_size))
-
-    ! Get size the stencil should be to check if we are at the edge of a LAM domain
-    lam_edge_size = 2_i_def*extent_size+1_i_def
-
-    ! = X Calculation ======================================================== !
-    stencil_half = (stencil_size_x + 1_i_def) / 2_i_def
-
-    if ( lam_edge_size > stencil_size_x ) then
-
-      ! At edge of LAM, so set output to zero ----------------------------------
-      do k = 0, nlayers - 1
-        do dof_iterator = 1, face_selector_ew(map_w3_2d(1))
-          flux( map_w2h(local_dofs_x(dof_iterator)) + k ) = 0.0_r_tran
-        end do
-      end do
-
-    else
-
-      ! Not at edge of LAM so compute fluxes -----------------------------------
-
-      ! Loop over the x direction dofs to compute flux at each dof
-      do dof_iterator = 1, face_selector_ew(map_w3_2d(1))
-
-        ! Pull out index to avoid multiple indirections
-        idx_3d = map_w2h(local_dofs_x(dof_iterator))
-
-        ! Set a local offset, dependent on the face we are looping over
-        select case (local_dofs_x(dof_iterator))
-        case ( W, S )
-          dof_offset = 0
-        case ( E, N )
-          dof_offset = 1
-        end select
-
-        ! Loop over vertical levels
-        do k = 0, nlayers - 1
-
-          ! Flux calculation for a single face =================================
-
-          ! Pull out departure point, and separate into integer / frac parts
-          displacement = dep_dist(idx_3d + k)
-          int_displacement = INT(displacement, i_def)
-          frac_dist = displacement - REAL(int_displacement, r_tran)
-          sign_displacement = INT(SIGN(1.0_r_tran, displacement))
-
-          ! Set an offset for the stencil index, based on dep point sign
-          sign_offset = (1 - sign_displacement) / 2   ! 0 if sign == 1, 1 if sign == -1
-
-          ! The local index of the departure cell
-          rel_dep_cell_idx = dof_offset - int_displacement + sign_offset - 1
-
-          ! Integer part =======================================================
-          int_mass = 0.0_r_tran
-          do j = 1, ABS(int_displacement)
-            ! If this column has idx 0, find relative index along column of
-            ! the departure cell, between - stencil_half and stencil_half
-            rel_idx = dof_offset - (j - 1) * sign_displacement + sign_offset - 1
-
-            ! Determine the index in the stencil from rel_idx
-            ! e.g. for extent 4:
-            ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
-            ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-            stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-
-            col_idx = stencil_map_x(1,stencil_idx)
-
-            int_mass = int_mass + field_for_x(col_idx + k) * dry_mass_for_x(col_idx + k)
-
-          end do
-
-          ! Fractional part ====================================================
-          ! Extract reconstruction data
-          do j = 1, recon_size
-            ! If this column has idx 0, find relative index along column of
-            ! the departure cell, between - stencil_half and stencil_half
-            rel_idx = rel_dep_cell_idx + j - order - 1
-
-            ! Determine the index in the stencil from rel_idx
-            ! e.g. for extent 4:
-            ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
-            ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-            stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-
-            col_idx = stencil_map_x(1,stencil_idx)
-
-            ! Populate small local array of field values
-            field_local(j) = field_for_x(col_idx + k)
-
-            ! Store index of departure cell for later
-            if (j == order + 1) dep_cell_idx = col_idx
-
-          end do
-
-          select case ( order )
-          case ( 0 )
-            ! Constant reconstruction
-            recon_field = field_local(1)
-          case ( 1 )
-            ! Nirvana reconstruction
-            ! Compute edge values using Nirvana interpolation
-            call nirvana_horizontal_edge(field_local, field_edge_left,         &
-                                         field_edge_right)
-
-            ! Apply monotonicity to edges if required
-            call monotonic_horizontal_edge(field_local, monotone, min_val,     &
-                                           field_edge_left, field_edge_right)
-
-            ! Compute reconstruction using field edge values
-            ! and quadratic subgrid reconstruction
-            call subgrid_quadratic_recon(recon_field, frac_dist,               &
-                                         field_local(2), field_edge_left,      &
-                                         field_edge_right, monotone)
-          case ( 2 )
-            ! PPM reconstruction
-            ! Compute edge values using fourth-order interpolation
-            call fourth_order_horizontal_edge(field_local, field_edge_left,    &
-                                              field_edge_right)
-
-            ! Apply monotonicity to edges if required
-            call monotonic_horizontal_edge(field_local(2:4), monotone,         &
-                                           min_val, field_edge_left, field_edge_right)
-
-            ! Compute reconstruction using field edge values
-            ! and quadratic subgrid reconstruction
-            call subgrid_quadratic_recon(recon_field, frac_dist,               &
-                                         field_local(3), field_edge_left,      &
-                                         field_edge_right, monotone)
-          end select
-
-          ! Assign flux ========================================================
-          flux(idx_3d + k) = (recon_field * frac_dry_flux(idx_3d + k)          &
-                              + int_mass * SIGN(1.0_r_tran, displacement)) / dt
-        end do ! vertical levels k
-
-      end do ! dof_iterator
-    end if
-
-    ! = Y Calculation ======================================================== !
-    stencil_half = (stencil_size_y + 1_i_def) / 2_i_def
-
-    if ( lam_edge_size > stencil_size_y ) then
-
-      ! At edge of LAM, so set output to zero ----------------------------------
-      do k = 0, nlayers - 1
-        do dof_iterator = 1, face_selector_ns(map_w3_2d(1))
-          flux( map_w2h(local_dofs_y(dof_iterator)) + k ) = 0.0_r_tran
-        end do
-      end do
-
-    else
-
-      ! Not at edge of LAM so compute fluxes -----------------------------------
-
-      ! Loop over the y direction dofs to compute flux at each dof
-      do dof_iterator = 1, face_selector_ns(map_w3_2d(1))
-
-        ! Pull out index to avoid multiple indirections
-        idx_3d = map_w2h(local_dofs_y(dof_iterator))
-
-        ! Set a local offset, dependent on the face we are looping over
-        select case (local_dofs_y(dof_iterator))
-        case ( W, S )
-          dof_offset = 0
-        case ( E, N )
-          dof_offset = 1
-        end select
-
-        ! Loop over vertical levels
-        do k = 0, nlayers - 1
-
-          ! Flux calculation for a single face =================================
-
-          ! Pull out departure point, and separate into integer / frac parts
-          ! NB: minus signs are needed because the Y1D stencil runs from S to N
-          ! but winds blowing S to N have negative sign
-          displacement = -dep_dist(idx_3d + k)     ! NB: minus sign
-          int_displacement = INT(displacement, i_def)
-          frac_dist = displacement - REAL(int_displacement, r_tran)
-          sign_displacement = INT(SIGN(1.0_r_tran, displacement))
-
-          ! Set an offset for the stencil index, based on dep point sign
-          sign_offset = (1 - sign_displacement) / 2   ! 0 if sign == 1, 1 if sign == -1
-
-          ! The local index of the departure cell
-          rel_dep_cell_idx = dof_offset - int_displacement + sign_offset - 1
-
-          ! Integer part =======================================================
-          int_mass = 0.0_r_tran
-          do j = 1, ABS(int_displacement)
-            ! If this column has idx 0, find relative index along column of
-            ! the departure cell, between - stencil_half and stencil_half
-            rel_idx = dof_offset - (j - 1) * sign_displacement + sign_offset - 1
-
-            ! Determine the index in the stencil from rel_idx
-            ! e.g. for extent 4:
-            ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
-            ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-            stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-
-            col_idx = stencil_map_y(1,stencil_idx)
-
-            int_mass = int_mass + field_for_y(col_idx + k) * dry_mass_for_y(col_idx + k)
-
-          end do
-
-          ! Fractional part ====================================================
-          ! Extract reconstruction data
-          do j = 1, recon_size
-            ! If this column has idx 0, find relative index along column of
-            ! the departure cell, between - stencil_half and stencil_half
-            rel_idx = rel_dep_cell_idx + j - order - 1
-
-            ! Determine the index in the stencil from rel_idx
-            ! e.g. for extent 4:
-            ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
-            ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
-            stencil_idx = 1 + ABS(rel_idx) + (stencil_half - 1)*(1 - SIGN(1, -rel_idx))/2
-
-            col_idx = stencil_map_y(1,stencil_idx)
-
-            ! Populate small local array of field values
-            field_local(j) = field_for_y(col_idx + k)
-
-            ! Store index of departure cell for later
-            if (j == order + 1) dep_cell_idx = col_idx
-
-          end do
-
-          select case ( order )
-          case ( 0 )
-            ! Constant reconstruction
-            recon_field = field_local(1)
-          case ( 1 )
-            ! Nirvana reconstruction
-            ! Compute edge values using Nirvana interpolation
-            call nirvana_horizontal_edge(field_local, field_edge_left,         &
-                                         field_edge_right)
-
-            ! Apply monotonicity to edges if required
-            call monotonic_horizontal_edge(field_local, monotone, min_val,     &
-                                           field_edge_left, field_edge_right)
-
-            ! Compute reconstruction using field edge values
-            ! and quadratic subgrid reconstruction
-            call subgrid_quadratic_recon(recon_field, frac_dist,               &
-                                         field_local(2), field_edge_left,      &
-                                         field_edge_right, monotone)
-          case ( 2 )
-            ! PPM reconstruction
-            ! Compute edge values using fourth-order interpolation
-            call fourth_order_horizontal_edge(field_local, field_edge_left,    &
-                                              field_edge_right)
-
-            ! Apply monotonicity to edges if required
-            call monotonic_horizontal_edge(field_local(2:4), monotone,         &
-                                           min_val, field_edge_left, field_edge_right)
-
-            ! Compute reconstruction using field edge values
-            ! and quadratic subgrid reconstruction
-            call subgrid_quadratic_recon(recon_field, frac_dist,               &
-                                         field_local(3), field_edge_left,      &
-                                         field_edge_right, monotone)
-          end select
-
-          ! Assign flux ========================================================
-          ! NB: minus sign before integer component of flux returns us to the
-          ! usual y-direction for the rest of the model
-          ! This is not needed for the fractional part, as frac_dry_flux has
-          ! the correct sign already
-          flux(idx_3d + k) = (recon_field * frac_dry_flux(idx_3d + k)        &
-                              - int_mass * SIGN(1.0_r_tran, displacement)) / dt
-        end do ! vertical levels k
-
-      end do ! dof_iterator
-
-    end if
-
-    deallocate(field_local)
+    integer(kind=i_def), intent(in)    :: dep_lowest_k(undf_depk)
+    integer(kind=i_def), intent(in)    :: dep_highest_k(undf_depk)
+
+    ! X direction --------------------------------------------------------------
+    call ffsl_flux_xy_1d( nlayers,             &
+                          .true.,              &
+                          flux,                &
+                          field_for_x,         &
+                          stencil_size_x,      &
+                          stencil_map_x,       &
+                          dry_mass_for_x,      &
+                          dep_dist,            &
+                          frac_dry_flux,       &
+                          dep_lowest_k,        &
+                          dep_highest_k,       &
+                          face_selector_ew,    &
+                          order,               &
+                          monotone,            &
+                          min_val,             &
+                          extent_size,         &
+                          ndep,                &
+                          dt,                  &
+                          ndf_w2h,             &
+                          undf_w2h,            &
+                          map_w2h,             &
+                          ndf_w3,              &
+                          undf_w3,             &
+                          map_w3,              &
+                          ndf_depk,            &
+                          undf_depk,           &
+                          map_depk,            &
+                          ndf_w3_2d,           &
+                          undf_w3_2d,          &
+                          map_w3_2d )
+
+    ! Y direction --------------------------------------------------------------
+    call ffsl_flux_xy_1d( nlayers,             &
+                          .false.,             &
+                          flux,                &
+                          field_for_y,         &
+                          stencil_size_y,      &
+                          stencil_map_y,       &
+                          dry_mass_for_y,      &
+                          dep_dist,            &
+                          frac_dry_flux,       &
+                          dep_lowest_k,        &
+                          dep_highest_k,       &
+                          face_selector_ns,    &
+                          order,               &
+                          monotone,            &
+                          min_val,             &
+                          extent_size,         &
+                          ndep,                &
+                          dt,                  &
+                          ndf_w2h,             &
+                          undf_w2h,            &
+                          map_w2h,             &
+                          ndf_w3,              &
+                          undf_w3,             &
+                          map_w3,              &
+                          ndf_depk,            &
+                          undf_depk,           &
+                          map_depk,            &
+                          ndf_w3_2d,           &
+                          undf_w3_2d,          &
+                          map_w3_2d )
 
   end subroutine ffsl_flux_xy_code
+
+! ============================================================================ !
+! SINGLE UNDERLYING 1D ROUTINE
+! ============================================================================ !
+
+  !> @brief Compute the flux for either the x- or y-direction
+  subroutine ffsl_flux_xy_1d( nlayers,             &
+                              x_direction,         &
+                              flux,                &
+                              field,               &
+                              stencil_size,        &
+                              stencil_map,         &
+                              dry_mass,            &
+                              dep_dist,            &
+                              frac_dry_flux,       &
+                              dep_lowest_k,        &
+                              dep_highest_k,       &
+                              face_selector,       &
+                              order,               &
+                              monotone,            &
+                              min_val,             &
+                              extent_size,         &
+                              ndep,                &
+                              dt,                  &
+                              ndf_w2h,             &
+                              undf_w2h,            &
+                              map_w2h,             &
+                              ndf_w3,              &
+                              undf_w3,             &
+                              map_w3,              &
+                              ndf_depk,            &
+                              undf_depk,           &
+                              map_depk,            &
+                              ndf_w3_2d,           &
+                              undf_w3_2d,          &
+                              map_w3_2d )
+
+    use subgrid_horizontal_support_mod, only: fourth_order_horizontal_edge,    &
+                                              nirvana_horizontal_edge
+    use subgrid_common_support_mod,     only: monotonic_edge,                  &
+                                              subgrid_quadratic_recon
+
+    implicit none
+
+    ! Arguments: Function space metadata
+    integer(kind=i_def), intent(in) :: nlayers
+    integer(kind=i_def), intent(in) :: undf_w3
+    integer(kind=i_def), intent(in) :: ndf_w3
+    integer(kind=i_def), intent(in) :: undf_w2h
+    integer(kind=i_def), intent(in) :: ndf_w2h
+    integer(kind=i_def), intent(in) :: undf_w3_2d
+    integer(kind=i_def), intent(in) :: ndf_w3_2d
+    integer(kind=i_def), intent(in) :: ndf_depk
+    integer(kind=i_def), intent(in) :: undf_depk
+    integer(kind=i_def), intent(in) :: ndep
+    integer(kind=i_def), intent(in) :: stencil_size
+
+    ! Arguments: Maps
+    integer(kind=i_def), intent(in) :: map_w3(ndf_w3)
+    integer(kind=i_def), intent(in) :: map_w2h(ndf_w2h)
+    integer(kind=i_def), intent(in) :: map_w3_2d(ndf_w3_2d)
+    integer(kind=i_def), intent(in) :: map_depk(ndf_depk)
+    integer(kind=i_def), intent(in) :: stencil_map(ndf_w3,stencil_size)
+
+    ! Arguments: Fields
+    real(kind=r_tran),   intent(inout) :: flux(undf_w2h)
+    real(kind=r_tran),   intent(in)    :: field(undf_w3)
+    real(kind=r_tran),   intent(in)    :: dry_mass(undf_w3)
+    real(kind=r_tran),   intent(in)    :: dep_dist(undf_w2h)
+    real(kind=r_tran),   intent(in)    :: frac_dry_flux(undf_w2h)
+    integer(kind=i_def), intent(in)    :: face_selector(undf_w3_2d)
+    integer(kind=i_def), intent(in)    :: dep_lowest_k(undf_depk)
+    integer(kind=i_def), intent(in)    :: dep_highest_k(undf_depk)
+
+    ! Arguments: Scalars
+    integer(kind=i_def), intent(in) :: order
+    integer(kind=i_def), intent(in) :: monotone
+    real(kind=r_tran),   intent(in) :: min_val
+    integer(kind=i_def), intent(in) :: extent_size
+    real(kind=r_tran),   intent(in) :: dt
+    logical(kind=l_def), intent(in) :: x_direction
+
+    ! Local arrays
+    integer(kind=i_def) :: int_cell_idx(nlayers)
+    integer(kind=i_def) :: int_cell_switch(nlayers)
+    integer(kind=i_def) :: sign_disp(nlayers)
+    integer(kind=i_def) :: rel_dep_cell_idx(nlayers)
+    real(kind=r_tran)   :: displacement(nlayers)
+    real(kind=r_tran)   :: frac_dist(nlayers)
+    real(kind=r_tran)   :: recon_field(nlayers)
+    real(kind=r_tran)   :: field_edge_left(nlayers)
+    real(kind=r_tran)   :: field_edge_right(nlayers)
+    real(kind=r_tran)   :: field_local(nlayers, 1+2*order)
+    integer(kind=i_def) :: stencil_idx(nlayers)
+    integer(kind=i_def) :: rel_idx(nlayers)
+    integer(kind=i_def) :: loc_idx(nlayers)
+    integer(kind=i_def) :: local_dofs(2)
+
+    ! Local scalars
+    integer(kind=i_def) :: dof_iterator
+    integer(kind=i_def) :: dof_offset
+    integer(kind=i_def) :: k, j, w2h_idx, idx_dep, col_idx
+    integer(kind=i_def) :: rel_idx_k, stencil_idx_k
+    integer(kind=i_def) :: stencil_half, lam_edge_size, recon_size
+    integer(kind=i_def) :: k_low, k_high, ndep_half
+    integer(kind=i_def) :: rel_idx_min, rel_idx_max
+    real(kind=r_tran)   :: direction
+    real(kind=r_tran)   :: inv_dt
+
+    inv_dt = 1.0_r_tran/dt
+
+    if (x_direction) then
+      local_dofs = (/ W, E /)
+      direction = 1.0_r_tran
+    else
+      ! y-direction
+      local_dofs = (/ S, N /)
+      direction = -1.0_r_tran
+    end if
+
+    ! Set stencil info ---------------------------------------------------------
+    recon_size = 1 + 2*order
+    lam_edge_size = 2_i_def*extent_size+1_i_def
+    stencil_half = (stencil_size - 1_i_def) / 2_i_def
+    ndep_half = (ndep - 1_i_def) / 2_i_def
+    rel_idx_min = MAX(-stencil_half, -ndep_half)
+    rel_idx_max = MIN(stencil_half, ndep_half)
+
+    if ( lam_edge_size > stencil_size ) then
+
+      ! At edge of LAM, so set output to zero ----------------------------------
+      do dof_iterator = 1, face_selector(map_w3_2d(1))
+        do k = 0, nlayers - 1
+          flux( map_w2h(local_dofs(dof_iterator)) + k ) = 0.0_r_tran
+        end do
+      end do
+
+    else
+
+      ! Not at edge of LAM so compute fluxes -----------------------------------
+
+      ! Loop over the direction dofs to compute flux at each dof
+      do dof_iterator = 1, face_selector(map_w3_2d(1))
+
+        ! Pull out index to avoid multiple indirections
+        w2h_idx = map_w2h(local_dofs(dof_iterator))
+        idx_dep = map_depk(local_dofs(dof_iterator)) + ndep_half
+
+        ! Set a local offset, dependent on the face we are looping over
+        select case (local_dofs(dof_iterator))
+        case (W, S)
+          dof_offset = 0
+        case (E, N)
+          dof_offset = 1
+        end select
+
+        ! ==================================================================== !
+        ! Extract departure info
+        ! ==================================================================== !
+        ! Pull out departure point, and separate into integer / frac parts
+        ! NB: minus sign in 'direction' because the Y1D stencil runs from S to N
+        displacement(:) = direction*dep_dist(w2h_idx:w2h_idx + nlayers-1)
+        frac_dist(:) = ABS(displacement(:) - REAL(INT(displacement(:), i_def), r_tran))
+        sign_disp(:) = INT(SIGN(1.0_r_tran, displacement(:)))
+
+        ! The relative index of the departure cell
+        rel_dep_cell_idx(:) = (                                                &
+          dof_offset - INT(displacement(:), i_def)                             &
+          + (1 - sign_disp(:)) / 2 - 1                                         &
+        )
+
+        ! ==================================================================== !
+        ! INTEGER FLUX
+        ! ==================================================================== !
+        ! Set flux to be zero initially
+        flux(w2h_idx : w2h_idx + nlayers-1) = 0.0_r_tran
+
+        ! Loop over columns in stencil
+        do rel_idx_k = rel_idx_min, rel_idx_max
+          ! Extract indices for looping over levels. We loop from the lowest
+          ! relevant level to the highest
+          k_low = dep_lowest_k(idx_dep + rel_idx_k)
+          k_high = dep_highest_k(idx_dep + rel_idx_k)
+
+          ! If k_high is -1, there are no levels to loop over for this column
+          if (k_high > -1_i_def) then
+            ! Determine the index in the stencil from rel_idx
+            ! e.g. for extent 4:
+            ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
+            ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
+            stencil_idx_k = (                                                  &
+              1 + ABS(rel_idx_k) + stencil_half * (1 - SIGN(1, -rel_idx_k))/2  &
+            )
+            col_idx = stencil_map(1,stencil_idx_k)
+
+            ! Adjust relative index based on sign for each level
+            int_cell_idx(k_low+1 : k_high+1) = (                               &
+                1 + sign_disp(k_low+1 : k_high+1)                              &
+                * (dof_offset - rel_idx_k - 1                                  &
+                  + (1 - sign_disp(k_low+1 : k_high+1)) / 2)                   &
+            )
+            ! Factor for whether to include mass for each cell in calculation
+            ! This is one for cells between the departure point and flux point,
+            ! but zero for cells outside
+            int_cell_switch(k_low+1 : k_high+1) = (                            &
+                1 + SIGN(1, ABS(INT(displacement(k_low+1 : k_high+1), i_def))  &
+                  - int_cell_idx(k_low+1 : k_high+1))                          &
+                * SIGN(1, int_cell_idx(k_low+1 : k_high+1) - 1)                &
+            ) / 2
+
+            ! Add integer mass to flux
+            flux(w2h_idx+k_low : w2h_idx+k_high) =                             &
+                flux(w2h_idx+k_low : w2h_idx+k_high)                           &
+                + int_cell_switch(k_low+1 : k_high+1)                          &
+                * field(col_idx+k_low : col_idx+k_high)                        &
+                * dry_mass(col_idx+k_low : col_idx+k_high)
+          end if
+        end do
+
+        ! ==================================================================== !
+        ! Populate local arrays for fractional flux calculations
+        ! ==================================================================== !
+        do j = 1, recon_size
+          ! If this column has idx 0, find relative index along column of
+          ! the departure cell, between - stencil_half and stencil_half
+          rel_idx(:) = rel_dep_cell_idx(:) + j - order - 1
+
+          ! Determine the index in the stencil from rel_idx
+          ! e.g. for extent 4:
+          ! Relative idx is   | -4 | -3 | -2 | -1 |  0 |  1 |  2 |  3 |  4 |
+          ! Stencil has order |  5 |  4 |  3 |  2 |  1 |  6 |  7 |  8 |  9 |
+          stencil_idx = 1 + ABS(rel_idx) + stencil_half * (1 - SIGN(1, -rel_idx))/2
+
+          ! Swap the order of the local array depending on sign of wind
+          ! j if wind > 0, recon_size - j + 1 if wind < 0
+          loc_idx = (                                                          &
+              (1 + sign_disp)/2*j + (1 - sign_disp)/2*(recon_size - j + 1)     &
+          )
+
+          ! Extract reconstruction data
+          do k = 1, nlayers
+            col_idx = stencil_map(1,stencil_idx(k))
+            field_local(k, loc_idx(k)) = field(col_idx+k - 1)
+          end do
+        end do
+
+        ! ==================================================================== !
+        ! EDGE RECONSTRUCTION
+        ! ==================================================================== !
+        select case ( order )
+        case ( 1 )
+          ! Nirvana reconstruction
+          ! Compute edge values using Nirvana interpolation
+          call nirvana_horizontal_edge(                                        &
+                  field_local, field_edge_left, field_edge_right, nlayers      &
+          )
+        case ( 2 )
+          ! PPM reconstruction
+          ! Compute edge values using fourth-order interpolation
+          call fourth_order_horizontal_edge(                                   &
+                  field_local, field_edge_left, field_edge_right, nlayers      &
+          )
+        end select
+
+        ! ==================================================================== !
+        ! FRACTIONAL FLUX RECONSTRUCTION
+        ! ==================================================================== !
+        if (order == 0) then
+          ! Constant reconstruction
+          recon_field(:) = field_local(:,1)
+
+        else
+          ! Apply monotonicity to edges if required
+          call monotonic_edge(                                                 &
+                  field_local, monotone, min_val,                              &
+                  field_edge_left, field_edge_right, order, nlayers            &
+          )
+          ! Compute reconstruction using field edge values
+          ! and quadratic subgrid reconstruction
+          call subgrid_quadratic_recon(                                        &
+                  recon_field, frac_dist, field_local,                         &
+                  field_edge_left, field_edge_right, monotone,                 &
+                  order, nlayers                                               &
+          )
+        end if
+
+        ! ==================================================================== !
+        ! Assign flux
+        ! ==================================================================== !
+        ! NB: minus sign from 'direction' before integer component of flux
+        ! returns us to the usual y-direction for the rest of the model
+        ! This is not needed for the fractional part, as frac_dry_flux has
+        ! the correct sign already
+        flux(w2h_idx : w2h_idx+nlayers-1) = inv_dt * (                         &
+          recon_field(:) * frac_dry_flux(w2h_idx : w2h_idx+nlayers-1)          &
+          + direction * sign_disp(:) * flux(w2h_idx : w2h_idx+nlayers-1)       &
+        )
+      end do ! dof_iterator
+    end if ! At edge of LAM
+
+  end subroutine ffsl_flux_xy_1d
 
 end module ffsl_flux_xy_kernel_mod

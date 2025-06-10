@@ -60,16 +60,11 @@ module check_configuration_mod
                                   splitting_strang_hvh,            &
                                   splitting_strang_vhv,            &
                                   splitting_none,                  &
-                                  vertical_monotone_koren,         &
-                                  vertical_monotone_relaxed,       &
-                                  vertical_monotone_strict,        &
-                                  vertical_monotone_clipping,      &
-                                  vertical_monotone_qm_pos,        &
-                                  horizontal_monotone_koren,       &
-                                  horizontal_monotone_relaxed,     &
-                                  horizontal_monotone_strict,      &
-                                  horizontal_monotone_clipping,    &
-                                  horizontal_monotone_qm_pos,      &
+                                  monotone_koren,                  &
+                                  monotone_relaxed,                &
+                                  monotone_strict,                 &
+                                  monotone_clipping,               &
+                                  monotone_qm_pos,                 &
                                   ffsl_splitting_swift, &
                                   ffsl_splitting_cosmic
 
@@ -290,6 +285,15 @@ contains
           call log_event( log_scratch_space, LOG_LEVEL_ERROR )
         end if
       end if
+      ! Check FFSL orders are in allowed range
+      if (ffsl_inner_order < 0 .or. ffsl_inner_order > 2) then
+        write( log_scratch_space, '(A)' ) 'ffsl_inner_order must be between 0 and 2'
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+      end if
+      if (ffsl_outer_order < 0 .or. ffsl_outer_order > 2) then
+        write( log_scratch_space, '(A)' ) 'ffsl_outer_order must be between 0 and 2'
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+      end if
       if ( extended_mesh ) then
         if ( geometry /= geometry_spherical ) then
           write( log_scratch_space, '(A)' ) 'Extended_mesh only valid for spherical geometry'
@@ -399,8 +403,8 @@ contains
           call log_event(log_scratch_space, LOG_LEVEL_ERROR)
         end if
 
-        if ( (vertical_monotone(i) == vertical_monotone_strict .or.    &
-              vertical_monotone(i) == vertical_monotone_relaxed) .and. &
+        if ( (vertical_monotone(i) == monotone_strict .or.    &
+              vertical_monotone(i) == monotone_relaxed) .and. &
               .not. (vertical_method(i) == split_method_ffsl .or.      &
                      vertical_method(i) == split_method_sl) ) then
           write( log_scratch_space, '(A)') trim(field_names(i)) // ' variable ' // &
@@ -409,8 +413,8 @@ contains
           call log_event(log_scratch_space, LOG_LEVEL_ERROR)
         end if
 
-        if ( (horizontal_monotone(i) == horizontal_monotone_strict .or.    &
-              horizontal_monotone(i) == horizontal_monotone_relaxed) .and. &
+        if ( (horizontal_monotone(i) == monotone_strict .or.    &
+              horizontal_monotone(i) == monotone_relaxed) .and. &
               .not. (horizontal_method(i) == split_method_ffsl .or.        &
                      horizontal_method(i) == split_method_sl) ) then
           write( log_scratch_space, '(A)') trim(field_names(i)) // ' variable ' // &
@@ -419,7 +423,7 @@ contains
           call log_event(log_scratch_space, LOG_LEVEL_ERROR)
         end if
 
-        if ( (vertical_monotone(i) == vertical_monotone_qm_pos) .and. &
+        if ( (vertical_monotone(i) == monotone_qm_pos) .and. &
               .not. (vertical_method(i) == split_method_ffsl)   .and. &
               .not. (ffsl_vertical_order(i) == 2) ) then
           write( log_scratch_space, '(A)') trim(field_names(i)) // ' variable ' // &
@@ -428,7 +432,7 @@ contains
           call log_event(log_scratch_space, LOG_LEVEL_ERROR)
         end if
 
-        if ( (horizontal_monotone(i) == horizontal_monotone_qm_pos) .and. &
+        if ( (horizontal_monotone(i) == monotone_qm_pos) .and. &
               .not. (horizontal_method(i) == split_method_ffsl) ) then
           write( log_scratch_space, '(A)') trim(field_names(i)) // ' variable ' // &
             'is set to use quasi-monotone positive horizontal monotonicity, but this is ' // &
@@ -436,8 +440,8 @@ contains
           call log_event(log_scratch_space, LOG_LEVEL_ERROR)
         end if
 
-        if ( (vertical_monotone(i) == vertical_monotone_koren .or.      &
-              vertical_monotone(i) == vertical_monotone_clipping) .and. &
+        if ( (vertical_monotone(i) == monotone_koren .or.      &
+              vertical_monotone(i) == monotone_clipping) .and. &
               .not. (vertical_method(i) == split_method_mol) ) then
           write( log_scratch_space, '(A)') trim(field_names(i)) // ' variable ' // &
             'is set to use Koren/clipping vertical monotonicity, but this is ' // &
@@ -445,8 +449,8 @@ contains
           call log_event(log_scratch_space, LOG_LEVEL_ERROR)
         end if
 
-        if ( (horizontal_monotone(i) == horizontal_monotone_koren .or.      &
-              horizontal_monotone(i) == horizontal_monotone_clipping) .and. &
+        if ( (horizontal_monotone(i) == monotone_koren .or.      &
+              horizontal_monotone(i) == monotone_clipping) .and. &
               .not. (horizontal_method(i) == split_method_mol) ) then
           write( log_scratch_space, '(A)') trim(field_names(i)) // ' variable ' // &
             'is set to use Koren/clipping horizontal monotonicity, but this is ' // &
@@ -568,24 +572,6 @@ contains
           write( log_scratch_space, '(A)' ) 'reference_reset_time must be greater than or equal to time step size dt'
           call log_event( log_scratch_space, LOG_LEVEL_ERROR )
         end if
-      end if
-
-      ! Throw error if using FFSL on the cubed-sphere without correct number of
-      ! ranks being used
-      if ( check_any_hori_scheme_ffsl()                                        &
-           .and. geometry == geometry_spherical                                &
-           .and. topology == topology_fully_periodic                           &
-           .and. (MOD(modeldb%mpi%get_comm_size(), 6_i_def) /= 0_i_def         &
-                  .and. modeldb%mpi%get_comm_size() > 1_i_def) ) then
-
-        call log_event(                                                        &
-          'Horizontal FFSL transport for the cubed-sphere currently requires ' &
-          // 'the number of MPI parts to be a multiple of 6, so that the '     &
-          // 'domain is partitioned separately for each panel of the mesh. '   &
-          // 'Alternatively a single MPI part can be used. '                   &
-          // 'Please try again with an appropriate parallel decomposition.',   &
-          LOG_LEVEL_ERROR                                                      &
-        )
       end if
 
       call log_event( '...Check gungho config done', LOG_LEVEL_INFO )

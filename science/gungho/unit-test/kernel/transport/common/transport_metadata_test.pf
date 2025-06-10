@@ -14,8 +14,7 @@ module transport_metadata_test
                                              scheme_split,                 &
                                              split_method_ffsl,            &
                                              split_method_sl,              &
-                                             horizontal_monotone_none,     &
-                                             vertical_monotone_none,       &
+                                             monotone_none,                &
                                              vertical_monotone_order_high, &
                                              special_edges_monotone_none,  &
                                              ffsl_splitting_swift
@@ -76,8 +75,8 @@ contains
     integer(kind=i_def)           :: splitting = splitting_hv
     integer(kind=i_def)           :: horizontal_method = split_method_ffsl
     integer(kind=i_def)           :: vertical_method = split_method_sl
-    integer(kind=i_def)           :: horizontal_monotone = horizontal_monotone_none
-    integer(kind=i_def)           :: vertical_monotone = vertical_monotone_none
+    integer(kind=i_def)           :: horizontal_monotone = monotone_none
+    integer(kind=i_def)           :: vertical_monotone = monotone_none
     integer(kind=i_def)           :: monotone_order = vertical_monotone_order_high
     integer(kind=i_def)           :: special_edges_monotone = special_edges_monotone_none
     logical(kind=l_def)           :: enforce_min_value = .true.

@@ -12,14 +12,13 @@
 
 module sl_support_mod
 
-  use constants_mod,                      only: i_def, r_tran
-  use transport_enumerated_types_mod,     only: vertical_monotone_none,           &
-                                                vertical_monotone_strict,         &
-                                                vertical_monotone_relaxed,        &
-                                                vertical_monotone_order_constant, &
-                                                vertical_monotone_order_linear,   &
-                                                vertical_monotone_order_high
-  use vertical_mass_remapping_kernel_mod, only: local_point_1d_array
+  use constants_mod,                   only: i_def, r_tran
+  use transport_enumerated_types_mod,  only: monotone_none,                    &
+                                             monotone_strict,                  &
+                                             monotone_relaxed,                 &
+                                             vertical_monotone_order_constant, &
+                                             vertical_monotone_order_linear,   &
+                                             vertical_monotone_order_high
 
   implicit none
 
@@ -34,242 +33,233 @@ module sl_support_mod
 
   contains
 
-  !-------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !> @brief   Limits the cubic semi-Lagrangian advective transport.
-  !> @details This subroutine identifies the non-monotone cubic-interpolated values
-  !!          and modifies them using the specified order/option of the modification.
-  !> @param[inout] fi        The interpolated field
-  !> @param[in]    f         The grid-data field
-  !> @param[in]    sc        The cubic-stencil used for interpolation for each point
-  !> @param[in]    cl        Linear weights
-  !> @param[in]    vertical_monotone
-  !!                         Option to identify non-monotone points
-  !> @param[in]    vertical_monotone_order
-  !!                         Option of the modification for non-monotone points
-  !> @param[in]    ns        First index of data-in
-  !> @param[in]    nf        End index of data-in
-  !-------------------------------------------------------------------------------
-  subroutine monotone_cubic_sl(fi,f,sc,cl,vertical_monotone,vertical_monotone_order,ns,nf)
+  !> @details Identifies the non-monotone cubic-interpolated values
+  !!          and modifies them using the specified order/option.
+  !> @param[in,out] field_dep       The calculated field at departure points
+  !> @param[in]     field_local     Grid-data field around the departure points
+  !> @param[in]     linear_coef_1   First linear coefficient
+  !> @param[in]     linear_coef_2   Second linear coefficient
+  !> @param[in]     vertical_monotone
+  !!                                Option to identify non-monotone points
+  !> @param[in]     vertical_monotone_order
+  !!                                Specifies the monotonic modification
+  !> @param[in]     nl              Number of data points in the vertical
+  !-----------------------------------------------------------------------------
+  subroutine monotone_cubic_sl( field_dep, field_local,       &
+                                linear_coef_1, linear_coef_2, &
+                                vertical_monotone,            &
+                                vertical_monotone_order,      &
+                                nl )
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def),                     intent(in)    :: vertical_monotone
-    integer(kind=i_def),                     intent(in)    :: vertical_monotone_order
-    integer(kind=i_def),                     intent(in)    :: ns
-    integer(kind=i_def),                     intent(in)    :: nf
-    real(kind=r_tran),   dimension(ns:nf),   intent(inout) :: fi(ns:nf)
-    real(kind=r_tran),   dimension(ns:nf),   intent(in)    :: f(ns:nf)
-    integer(kind=i_def), dimension(4,ns:nf), intent(in)    :: sc
-    real(kind=r_tran),   dimension(2,ns:nf), intent(in)    :: cl
+    integer(kind=i_def), intent(in)    :: nl
+    integer(kind=i_def), intent(in)    :: vertical_monotone
+    integer(kind=i_def), intent(in)    :: vertical_monotone_order
+    real(kind=r_tran),   intent(inout) :: field_dep(nl)
+    real(kind=r_tran),   intent(in)    :: field_local(nl,4)
+    real(kind=r_tran),   intent(in)    :: linear_coef_1(nl)
+    real(kind=r_tran),   intent(in)    :: linear_coef_2(nl)
 
     ! Local variables
-    integer(kind=i_def), dimension(ns:nf) :: no_mono_id
-    integer(kind=i_def) :: k
-    real(kind=r_tran)   :: test1, test2, test3, test4
-    real(kind=r_tran)   :: minv, maxv, sigma, xi
+    real(kind=r_tran)   :: tau(nl), sigma(nl)
 
-    ! Identify points/values that are non-monotone using
-    ! either the strict or relaxed conditions
-    ! if no_mono_id(:) /= 0, fi is non-monotone
-    !    no_mono_id(:) == 1, flat-left  for mod_high
-    !    no_mono_id(:) == 2, flat-right for mod_high
+    ! Determine if monotonicity needs applying to each point -------------------
+    select case (vertical_monotone)
+    case (monotone_strict)
+      ! 1 if there is a new extremum between the central points, 0 otherwise
+      tau = 0.5_r_tran + SIGN(0.5_r_tran,                                      &
+        (field_local(:,2) - field_dep(:)) * (field_local(:,3) - field_dep(:))  &
+      )
 
-    no_mono_id(:) = 0_i_def
-
-    select case( vertical_monotone )
-
-    case ( vertical_monotone_strict )
-      do k = ns, nf
-        test1 = (fi(k)-f(sc(2,k)))*(f(sc(3,k))-fi(k))
-        test2 = (fi(k)-f(sc(2,k)))*(f(sc(3,k))-f(sc(2,k)))
-        if ( test1 < 0.0_r_tran ) then
-          if (test2  < 0.0_r_tran ) then
-            no_mono_id(k) = 1_i_def
-          else
-            no_mono_id(k) = 2_i_def
-          end if
-        end if
-      end do
-    case ( vertical_monotone_relaxed )
-      do k = ns, nf
-        test1 = (fi(k)-f(sc(2,k)))*(f(sc(3,k))-fi(k))
-        test2 = (f(sc(2,k))-f(sc(1,k)))*(f(sc(3,k))-f(sc(4,k)))
-        test3 = (fi(k)-f(sc(2,k)))*(f(sc(2,k))-f(sc(1,k)))
-        test4 = (fi(k)-f(sc(2,k)))*(f(sc(3,k))-f(sc(2,k)))
-        if ( test1 < 0.0_r_tran .and. (test2 < 0.0_r_tran .or. test3 < 0.0_r_tran) ) then
-          if (test4  < 0.0_r_tran ) then
-            no_mono_id(k) = 1_i_def
-          else
-            no_mono_id(k) = 2_i_def
-          end if
-        end if
-      end do
+    case (monotone_relaxed)
+      ! This switch is equivalent to the following logical process:
+      ! is_new_extremum AND NOT (expect_new_extremum AND correct_extremum)
+      tau = (0.5_r_tran + SIGN(0.5_r_tran,                                     &
+        ! is_new_extremum: 1 if new extremum between central points, 0 otherwise
+        (field_local(:,2) - field_dep(:)) * (field_local(:,3) - field_dep(:))  &
+      )) * (1.0_r_tran - (0.5_r_tran + SIGN(0.5_r_tran,                        &
+        ! expect_new_extremum: 1 if cell should be extremum, 0 otherwise
+        (field_local(:,2) - field_local(:,1))                                  &
+        * (field_local(:,3) - field_local(:,4))                                &
+      )) * (0.5_r_tran + SIGN(0.5_r_tran,                                      &
+        ! correct_extremum: 1 if extremum is in correct direction, 0 otherwise
+        ! NB: this switch is only relevant if expecting new extremum. Don't need
+        ! to also test with field_local(:,3) and field_local(:,4) because in
+        ! that situation we would get the same answer
+        (field_dep(:) - field_local(:,2))                                      &
+        * (field_local(:,2) - field_local(:,1))                                &
+      )))
     end select
 
-    ! Perform modification for identified no-mono points/values
+    ! Apply monotonicity -------------------------------------------------------
+    if (vertical_monotone /= monotone_none) then
+      select case (vertical_monotone_order)
+      case (vertical_monotone_order_constant)
+        ! if monotonicity needs applying, just bound the field by its neighbours
+        field_dep(:) = (1.0_r_tran - tau) * field_dep + tau * MIN(             &
+          MAX(field_local(:,2), field_local(:,3)),                             &
+          MAX(field_dep(:), MIN(field_local(:,2), field_local(:,3)))           &
+        )
 
-    select case( vertical_monotone_order )
+      case (vertical_monotone_order_linear)
+        ! if monotonicity needs applying, revert to linear reconstruction
+        field_dep(:) = (1.0_r_tran - tau)*field_dep(:) + tau * (               &
+          linear_coef_1(:)*field_local(:,2)                                    &
+          + linear_coef_2(:)*field_local(:,3)                                  &
+        )
 
-    case ( vertical_monotone_order_constant )
-      do k = ns, nf
-        if ( no_mono_id(k) /= 0_i_def ) then
-          minv = min(f(sc(2,k)), f(sc(3,k)))
-          maxv = max(f(sc(2,k)), f(sc(3,k)))
-          fi(k) = max( minv, min(fi(k), maxv) )
-        end if
-      end do
-    case ( vertical_monotone_order_linear )
-      do k = ns, nf
-        if ( no_mono_id(k) /= 0_i_def ) then
-          fi(k) = cl(1,k)*f(sc(2,k)) + cl(2,k)*f(sc(3,k))
-        end if
-      end do
-    case ( vertical_monotone_order_high )
-      do k = ns, nf
-        if (no_mono_id(k) == 1_i_def ) then
-          sigma = f(sc(3,k)) -  f(sc(2,k))
-          xi = cl(2,k)
-          fi(k) =  sigma*xi**3 + f(sc(2,k))
-        elseif (no_mono_id(k) == 2_i_def ) then
-          sigma = f(sc(3,k)) -  f(sc(2,k))
-          xi = cl(1,k)
-          fi(k) = -sigma*xi**3 + f(sc(3,k))
-        end if
-      end do
-    end select
+      case (vertical_monotone_order_high)
+        ! sigma is 1 if the dep field value is closer to right field value than
+        ! the left, and 0 if closer to left field value than the right
+        sigma = 0.5_r_tran + SIGN(0.5_r_tran,                                  &
+          (field_dep(:) - field_local(:,2))                                    &
+          * (field_local(:,3) - field_local(:,2))                              &
+        )
+        ! Interpolated field combines sigma and tau switches:
+        ! tau switches on monotonicity, sigma chooses if shifting left or right
+        field_dep(:) = (1.0_r_tran - tau)*field_dep(:) + tau * (               &
+        ! Monotonicity uses a bounded cubic polynomial
+          (1.0_r_tran - sigma) * (field_local(:,2)                             &
+            + (field_local(:,3) - field_local(:,2))*linear_coef_2(:)**3        &
+          )                                                                    &
+          + sigma * (field_local(:,3)                                          &
+            - (field_local(:,3) - field_local(:,2))*linear_coef_1(:)**3        &
+          )                                                                    &
+        )
+      end select
+    end if
 
   end subroutine monotone_cubic_sl
 
-  !-------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !> @brief   Limits the quintic semi-Lagrangian advective transport.
-  !> @details This subroutine identifies the non-monotone quintic-interpolated values
-  !!          and modifies them using the specified order/option of the modification.
-  !> @param[inout] fi        The interpolated field
-  !> @param[in]    f         The grid-data field
-  !> @param[in]    sq        The quintic-stencil used for interpolation for each point
-  !> @param[in]    cl        Linear weights
-  !> @param[in]    vertical_monotone
-  !!                         Option to identify non-monotone points
-  !> @param[in]    vertical_monotone_order
-  !!                         Option of the modification for non-monotone points
-  !> @param[in]    ns        Start index of data-in
-  !> @param[in]    nf        End index of data-in
-  !-------------------------------------------------------------------------------
-  subroutine monotone_quintic_sl(fi,f,sq,cl,vertical_monotone,vertical_monotone_order,ns,nf)
+  !> @details Identifies the non-monotone quintic-interpolated values
+  !!          and modifies them using the specified order/option.
+  !> @param[in,out] field_dep       The calculated field at departure points
+  !> @param[in]     field_local     Grid-data field around the departure points
+  !> @param[in]     linear_coef_1   First linear coefficient
+  !> @param[in]     linear_coef_2   Second linear coefficient
+  !> @param[in]     vertical_monotone
+  !!                                Option to identify non-monotone points
+  !> @param[in]     vertical_monotone_order
+  !!                                Specifies the monotonic modification
+  !> @param[in]     nl              Number of data points in the vertical
+  !-----------------------------------------------------------------------------
+  subroutine monotone_quintic_sl( field_dep, field_local,       &
+                                  linear_coef_1, linear_coef_2, &
+                                  vertical_monotone,            &
+                                  vertical_monotone_order,      &
+                                  nl )
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def),                     intent(in)    :: vertical_monotone
-    integer(kind=i_def),                     intent(in)    :: vertical_monotone_order
-    integer(kind=i_def),                     intent(in)    :: ns
-    integer(kind=i_def),                     intent(in)    :: nf
-    real(kind=r_tran),   dimension(ns:nf),   intent(inout) :: fi(ns:nf)
-    real(kind=r_tran),   dimension(ns:nf),   intent(in)    :: f(ns:nf)
-    integer(kind=i_def), dimension(6,ns:nf), intent(in)    :: sq
-    real(kind=r_tran),   dimension(2,ns:nf), intent(in)    :: cl
+    integer(kind=i_def), intent(in)    :: nl
+    integer(kind=i_def), intent(in)    :: vertical_monotone
+    integer(kind=i_def), intent(in)    :: vertical_monotone_order
+    real(kind=r_tran),   intent(inout) :: field_dep(nl)
+    real(kind=r_tran),   intent(in)    :: field_local(6,nl)
+    real(kind=r_tran),   intent(in)    :: linear_coef_1(nl)
+    real(kind=r_tran),   intent(in)    :: linear_coef_2(nl)
 
     ! Local variables
-    integer(kind=i_def), dimension(ns:nf) :: no_mono_id
-    integer(kind=i_def) :: k
-    real(kind=r_tran)   :: test1, test2, test3, test4
-    real(kind=r_tran)   :: minv, maxv, sigma, xi
+    real(kind=r_tran)   :: tau(nl), sigma(nl)
 
-    ! Identify points/values that are non-monotone using
-    ! either the strict or relaxed conditions
-    ! if no_mono_id(:) # 0, fi is non-monotone
-    !    no_mono_id(:) = 1, flat-left  for mod_high
-    !    no_mono_id(:) = 2, flat-right for mod_high
+    ! Determine if monotonicity needs applying to each point -------------------
+    select case (vertical_monotone)
+    case (monotone_strict)
+      ! 1 if there is a new extremum between the central points, 0 otherwise
+      tau = 0.5_r_tran + SIGN(0.5_r_tran,                                      &
+        (field_local(:,3) - field_dep(:)) * (field_local(:,4) - field_dep(:))  &
+      )
 
-    no_mono_id(:) = 0_i_def
-
-    select case( vertical_monotone )
-
-    case ( vertical_monotone_strict )
-      do k = ns, nf
-        test1 = (fi(k)-f(sq(3,k)))*(f(sq(4,k))-fi(k))
-        test2 = (fi(k)-f(sq(3,k)))*(f(sq(4,k))-f(sq(3,k)))
-        if ( test1 < 0.0_r_tran ) then
-          if (test2  < 0.0_r_tran ) then
-            no_mono_id(k) = 1_i_def
-          else
-            no_mono_id(k) = 2_i_def
-          end if
-        end if
-      end do
-    case ( vertical_monotone_relaxed )
-      do k = ns, nf
-        test1 = (fi(k)-f(sq(3,k)))*(f(sq(4,k))-fi(k))
-        test2 = (f(sq(3,k))-f(sq(2,k)))*(f(sq(4,k))-f(sq(5,k)))
-        test3 = (fi(k)-f(sq(3,k)) )*(f(sq(3,k))-f(sq(2,k)))
-        test4 = (fi(k)-f(sq(3,k)) )*(f(sq(4,k))-f(sq(3,k)))
-        if ( test1 < 0.0_r_tran .and. (test2 < 0.0_r_tran .or. test3 < 0.0_r_tran) ) then
-          if ( test4  < 0.0_r_tran ) then
-            no_mono_id(k) = 1_i_def
-          else
-            no_mono_id(k) = 2_i_def
-          end if
-        end if
-      end do
+    case (monotone_relaxed)
+      ! This switch is equivalent to the following logical process:
+      ! is_new_extremum AND NOT (expect_new_extremum AND correct_extremum)
+      tau = (0.5_r_tran + SIGN(0.5_r_tran,                                     &
+        ! is_new_extremum: 1 if new extremum between central points, 0 otherwise
+        (field_local(:,3) - field_dep(:)) * (field_local(:,4) - field_dep(:))  &
+      )) * (1.0_r_tran - (0.5_r_tran + SIGN(0.5_r_tran,                        &
+        ! expect_new_extremum: 1 if cell should be extremum, 0 otherwise
+        (field_local(:,3) - field_local(:,2))                                  &
+        * (field_local(:,4) - field_local(:,5))                                &
+      )) * (0.5_r_tran + SIGN(0.5_r_tran,                                      &
+        ! correct_extremum: 1 if extremum is in correct direction, 0 otherwise
+        ! NB: this switch is only relevant if expecting new extremum. Don't need
+        ! to also test with field_local(:,3) and field_local(:,4) because in
+        ! that situation we would get the same answer
+        (field_dep(:) - field_local(:,3))                                      &
+        * (field_local(:,3) - field_local(:,2))                                &
+      )))
     end select
 
-    ! Perform modification for identified no-mono points/values
+    ! Apply monotonicity -------------------------------------------------------
+    if (vertical_monotone /= monotone_none) then
+      select case (vertical_monotone_order)
+      case (vertical_monotone_order_constant)
+        ! if monotonicity needs applying, just bound the field by its neighbours
+        field_dep(:) = (1.0_r_tran - tau) * field_dep + tau * MIN(             &
+          MAX(field_local(:,3), field_local(:,4)),                             &
+          MAX(field_dep(:), MIN(field_local(:,3), field_local(:,4)))           &
+        )
 
-    select case( vertical_monotone_order )
+      case (vertical_monotone_order_linear)
+        ! if monotonicity needs applying, revert to linear reconstruction
+        field_dep(:) = (1.0_r_tran - tau)*field_dep(:) + tau * (               &
+          linear_coef_1(:)*field_local(:,3)                                    &
+          + linear_coef_2(:)*field_local(:,4)                                  &
+        )
 
-    case ( vertical_monotone_order_constant )
-      do k = ns, nf
-        if ( no_mono_id(k) /= 0_i_def ) then
-          minv = min(f(sq(3,k)), f(sq(4,k)))
-          maxv = max(f(sq(3,k)), f(sq(4,k)))
-          fi(k) = max( minv, min(fi(k), maxv) )
-        end if
-      end do
-    case ( vertical_monotone_order_linear )
-      do k = ns, nf
-        if ( no_mono_id(k) /= 0_i_def ) then
-          fi(k) = cl(1,k)*f(sq(3,k)) + cl(2,k)*f(sq(4,k))
-        end if
-      end do
-    case ( vertical_monotone_order_high )
-      do k = ns, nf
-        if ( no_mono_id(k) == 1_i_def ) then
-          sigma = f(sq(4,k)) -  f(sq(3,k))
-          xi = cl(2,k)
-          fi(k) =  sigma*xi**5 + f(sq(3,k))
-        elseif ( no_mono_id(k) == 2_i_def ) then
-          sigma = f(sq(4,k)) -  f(sq(3,k))
-          xi = cl(1,k)
-          fi(k) = -sigma*xi**5 + f(sq(4,k))
-        end if
-      end do
-    end select
+      case (vertical_monotone_order_high)
+        ! sigma is 1 if the dep field value is closer to right field value than
+        ! the left, and 0 if closer to left field value than the right
+        sigma = 0.5_r_tran + SIGN(0.5_r_tran,                                  &
+          (field_dep(:) - field_local(:,3))                                    &
+          * (field_local(:,4) - field_local(:,3))                              &
+        )
+        ! Interpolated field combines sigma and tau switches:
+        ! tau switches on monotonicity, sigma chooses if shifting left or right
+        field_dep(:) = (1.0_r_tran - tau)*field_dep(:) + tau * (               &
+        ! Monotonicity uses a bounded quintic polynomial
+          (1.0_r_tran - sigma) * (field_local(:,3)                             &
+            + (field_local(:,4) - field_local(:,3))*linear_coef_2(:)**5        &
+          )                                                                    &
+          + sigma * (field_local(:,4)                                          &
+            - (field_local(:,4) - field_local(:,3))*linear_coef_1(:)**5        &
+          )                                                                    &
+        )
+      end select
+    end if
 
   end subroutine monotone_quintic_sl
 
-  !-------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !> @brief   This subroutine computes the cubic-Lagrange weights.
   !> @details Compute the cubic-Lagrange interpolation weights for vertical
   !!          semi-Lagrangian advective transport.
-  !> @param[in]  zi  The interpolation points
-  !> @param[in]  zg  The grid points where the data is located
-  !> @param[out] sc  The cubic-stencil used for interpolation for each point
-  !> @param[out] cc  The cubic interpolation weights
-  !> @param[in]  nzi The size of interpolation points
-  !> @param[in]  nzg The size of the grid-data
-  !-------------------------------------------------------------------------------
-  subroutine compute_cubic_coeffs(zi,zg,dz,sc,cc,nzi,nzg)
+  !> @param[in]  k_dep   Indices of the grid points below the departure points
+  !> @param[in]  z_dep   The departure (interpolation) points
+  !> @param[in]  z_arr   The grid points where the data is located
+  !> @param[out] indices Column index for interpolation for each point
+  !> @param[out] coeffs  The cubic interpolation weights
+  !> @param[in]  nl      Number of values in a column
+  !-----------------------------------------------------------------------------
+  subroutine compute_cubic_coeffs(k_dep, z_dep, z_arr, dz, indices, coeffs, nl)
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def),                   intent(in)  :: nzi, nzg
-    real(kind=r_tran),   dimension(nzi),   intent(in)  :: zi
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: zg
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: dz
-    real(kind=r_tran),   dimension(4,nzi), intent(out) :: cc
-    integer(kind=i_def), dimension(4,nzi), intent(out) :: sc
+    integer(kind=i_def), intent(in)  :: nl
+    integer(kind=i_def), intent(in)  :: k_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_arr(nl)
+    real(kind=r_tran),   intent(in)  :: dz(nl)
+    real(kind=r_tran),   intent(out) :: coeffs(nl,4)
+    integer(kind=i_def), intent(out) :: indices(nl,4)
 
     ! Local variables
     real(kind=r_tran)   :: z1, z2, z3, z4, xi
@@ -277,19 +267,19 @@ module sl_support_mod
     real(kind=r_tran)   :: n1, n2, n3, n4
     integer(kind=i_def) :: k, km
 
-    do k = 1, nzi
-      km = local_point_1d_array(zi(k), zg, 1, nzg)
-      xi = (zi(k) - zg(km))/dz(km)
+    do k = 1, nl
+      km = k_dep(k)
+      xi = (z_dep(k) - z_arr(km))/dz(km)
 
-      sc(1,k) = max(1 , km - 1 )
-      sc(2,k) = km
-      sc(3,k) = min(nzg, km + 1 )
-      sc(4,k) = min(nzg, km + 2 )
+      indices(k,1) = max(1, km - 1)
+      indices(k,2) = km
+      indices(k,3) = min(nl, km + 1)
+      indices(k,4) = min(nl, km + 2)
 
       z1 = 0.0_r_tran
-      z2 = z1 + dz(sc(1,k))
-      z3 = z2 + dz(sc(2,k))
-      z4 = z3 + dz(sc(3,k))
+      z2 = z1 + dz(indices(k,1))
+      z3 = z2 + dz(indices(k,2))
+      z4 = z3 + dz(indices(k,3))
       xi = z2 + xi*(z3-z2)
 
       d1 = (z1-z2)*(z1-z3)*(z1-z4)
@@ -303,65 +293,66 @@ module sl_support_mod
       n4 = (xi-z1)*(xi-z2)*(xi-z3)
 
       ! cubic weights
-      cc(1,k) = n1/d1
-      cc(2,k) = n2/d2
-      cc(3,k) = n3/d3
-      cc(4,k) = n4/d4
+      coeffs(k,1) = n1/d1
+      coeffs(k,2) = n2/d2
+      coeffs(k,3) = n3/d3
+      coeffs(k,4) = n4/d4
 
       ! Next to boundaries there are not enough points for cubic
       ! so revert to linear
 
-      if( sc(1,k) == sc(2,k) .or. sc(3,k) == sc(4,k) ) then
-        cc(1,k) = 0.0_r_tran
-        cc(2,k) = (z3-xi)/(z3-z2)
-        cc(3,k) = 1.0_r_tran - cc(2,k)
-        cc(4,k) = 0.0_r_tran
+      if (indices(k,1) == indices(k,2) .or. indices(k,3) == indices(k,4)) then
+        coeffs(k,1) = 0.0_r_tran
+        coeffs(k,2) = (z3-xi)/(z3-z2)
+        coeffs(k,3) = 1.0_r_tran - coeffs(k,2)
+        coeffs(k,4) = 0.0_r_tran
       end if
     end do
 
   end subroutine compute_cubic_coeffs
 
-  !-------------------------------------------------------------------------------
-  !> @breif   This subroutine computes cubic-Hermite weights.
+  !-----------------------------------------------------------------------------
+  !> @brief   This subroutine computes cubic-Hermite weights.
   !> @details Compute the cubic-Hermite interpolation weights for vertical
   !!          semi-Lagrangian advective transport.
-  !> @param[in]  zi  The interpolation points
-  !> @param[in]  zg  The grid points where the data is located
-  !> @param[out] sc  The cubic-stencil used for interpolation for each point
-  !> @param[out] cc  The cubic interpolation weights
-  !> @param[in]  nzi The size of interpolation points
-  !> @param[in]  nzg The size of the grid-data
-  !-------------------------------------------------------------------------------
-  subroutine compute_cubic_hermite_coeffs(zi,zg,dz,sc,cc,nzi,nzg)
+  !> @param[in]  k_dep   Indices of the grid points below the departure points
+  !> @param[in]  z_dep   The departure (interpolation) points
+  !> @param[in]  z_arr   The grid points where the data is located
+  !> @param[out] indices Column index for interpolation for each point
+  !> @param[out] coeffs  The cubic interpolation weights
+  !> @param[in]  nl      Number of values in a column
+  !-----------------------------------------------------------------------------
+  subroutine compute_cubic_hermite_coeffs(k_dep, z_dep, z_arr, dz, indices, coeffs, nl)
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def),                   intent(in)  :: nzi, nzg
-    real(kind=r_tran),   dimension(nzi),   intent(in)  :: zi
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: zg
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: dz
-    real(kind=r_tran),   dimension(4,nzi), intent(out) :: cc
-    integer(kind=i_def), dimension(4,nzi), intent(out) :: sc
+    integer(kind=i_def), intent(in)  :: nl
+    integer(kind=i_def), intent(in)  :: k_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_arr(nl)
+    real(kind=r_tran),   intent(in)  :: dz(nl)
+    real(kind=r_tran),   intent(out) :: coeffs(nl,4)
+    integer(kind=i_def), intent(out) :: indices(nl,4)
 
     ! Local variables
-    real(kind=r_tran)   :: xi, alfa, beta, inv_1p_alfa, inv_1p_beta
+    real(kind=r_tran)   :: xi, alpha, beta, inv_1p_alpha, inv_1p_beta
     real(kind=r_tran)   :: xip2, xip3, c1, c2, c3, c4
     integer(kind=i_def) :: k, km
 
-    do k = 1, nzi
-      km = local_point_1d_array(zi(k), zg, 1, nzg)
-      xi = (zi(k) - zg(km))/dz(km)
+    do k = 1, nl
+      km = k_dep(k)
+      xi = (z_dep(k) - z_arr(km))/dz(km)
 
-      sc(1,k) = max(1 , km - 1 )
-      sc(2,k) = km
-      sc(3,k) = min(nzg, km + 1 )
-      sc(4,k) = min(nzg, km + 2 )
+      indices(k,1) = max(1, km - 1)
+      indices(k,2) = km
+      indices(k,3) = min(nl, km + 1)
+      indices(k,4) = min(nl, km + 2)
 
-      alfa = dz(sc(1,k))/dz(sc(2,k))
-      beta = dz(sc(3,k))/dz(sc(2,k))
-      inv_1p_alfa=1.0_r_tran/(1.0_r_tran + alfa)
-      inv_1p_beta=1.0_r_tran/(1.0_r_tran + beta)
+      alpha = dz(indices(k,1))/dz(indices(k,2))
+      beta = dz(indices(k,3))/dz(indices(k,2))
+      inv_1p_alpha = 1.0_r_tran/(1.0_r_tran + alpha)
+      inv_1p_beta = 1.0_r_tran/(1.0_r_tran + beta)
       xip2 = xi**2
       xip3 = xi**3
       c1 = 2.0_r_tran*xip3 - 3.0_r_tran*xip2 + 1.0_r_tran
@@ -370,59 +361,60 @@ module sl_support_mod
       c4 = xip3 - xip2
 
       ! Cubic-hermite weights
-      if( sc(1,k) == sc(2,k) ) then
-        cc(1,k) = 0.0_r_tran
-        cc(2,k) = c1 - c3 - c4*inv_1p_beta
-        cc(3,k) = c2 + c3
-        cc(4,k) = c4*inv_1p_beta
-      elseif ( sc(3,k) == sc(4,k) ) then
-        cc(1,k) = -c3*inv_1p_alfa
-        cc(2,k) = c1 - c4
-        cc(3,k) = c2 + c4 + c3*inv_1p_alfa
-        cc(4,k) = 0.0_r_tran
+      if (indices(k,1) == indices(k,2)) then
+        coeffs(k,1) = 0.0_r_tran
+        coeffs(k,2) = c1 - c3 - c4*inv_1p_beta
+        coeffs(k,3) = c2 + c3
+        coeffs(k,4) = c4*inv_1p_beta
+      else if (indices(k,3) == indices(k,4)) then
+        coeffs(k,1) = -c3*inv_1p_alpha
+        coeffs(k,2) = c1 - c4
+        coeffs(k,3) = c2 + c4 + c3*inv_1p_alpha
+        coeffs(k,4) = 0.0_r_tran
       else
-        cc(1,k) = -c3*inv_1p_alfa
-        cc(2,k) = c1 - c4*inv_1p_beta
-        cc(3,k) = c2 + c3*inv_1p_alfa
-        cc(4,k) = c4*inv_1p_beta
+        coeffs(k,1) = -c3*inv_1p_alpha
+        coeffs(k,2) = c1 - c4*inv_1p_beta
+        coeffs(k,3) = c2 + c3*inv_1p_alpha
+        coeffs(k,4) = c4*inv_1p_beta
       end if
 
     end do
 
   end subroutine compute_cubic_hermite_coeffs
 
-  !-------------------------------------------------------------------------------
-  !> @breif   This subroutine computes cubic-Hermite weights.
+  !-----------------------------------------------------------------------------
+  !> @brief   This subroutine computes cubic-Hermite weights.
   !> @details Compute the cubic-Hermite interpolation weights for vertical
   !!          semi-Lagrangian advective transport.
-  !> @param[in]  zi  The interpolation points
-  !> @param[in]  zg  The grid points where the data is located
-  !> @param[out] cl  Linear weights
-  !> @param[in]  nzi The size of interpolation points
-  !> @param[in]  nzg The size of the grid-data
-  !-------------------------------------------------------------------------------
-  subroutine compute_linear_coeffs(zi,zg,dz,cl,nzi,nzg)
+  !> @param[in]  k_dep   Indices of the grid points below the departure points
+  !> @param[in]  z_dep   The departure (interpolation) points
+  !> @param[in]  z_arr   The grid points where the data is located
+  !> @param[out] coeffs  The linear interpolation weights
+  !> @param[in]  nl      Number of values in a column
+  !-----------------------------------------------------------------------------
+  subroutine compute_linear_coeffs(k_dep, z_dep, z_arr, dz, coeffs, nl)
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def),                   intent(in)  :: nzi, nzg
-    real(kind=r_tran),   dimension(nzi),   intent(in)  :: zi
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: zg
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: dz
-    real(kind=r_tran),   dimension(2,nzi), intent(out) :: cl
+    integer(kind=i_def), intent(in)  :: nl
+    integer(kind=i_def), intent(in)  :: k_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_arr(nl)
+    real(kind=r_tran),   intent(in)  :: dz(nl)
+    real(kind=r_tran),   intent(out) :: coeffs(nl,2)
 
     ! Local variables
     real(kind=r_tran)   :: xi
     integer(kind=i_def) :: k, km
 
-    do k = 1, nzi
-      km = local_point_1d_array(zi(k), zg, 1, nzg)
-      xi = (zi(k) - zg(km))/dz(km)
+    do k = 1, nl
+      km = k_dep(k)
+      xi = (z_dep(k) - z_arr(km))/dz(km)
 
       ! linear weights
-      cl(2,k) = xi
-      cl(1,k) = 1.0_r_tran - cl(2,k)
+      coeffs(k,2) = xi
+      coeffs(k,1) = 1.0_r_tran - coeffs(k,2)
     end do
 
   end subroutine compute_linear_coeffs
@@ -431,24 +423,25 @@ module sl_support_mod
   !> @details This subroutine computes the quintic-Lagrange weights.
   !> @details Compute the quintic-Lagrange interpolation weights for vertical
   !!          semi-Lagrangian advective transport.
-  !> @param[in]  zi        The interpolation points
-  !> @param[in]  zg        The grid points where the data is located
-  !> @param[out] sq        The quintic-stencil used for interpolation for each point
-  !> @param[out] cq        The quintic interpolation weights
-  !> @param[in]  nzi       The size of interpolation points
-  !> @param[in]  nzg       The size of the grid-data
+  !> @param[in]  k_dep   Indices of the grid points below the departure points
+  !> @param[in]  z_dep   The departure (interpolation) points
+  !> @param[in]  z_arr   The grid points where the data is located
+  !> @param[out] indices Column index for interpolation for each point
+  !> @param[out] coeffs  The cubic interpolation weights
+  !> @param[in]  nl      Number of values in a column
   !-------------------------------------------------------------------------------
-  subroutine compute_quintic_coeffs(zi,zg,dz,sq,cq,nzi,nzg)
+  subroutine compute_quintic_coeffs(k_dep, z_dep, z_arr, dz, indices, coeffs, nl)
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def),                   intent(in)  :: nzi, nzg
-    real(kind=r_tran),   dimension(nzi),   intent(in)  :: zi
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: zg
-    real(kind=r_tran),   dimension(nzg),   intent(in)  :: dz
-    real(kind=r_tran),   dimension(6,nzi), intent(out) :: cq
-    integer(kind=i_def), dimension(6,nzi), intent(out) :: sq
+    integer(kind=i_def), intent(in)  :: nl
+    integer(kind=i_def), intent(in)  :: k_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_dep(nl)
+    real(kind=r_tran),   intent(in)  :: z_arr(nl)
+    real(kind=r_tran),   intent(in)  :: dz(nl)
+    real(kind=r_tran),   intent(out) :: coeffs(nl,6)
+    integer(kind=i_def), intent(out) :: indices(nl,6)
 
     ! Local variables
     real(kind=r_tran)   :: z1, z2, z3, z4, z5, z6, xi
@@ -456,23 +449,23 @@ module sl_support_mod
     real(kind=r_tran)   :: n1, n2, n3, n4, n5, n6
     integer(kind=i_def) :: k, km
 
-    do k = 1, nzi
-      km = local_point_1d_array(zi(k), zg, 1, nzg)
-      xi = (zi(k) - zg(km))/dz(km)
+    do k = 1, nl
+      km = k_dep(k)
+      xi = (z_dep(k) - z_arr(km))/dz(km)
 
-      sq(1,k) = max(1 , km - 2 )
-      sq(2,k) = max(1 , km - 1 )
-      sq(3,k) = km
-      sq(4,k) = min(nzg, km + 1 )
-      sq(5,k) = min(nzg, km + 2 )
-      sq(6,k) = min(nzg, km + 3 )
+      indices(k,1) = max(1, km - 2)
+      indices(k,2) = max(1, km - 1)
+      indices(k,3) = km
+      indices(k,4) = min(nl, km + 1)
+      indices(k,5) = min(nl, km + 2)
+      indices(k,6) = min(nl, km + 3)
 
       z1 = 0.0_r_tran
-      z2 = z1 + dz(sq(1,k))
-      z3 = z2 + dz(sq(2,k))
-      z4 = z3 + dz(sq(3,k))
-      z5 = z4 + dz(sq(4,k))
-      z6 = z5 + dz(sq(5,k))
+      z2 = z1 + dz(indices(k,1))
+      z3 = z2 + dz(indices(k,2))
+      z4 = z3 + dz(indices(k,3))
+      z5 = z4 + dz(indices(k,4))
+      z6 = z5 + dz(indices(k,5))
       xi = z3 + xi*(z4-z3)
 
       d1 = (z1-z2)*(z1-z3)*(z1-z4)*(z1-z5)*(z1-z6)
@@ -490,14 +483,14 @@ module sl_support_mod
       n6 = (xi-z1)*(xi-z2)*(xi-z3)*(xi-z4)*(xi-z5)
 
       ! quintic weights
-      cq(1,k) = n1/d1
-      cq(2,k) = n2/d2
-      cq(3,k) = n3/d3
-      cq(4,k) = n4/d4
-      cq(5,k) = n5/d5
-      cq(6,k) = n6/d6
+      coeffs(k,1) = n1/d1
+      coeffs(k,2) = n2/d2
+      coeffs(k,3) = n3/d3
+      coeffs(k,4) = n4/d4
+      coeffs(k,5) = n5/d5
+      coeffs(k,6) = n6/d6
 
-      if( sq(1,k) == sq(2,k) .or. sq(5,k) == sq(6,k) ) then
+      if (indices(k,1) == indices(k,2) .or. indices(k,5) == indices(k,6)) then
         ! Revert to cubic weights
         d1 = (z2-z3)*(z2-z4)*(z2-z5)
         d2 = (z3-z2)*(z3-z4)*(z3-z5)
@@ -509,22 +502,22 @@ module sl_support_mod
         n3 = (xi-z2)*(xi-z3)*(xi-z5)
         n4 = (xi-z2)*(xi-z3)*(xi-z4)
 
-        cq(1,k) = 0.0_r_tran
-        cq(2,k) = n1/d1
-        cq(3,k) = n2/d2
-        cq(4,k) = n3/d3
-        cq(5,k) = n4/d4
-        cq(6,k) = 0.0_r_tran
+        coeffs(k,1) = 0.0_r_tran
+        coeffs(k,2) = n1/d1
+        coeffs(k,3) = n2/d2
+        coeffs(k,4) = n3/d3
+        coeffs(k,5) = n4/d4
+        coeffs(k,6) = 0.0_r_tran
       end if
 
-      if( sq(2,k) == sq(3,k) .or. sq(4,k) == sq(5,k) ) then
+      if (indices(k,2) == indices(k,3) .or. indices(k,4) == indices(k,5)) then
         ! Revert to linear weights
-        cq(1,k) = 0.0_r_tran
-        cq(2,k) = 0.0_r_tran
-        cq(3,k) = (z4-xi)/(z4-z3)
-        cq(4,k) = 1.0_r_tran - cq(3,k)
-        cq(5,k) = 0.0_r_tran
-        cq(6,k) = 0.0_r_tran
+        coeffs(k,1) = 0.0_r_tran
+        coeffs(k,2) = 0.0_r_tran
+        coeffs(k,3) = (z4-xi)/(z4-z3)
+        coeffs(k,4) = 1.0_r_tran - coeffs(k,3)
+        coeffs(k,5) = 0.0_r_tran
+        coeffs(k,6) = 0.0_r_tran
       end if
     end do
 

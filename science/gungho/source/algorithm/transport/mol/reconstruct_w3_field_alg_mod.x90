@@ -53,10 +53,8 @@ module reconstruct_w3_field_alg_mod
   use transport_enumerated_types_mod, only: direction_v,                  &
                                             direction_h,                  &
                                             direction_3d,                 &
-                                            horizontal_monotone_none,     &
-                                            horizontal_monotone_koren,    &
-                                            vertical_monotone_none,       &
-                                            vertical_monotone_koren
+                                            monotone_none,                &
+                                            monotone_koren
   use transport_metadata_mod,         only: transport_metadata_type
   use polyv_w3_koren_kernel_mod,      only: polyv_w3_koren_kernel_type
   use polyh_w3_koren_kernel_mod,      only: polyh_w3_koren_kernel_type
@@ -200,7 +198,7 @@ contains
                                         halo_depth = get_required_stencil_depth() )
     call invoke( setval_X( field_old_big_halo, field_old ) )
 
-    monotone = (transport_metadata%get_horizontal_monotone() == horizontal_monotone_koren)
+    monotone = (transport_metadata%get_horizontal_monotone() == monotone_koren)
     if ( extended_mesh .and. (monotone .or. oned_reconstruction) ) then
       remap_depth = int(fv_horizontal_order/2)
       call remap_on_extended_mesh(remap_field, field_old_big_halo,             &
@@ -213,7 +211,7 @@ contains
       field_ptr => field_old_big_halo
     end if
 
-    if ( transport_metadata%get_horizontal_monotone() == horizontal_monotone_koren ) then
+    if ( transport_metadata%get_horizontal_monotone() == monotone_koren ) then
       ! Compute horizontal components of mass flux with the koren scheme
       call invoke( name="w3_koren_hor_reconstruction",           &
               polyh_w3_koren_kernel_type( field_new,             &
@@ -288,7 +286,7 @@ contains
       vertical_order = fv_vertical_order
     end if
 
-    if ( monotonicity == vertical_monotone_koren ) then
+    if ( monotonicity == monotone_koren ) then
       height_tr => get_height( Wtheta, mesh%get_id() )
       call invoke(name="w3_vert_reconstruction_koren",                         &
                   polyv_w3_koren_kernel_type( field_new,                       &

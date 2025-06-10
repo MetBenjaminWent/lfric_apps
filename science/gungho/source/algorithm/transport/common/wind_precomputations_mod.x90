@@ -25,7 +25,7 @@ module wind_precomputations_alg_mod
 
   use constants_mod,                  only: i_def, l_def, str_def, imdi,       &
                                             r_tran, EPS_R_TRAN
-  use extrusion_mod,                  only: SHIFTED
+  use extrusion_mod,                  only: SHIFTED, TWOD
   use sci_field_minmax_alg_mod,       only: get_field_minmax,                  &
                                             log_field_minmax
   use flux_precomputations_alg_mod,   only: flux_precomputations_type
@@ -126,6 +126,8 @@ module wind_precomputations_alg_mod
     procedure, public  :: get_dep_dist_xy
     procedure, public  :: get_frac_wind_z
     procedure, public  :: get_frac_wind_xy
+    procedure, public  :: get_dep_lowest_k
+    procedure, public  :: get_dep_highest_k
     procedure, public  :: get_dep_stencil_extent_xy
     procedure, public  :: get_adv_unity_x
     procedure, public  :: get_adv_unity_y
@@ -782,6 +784,7 @@ contains
     use calc_dep_pts_alg_mod,           only: calc_hori_dep_pts
     use departure_points_config_mod,    only: horizontal_method,               &
                                               horizontal_method_ffsl
+    use transport_config_mod,           only: dep_pt_stencil_extent
 
     implicit none
 
@@ -796,9 +799,14 @@ contains
     integer(kind=i_def)                                     :: mesh_idx
     integer(kind=i_def)                                     :: frac_idx
     type(mesh_type),                          pointer       :: mesh
+    type(mesh_type),                          pointer       :: twod_mesh
     type(function_space_type),                pointer       :: w2h_fs
+    type(function_space_type),                pointer       :: depk_fs
     type(r_tran_field_type)                                 :: dummy_frac_wind
+    type(integer_field_type)                                :: dummy_lowest_k
+    type(integer_field_type)                                :: dummy_highest_k
     integer(kind=i_def)                                     :: frac
+    integer(kind=i_def)                                     :: ndata
     real(kind=r_tran)                                       :: dt_split_step
 
     ! If departure points calculated using "FFSL" method, get these from the
@@ -828,9 +836,16 @@ contains
         call self%dep_dist_xy(mesh_idx, frac_idx)%initialise(w2h_fs)
         call dummy_frac_wind%initialise(w2h_fs)
 
+        ndata = 2*dep_pt_stencil_extent + 1
+        twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+        depk_fs => function_space_collection%get_fs(twod_mesh, 0, 0, W2H, ndata)
+        call dummy_lowest_k%initialise(depk_fs)
+        call dummy_highest_k%initialise(depk_fs)
+
         call calc_hori_dep_pts(                                                &
                 self%dep_dist_xy(mesh_idx, frac_idx), dummy_frac_wind,         &
                 self%dep_stencil_extent(mesh_idx, frac_idx),                   &
+                dummy_lowest_k, dummy_highest_k,                               &
                 self%wind_n(mesh_idx), self%wind_np1(mesh_idx), dt_split_step  &
         )
       end if
@@ -938,6 +953,60 @@ contains
     )
 
   end function get_frac_wind_xy
+
+  !> @brief Returns a pointer to the lowest-k for dep points
+  !> @param[in] mesh_id     The ID of the mesh to get the field for
+  !> @param[in] splitting   Enumerator for the splitting type
+  !> @param[in] step        Transport step to get the field for
+  !> @param[in] outer_step  Whether to return field for FFSL outer step
+  !> @return The field of indices for integer flux sums
+  function get_dep_lowest_k(self, mesh_id, splitting, step, outer_step) result(dep_lowest_k)
+
+    implicit none
+
+    class(wind_precomputations_type), target, intent(inout) :: self
+    integer(kind=i_def),                      intent(in)    :: mesh_id
+    integer(kind=i_def),                      intent(in)    :: splitting
+    integer(kind=i_def),                      intent(in)    :: step
+    logical(kind=l_def),                      intent(in)    :: outer_step
+    type(integer_field_type),                 pointer       :: dep_lowest_k
+    type(flux_precomputations_type),          pointer       :: split_ffsl_precomp
+    integer(kind=i_def)                                     :: flux_step
+
+    split_ffsl_precomp => self%get_split_ffsl_precomputations(splitting, step)
+    flux_step = 1  ! Horizontal step is designated as step 1
+    dep_lowest_k => split_ffsl_precomp%get_dep_lowest_k(                       &
+            mesh_id, flux_step, outer_step=outer_step                          &
+    )
+
+  end function get_dep_lowest_k
+
+  !> @brief Returns a pointer to the highest-k for dep points
+  !> @param[in] mesh_id     The ID of the mesh to get the field for
+  !> @param[in] splitting   Enumerator for the splitting type
+  !> @param[in] step        Transport step to get the field for
+  !> @param[in] outer_step  Whether to return field for FFSL outer step
+  !> @return The field of indices for integer flux sums
+  function get_dep_highest_k(self, mesh_id, splitting, step, outer_step) result(dep_highest_k)
+
+    implicit none
+
+    class(wind_precomputations_type), target, intent(inout) :: self
+    integer(kind=i_def),                      intent(in)    :: mesh_id
+    integer(kind=i_def),                      intent(in)    :: splitting
+    integer(kind=i_def),                      intent(in)    :: step
+    logical(kind=l_def),                      intent(in)    :: outer_step
+    type(integer_field_type),                 pointer       :: dep_highest_k
+    type(flux_precomputations_type),          pointer       :: split_ffsl_precomp
+    integer(kind=i_def)                                     :: flux_step
+
+    split_ffsl_precomp => self%get_split_ffsl_precomputations(splitting, step)
+    flux_step = 1  ! Horizontal step is designated as step 1
+    dep_highest_k => split_ffsl_precomp%get_dep_highest_k(                     &
+            mesh_id, flux_step, outer_step=outer_step                          &
+    )
+
+  end function get_dep_highest_k
 
   !> @brief Returns a pointer to the fractional vertical wind
   !> @param[in] mesh_id     The ID of the mesh to get the field for

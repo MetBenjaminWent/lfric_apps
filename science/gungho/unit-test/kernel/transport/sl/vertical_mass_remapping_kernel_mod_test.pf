@@ -11,8 +11,8 @@ module vertical_mass_remapping_kernel_mod_test
 
   use constants_mod, only : i_def, r_def, l_def, r_tran
   use funit
-  use transport_enumerated_types_mod, only : vertical_monotone_none,       &
-                                             vertical_monotone_strict,     &
+  use transport_enumerated_types_mod, only : monotone_none,                    &
+                                             monotone_strict,                  &
                                              vertical_monotone_order_high
 
   implicit none
@@ -106,7 +106,7 @@ contains
 
     ! call mass remap with cubic-order
 
-    monotone = vertical_monotone_none
+    monotone = monotone_none
     monotone_order = vertical_monotone_order_high
     enforce_min_value = .false.
     remap_order = slice_order_cubic
@@ -132,9 +132,9 @@ contains
       @assertEqual(mass_out(i), mass_in(i) , use_tol)
     end do
 
-    ! redo the test with monotone = vertical_monotone_strict
+    ! redo the test with monotone = monotone_strict
 
-    monotone = vertical_monotone_strict
+    monotone = monotone_strict
     monotone_order = vertical_monotone_order_high
     enforce_min_value = .false.
     remap_order = slice_order_cubic

@@ -26,9 +26,6 @@ use argument_mod,                   only : arg_type,              &
 use fs_continuity_mod,              only : W3, W2v
 use constants_mod,                  only : r_tran, i_def, l_def, EPS_R_TRAN
 use kernel_mod,                     only : kernel_type
-use transport_enumerated_types_mod, only : vertical_monotone_relaxed, &
-                                           vertical_monotone_strict,  &
-                                           vertical_monotone_positive
 
 implicit none
 
@@ -40,7 +37,7 @@ private
 !> The type declaration for the kernel. Contains the metadata needed by the Psy layer
 type, public, extends(kernel_type) :: ffsl_flux_z_rev_nirvana_kernel_type
   private
-  type(arg_type) :: meta_args(9) = (/                  &
+  type(arg_type) :: meta_args(10) = (/                 &
        arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, W2v), & ! flux
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2v), & ! frac_wind
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2v), & ! dep pts
@@ -49,6 +46,7 @@ type, public, extends(kernel_type) :: ffsl_flux_z_rev_nirvana_kernel_type
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3),  & ! detj
        arg_type(GH_SCALAR, GH_REAL,    GH_READ),       & ! dt
        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),       & ! monotone
+       arg_type(GH_SCALAR, GH_REAL,    GH_READ),       & ! min_val
        arg_type(GH_SCALAR, GH_LOGICAL, GH_READ)        & ! log_space
        /)
   integer :: operates_on = CELL_COLUMN
@@ -73,6 +71,8 @@ contains
 !> @param[in]     detj      Volume of cells
 !> @param[in]     dt        Time step
 !> @param[in]     monotone  Monotonicity option to use
+!> @param[in]     min_val   Minimum value to enforce when using
+!!                          quasi-monotone limiter for PPM
 !> @param[in]     log_space Switch to use natural logarithmic space
 !!                          for edge interpolation
 !> @param[in]     ndf_w2v   Number of degrees of freedom for W2v per cell
@@ -90,6 +90,7 @@ subroutine ffsl_flux_z_rev_nirvana_code( nlayers,   &
                                          detj,      &
                                          dt,        &
                                          monotone,  &
+                                         min_val,   &
                                          log_space, &
                                          ndf_w2v,   &
                                          undf_w2v,  &
@@ -98,11 +99,11 @@ subroutine ffsl_flux_z_rev_nirvana_code( nlayers,   &
                                          undf_w3,   &
                                          map_w3 )
 
-  use subgrid_vertical_support_mod, only: vertical_ppm_recon,                  &
-                                          vertical_ppm_mono_relax,             &
-                                          vertical_ppm_mono_strict,            &
-                                          vertical_ppm_positive,               &
-                                          second_order_vertical_edge
+  use subgrid_vertical_support_mod,   only: second_order_vertical_edge
+  use subgrid_common_support_mod,     only: monotonic_edge,                    &
+                                            subgrid_quadratic_recon
+  use transport_enumerated_types_mod, only: monotone_none,                     &
+                                            monotone_positive
 
   implicit none
 
@@ -122,143 +123,184 @@ subroutine ffsl_flux_z_rev_nirvana_code( nlayers,   &
   integer(kind=i_def), intent(in)    :: map_w2v(ndf_w2v)
   real(kind=r_tran),   intent(in)    :: dt
   integer(kind=i_def), intent(in)    :: monotone
+  real(kind=r_tran),   intent(in)    :: min_val
   logical(kind=l_def), intent(in)    :: log_space
 
-  ! Internal variables
-  integer(kind=i_def) :: k, i, w2v_idx, w3_idx
-  integer(kind=i_def) :: int_displacement, sign_displacement
-  integer(kind=i_def) :: dep_cell_idx, sign_offset
-  integer(kind=i_def) :: local_edge_idx
-  integer(kind=i_def) :: lowest_whole_cell, highest_whole_cell
-
-  real(kind=r_tran)   :: displacement, frac_dist
-  real(kind=r_tran)   :: reconstruction, mass_whole_cells
+  ! Local arrays
+  integer(kind=i_def) :: sign_displacement(nlayers-1)
+  integer(kind=i_def) :: dep_cell_idx(nlayers-1)
+  real(kind=r_tran)   :: reconstruction(nlayers-1)
   real(kind=r_tran)   :: edge_value(0:nlayers)
+  real(kind=r_tran)   :: edge_left(nlayers-1)
+  real(kind=r_tran)   :: edge_right(nlayers-1)
+  real(kind=r_tran)   :: field_local(nlayers-1, 3)
+  real(kind=r_tran)   :: displacement(nlayers-1)
+  real(kind=r_tran)   :: frac_dist(nlayers-1)
+  real(kind=r_tran)   :: mass(nlayers)
   real(kind=r_tran)   :: log_field(2)
+
+  ! Local scalars
+  integer(kind=i_def) :: k, w2v_idx, w3_idx, local_edge_idx
+  integer(kind=i_def) :: b_idx, t_idx, l_idx, r_idx
+  integer(kind=i_def) :: lowest_whole_cell, highest_whole_cell
+  real(kind=r_tran)   :: inv_dt
 
   w3_idx = map_w3(1)
   w2v_idx = map_w2v(1)
+  inv_dt = 1.0_r_tran / dt
 
   ! ========================================================================== !
-  ! Reconstruct edge values
+  ! EDGE RECONSTRUCTION
   ! ========================================================================== !
 
   if (log_space) then ! --------------------------------------------------------
 
     local_edge_idx = 0
     log_field(:) = LOG(MAX(ABS(field(w3_idx : w3_idx+1)), EPS_R_TRAN))
-    call second_order_vertical_edge(log_field, dz(w3_idx : w3_idx+1),          &
-                                    local_edge_idx, edge_value(0))
+    call second_order_vertical_edge(                                           &
+            log_field, dz(w3_idx : w3_idx+1), local_edge_idx, edge_value(0)    &
+    )
     edge_value(0) = EXP(edge_value(0))
 
     local_edge_idx = 1
     do k = 1, nlayers - 1
       log_field(:) = LOG(MAX(ABS(field(w3_idx+k-1 : w3_idx+k)), EPS_R_TRAN))
-      call second_order_vertical_edge(log_field, dz(w3_idx+k-1 : w3_idx+k),    &
-                                      local_edge_idx, edge_value(k))
+      call second_order_vertical_edge(                                         &
+              log_field, dz(w3_idx+k-1 : w3_idx+k), local_edge_idx,            &
+              edge_value(k)                                                    &
+      )
       edge_value(k) = EXP(edge_value(k))
     end do
 
     local_edge_idx = 2
     k = nlayers
     log_field(:) = LOG(MAX(ABS(field(w3_idx+k-2 : w3_idx+k-1)), EPS_R_TRAN))
-    call second_order_vertical_edge(log_field, dz(w3_idx+k-2 : w3_idx+k-1),    &
-                                    local_edge_idx, edge_value(k))
+    call second_order_vertical_edge(                                           &
+            log_field, dz(w3_idx+k-2 : w3_idx+k-1), local_edge_idx,            &
+            edge_value(k)                                                      &
+    )
     edge_value(k) = EXP(edge_value(k))
 
   else ! Not log-space ---------------------------------------------------------
 
     local_edge_idx = 0
-    call second_order_vertical_edge(field(w3_idx : w3_idx+1),                  &
-                                    dz(w3_idx : w3_idx+1),                     &
-                                    local_edge_idx, edge_value(0))
+    call second_order_vertical_edge(                                           &
+            field(w3_idx : w3_idx+1), dz(w3_idx : w3_idx+1),                   &
+            local_edge_idx, edge_value(0)                                      &
+    )
 
     local_edge_idx = 1
     do k = 1, nlayers - 1
       ! Perform edge reconstruction --------------------------------------------
-      call second_order_vertical_edge(field(w3_idx+k-1 : w3_idx+k),            &
-                                      dz(w3_idx+k-1 : w3_idx+k),               &
-                                      local_edge_idx, edge_value(k))
+      call second_order_vertical_edge(                                         &
+              field(w3_idx+k-1 : w3_idx+k), dz(w3_idx+k-1 : w3_idx+k),         &
+              local_edge_idx, edge_value(k)                                    &
+      )
     end do
 
     local_edge_idx = 2
     k = nlayers
-    call second_order_vertical_edge(field(w3_idx+k-2 : w3_idx+k-1),            &
-                                    dz(w3_idx+k-2 : w3_idx+k-1),               &
-                                    local_edge_idx, edge_value(k))
-
+    call second_order_vertical_edge(                                           &
+            field(w3_idx+k-2 : w3_idx+k-1), dz(w3_idx+k-2 : w3_idx+k-1),       &
+            local_edge_idx, edge_value(k)                                      &
+    )
   end if
 
   ! ========================================================================== !
-  ! Build fluxes
+  ! Extract departure info
   ! ========================================================================== !
+  b_idx = w2v_idx + 1
+  t_idx = w2v_idx + nlayers - 1
 
-  ! Force bottom flux to be zero
-  flux(w2v_idx) = 0.0_r_tran
+  ! Pull out departure point, and separate into integer / frac parts
+  displacement(:) = dep_dist(b_idx : t_idx)
+  frac_dist(:) = ABS(displacement(:) - REAL(INT(displacement(:), i_def), r_tran))
+  sign_displacement(:) = INT(SIGN(1.0_r_tran, displacement(:)))
 
-  ! Loop through faces
+  ! Determine departure cell
   do k = 1, nlayers - 1
-
-    ! Pull out departure point, and separate into integer / frac parts
-    displacement = dep_dist(w2v_idx + k)
-    int_displacement = INT(displacement, i_def)
-    frac_dist = displacement - REAL(int_displacement, r_tran)
-    sign_displacement = INT(SIGN(1.0_r_tran, displacement))
-
-    ! Set an offset for the stencil index, based on dep point sign
-    sign_offset = (1 - sign_displacement) / 2   ! 0 if sign == 1, 1 if sign == -1
-
-    ! Determine departure cell
-    dep_cell_idx = k - int_displacement + sign_offset - 1
-
-    ! ======================================================================== !
-    ! Integer sum
-    mass_whole_cells = 0.0_r_tran
-    lowest_whole_cell = MIN(dep_cell_idx + 1, k)
-    highest_whole_cell = MAX(dep_cell_idx, k) - 1
-    do i = lowest_whole_cell, highest_whole_cell
-      mass_whole_cells = mass_whole_cells + field(w3_idx + i) * detj(w3_idx + i)
-    end do
-
-    ! ======================================================================== !
-    ! Perform reversible PPM reconstruction for fractional part
-    call vertical_ppm_recon(reconstruction, frac_dist,    &
-                            field(w3_idx + dep_cell_idx), &  ! field in dep cell
-                            edge_value(dep_cell_idx),     &  ! edge below dep cell
-                            edge_value(dep_cell_idx + 1))    ! edge above dep cell
-
-    ! ======================================================================== !
-    ! Apply monotonicity for fractional part
-    select case ( monotone )
-    case ( vertical_monotone_strict )
-      call vertical_ppm_mono_strict(reconstruction,               &
-                                    field(w3_idx + dep_cell_idx), &
-                                    edge_value(dep_cell_idx),     &
-                                    edge_value(dep_cell_idx + 1))
-
-    case ( vertical_monotone_relaxed )
-      call vertical_ppm_mono_relax(reconstruction, frac_dist,    &
-                                   field(w3_idx + dep_cell_idx), &
-                                   edge_value(dep_cell_idx),     &
-                                   edge_value(dep_cell_idx + 1))
-
-    case ( vertical_monotone_positive )
-      call vertical_ppm_positive(reconstruction, frac_dist,    &
-                                 field(w3_idx + dep_cell_idx), &
-                                 edge_value(dep_cell_idx),     &
-                                 edge_value(dep_cell_idx + 1))
-
-    end select
-
-    ! ======================================================================== !
-    ! Compute flux
-    flux(w2v_idx + k) = (frac_wind(w2v_idx + k) * reconstruction               &
-                         + sign(1.0_r_tran, displacement) * mass_whole_cells) / dt
-
+    dep_cell_idx(k) = k - INT(displacement(k), i_def) + (1 - sign_displacement(k)) / 2 - 1
   end do
 
-  ! Force top flux to be zero
-  flux(w2v_idx + nlayers) = 0.0_r_tran
+  ! ========================================================================== !
+  ! Populate local arrays for fractional flux calculations
+  ! ========================================================================== !
+  if (monotone == monotone_none .or. monotone == monotone_positive) then
+    ! Don't need the neighbouring cell values
+    do k = 1, nlayers - 1
+      field_local(k,2) = field(w3_idx + dep_cell_idx(k))
+
+      ! Edge values on left/right of cell needed for subgrid reconstruction
+      ! Left value is the *edge* upwind of the departure cell
+      ! Right value is the *edge* downwind of the departure cell
+      l_idx = dep_cell_idx(k) + (1 - sign_displacement(k)) / 2
+      r_idx = dep_cell_idx(k) + 1 - (1 - sign_displacement(k)) / 2
+      edge_left(k) = edge_value(l_idx)
+      edge_right(k) = edge_value(r_idx)
+    end do
+
+  else
+    ! When populating arrays, include neighbouring cell values
+    do k = 1, nlayers - 1
+      ! Fields on left/right of cell needed for bounding edge values
+      ! Left value is the *cell* upwind of the departure cell
+      ! Right value is the *cell* downwind of the departure cell
+      ! At the top/bottom of the domain, use the same cell as the neighbour
+      l_idx = MIN(MAX(dep_cell_idx(k) - sign_displacement(k), 0), nlayers-1)
+      r_idx = MIN(MAX(dep_cell_idx(k) + sign_displacement(k), 0), nlayers-1)
+      field_local(k,1) = field(w3_idx + l_idx)
+      field_local(k,2) = field(w3_idx + dep_cell_idx(k))
+      field_local(k,3) = field(w3_idx + r_idx)
+
+      ! Edge values on left/right of cell needed for subgrid reconstruction
+      ! Left value is the *edge* upwind of the departure cell
+      ! Right value is the *edge* downwind of the departure cell
+      l_idx = dep_cell_idx(k) + (1 - sign_displacement(k)) / 2
+      r_idx = dep_cell_idx(k) + 1 - (1 - sign_displacement(k)) / 2
+      edge_left(k) = edge_value(l_idx)
+      edge_right(k) = edge_value(r_idx)
+    end do
+  end if
+
+  ! ========================================================================== !
+  ! FRACTIONAL FLUX RECONSTRUCTION
+  ! ========================================================================== !
+
+  ! Apply monotonicity to edges if required
+  call monotonic_edge(                                                         &
+          field_local, monotone, min_val, edge_left, edge_right, 1, nlayers-1  &
+  )
+
+  ! Compute reconstruction using field edge values
+  ! and quadratic subgrid reconstruction
+  call subgrid_quadratic_recon(                                                &
+          reconstruction, frac_dist, field_local,                              &
+          edge_left, edge_right, monotone, 1, nlayers-1                        &
+  )
+
+  ! ========================================================================== !
+  ! INTEGER FLUX
+  ! ========================================================================== !
+  ! Set flux to be zero initially
+  flux(w2v_idx : w2v_idx + nlayers) = 0.0_r_tran
+
+  ! Pre-multiply field and volume to get mass, for use in integer flux
+  mass(:) = field(w3_idx : w3_idx+nlayers-1) * detj(w3_idx : w3_idx+nlayers-1)
+
+  ! Integer sum
+  do k = 1, nlayers - 1
+    lowest_whole_cell = MIN(dep_cell_idx(k) + 1, k) + 1
+    highest_whole_cell = MAX(dep_cell_idx(k), k)
+    flux(w2v_idx + k) = SUM(mass(lowest_whole_cell : highest_whole_cell))
+  end do
+
+  ! ========================================================================== !
+  ! Assign flux
+  ! ========================================================================== !
+  flux(b_idx : t_idx) = inv_dt * (                                             &
+      frac_wind(b_idx : t_idx) * reconstruction(:)                             &
+      + sign_displacement(:) * flux(b_idx : t_idx)                             &
+  )
 
 end subroutine ffsl_flux_z_rev_nirvana_code
 

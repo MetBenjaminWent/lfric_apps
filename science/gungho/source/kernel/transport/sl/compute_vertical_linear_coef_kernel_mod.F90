@@ -55,30 +55,19 @@ module compute_vertical_linear_coef_kernel_mod
   !!          only w (i.e., vertical motion only), then interpolate theta at the
   !!          departure point using 1d-linear-Lagrange interpolation.
   !> @param[in]     nlayers       The number of layers
-  !> @param[in]     dep_dist_z    The vertical departure distance used for SL advection
+  !> @param[in]     dep_dist_z    The vertical departure distance
   !> @param[in]     theta_height  The height of theta-points
-  !> @param[inout]  linear_coef   The linear interpolation coefficients (1-2, used for monotonicity)
-  !> @param[in]     hermite       Flag to compute linear-Hermite interpolation coefficients
-  !> @param[in]     ndf_w2v       The number of degrees of freedom per cell
-  !!                              on W2v space
-  !> @param[in]     undf_w2v      The number of unique degrees of freedom
-  !!                              on W2v space
-  !> @param[in]     map_w2v       The dofmap for the cell at the base of the column
-  !!                              on W2v space
-  !> @param[in]     ndf_wt        The number of degrees of freedom per cell
-  !!                              on Wtheta space
-  !> @param[in]     undf_wt       The number of unique degrees of freedom
-  !!                              on Wtheta space
-  !> @param[in]     map_wt        The dofmap for the cell at the base of the column
-  !!                              on Wtheta space
-  !> @param[in]     ndf_wc        The number of degrees of freedom per cell
-  !!                              for the coefficients space
-  !> @param[in]     undf_wc       The number of unique degrees of freedom
-  !!                              for the coefficients space
-  !> @param[in]     map_wc        The dofmap for the cell at the base of the column
-  !!                              for the coefficients space
+  !> @param[in,out] linear_coef   The linear interpolation coefficients (1-2)
+  !> @param[in]     ndf_w2v       Num DoFs per cell for W2v
+  !> @param[in]     undf_w2v      Num DoFs for this rank for W2v
+  !> @param[in]     map_w2v       DoF map for W2v
+  !> @param[in]     ndf_wt        Num DoFs per cell for Wtheta
+  !> @param[in]     undf_wt       Num DoFs for this rank for Wtheta
+  !> @param[in]     map_wt        DoF map for Wtheta
+  !> @param[in]     ndf_wq        Num DoFs per cell for the coefficients
+  !> @param[in]     undf_wq       Num DoFs for this rank for the coefficients
+  !> @param[in]     map_wq        DoF map for the coefficients
   !-------------------------------------------------------------------------------
-
   subroutine compute_vertical_linear_coef_code( nlayers,                       &
                                                 dep_dist_z, theta_height,      &
                                                 linear_coef_1, linear_coef_2,  &
@@ -89,95 +78,128 @@ module compute_vertical_linear_coef_kernel_mod
     implicit none
 
     ! Arguments
-    integer(kind=i_def),                      intent(in)    :: nlayers
-    integer(kind=i_def),                      intent(in)    :: ndf_w2v
-    integer(kind=i_def),                      intent(in)    :: undf_w2v
-    integer(kind=i_def), dimension(ndf_w2v),  intent(in)    :: map_w2v
-    integer(kind=i_def),                      intent(in)    :: ndf_wt
-    integer(kind=i_def),                      intent(in)    :: undf_wt
-    integer(kind=i_def), dimension(ndf_wt),   intent(in)    :: map_wt
-    integer(kind=i_def),                      intent(in)    :: ndf_wc
-    integer(kind=i_def),                      intent(in)    :: undf_wc
-    integer(kind=i_def), dimension(ndf_wc),   intent(in)    :: map_wc
-    real(kind=r_tran),   dimension(undf_w2v), intent(in)    :: dep_dist_z
-    real(kind=r_tran),   dimension(undf_wt),  intent(in)    :: theta_height
-    real(kind=r_tran),   dimension(undf_wc),  intent(inout) :: linear_coef_1
-    real(kind=r_tran),   dimension(undf_wc),  intent(inout) :: linear_coef_2
+    integer(kind=i_def), intent(in)    :: nlayers
+    integer(kind=i_def), intent(in)    :: ndf_w2v
+    integer(kind=i_def), intent(in)    :: undf_w2v
+    integer(kind=i_def), intent(in)    :: map_w2v(ndf_w2v)
+    integer(kind=i_def), intent(in)    :: ndf_wt
+    integer(kind=i_def), intent(in)    :: undf_wt
+    integer(kind=i_def), intent(in)    :: map_wt(ndf_wt)
+    integer(kind=i_def), intent(in)    :: ndf_wc
+    integer(kind=i_def), intent(in)    :: undf_wc
+    integer(kind=i_def), intent(in)    :: map_wc(ndf_wc)
+    real(kind=r_tran),   intent(in)    :: dep_dist_z(undf_w2v)
+    real(kind=r_tran),   intent(in)    :: theta_height(undf_wt)
+    real(kind=r_tran),   intent(inout) :: linear_coef_1(undf_wc)
+    real(kind=r_tran),   intent(inout) :: linear_coef_2(undf_wc)
 
-    ! Local arrays and indices
-    real(kind=r_tran),   dimension(nlayers)     :: zm, zmd
-    real(kind=r_tran),   dimension(nlayers+1)   :: dist, zl, zld
-    integer(kind=i_def)                         :: k, nz, nl, nzl, km1, km2, si, nlp
-    real(kind=r_tran)                           :: d, r, sr
-    real(kind=r_tran),   dimension(nlayers+1)   :: dz
-    real(kind=r_tran),   dimension(2,nlayers+1) :: cl
+    ! Local arrays
+    real(kind=r_tran)   :: displacement(nlayers+1)
+    real(kind=r_tran)   :: frac_dist(nlayers+1)
+    real(kind=r_tran)   :: sign_offset(nlayers+1)
+    real(kind=r_tran)   :: z_arr(nlayers+1)
+    real(kind=r_tran)   :: z_dep(nlayers+1)
+    real(kind=r_tran)   :: z_dep_w3(nlayers)
+    real(kind=r_tran)   :: z_arr_w3(nlayers)
+    real(kind=r_tran)   :: dz(nlayers+ndf_wc-1)
+    real(kind=r_tran)   :: coeff_local(nlayers+ndf_wc-1, 2)
+    integer(kind=i_def) :: int_disp(nlayers+1)
+    integer(kind=i_def) :: k_dep(nlayers+1)
+    integer(kind=i_def) :: k_dep_w3(nlayers)
 
-    ! nl = nlayers-1  for W3
-    !    = nlayers    for Wtheta
-    nl  = nlayers - 1 + (ndf_wc - 1)
-    nlp = nl+1
-    nz  = nlayers
-    nzl = nlayers + 1
+    ! Local scalars
+    integer(kind=i_def) :: wc_idx, k, j, nl, j_max, j_min, j_dep
 
-    ! Extract and fill local column from global data
-    ! Map departure points into 1d-array dist
-    ! Map theta-height to 1d-zl (zl is cell-edges in the vertical)
-    do k = 0, nlayers
-      dist(k+1) = dep_dist_z(map_w2v(1)+k)
-      zl(k+1)   = theta_height(map_wt(1)+k)
+    ! nl = nlayers for W3
+    !    = nlayers+1 for Wtheta
+    nl  = nlayers - 2 + ndf_wc
+
+    wc_idx = map_wc(1)
+
+    ! Extract departure distances and physical heights
+    displacement(:) = dep_dist_z(map_w2v(1) : map_w2v(1)+nlayers)
+    int_disp(:) = INT(displacement(:), i_def)
+    frac_dist(:) = ABS(displacement(:) - REAL(int_disp(:), r_tran))
+    sign_offset(:) = 0.5_r_tran*(1.0_r_tran + SIGN(1.0_r_tran, displacement(:)))
+    z_arr(:) = theta_height(map_wt(1) : map_wt(1)+nlayers)
+
+    ! Wtheta departure heights and indices -------------------------------------
+    ! Force bottom departure point to be zero
+    k_dep(1) = 1
+    z_dep(1) = z_arr(1)
+    ! Calculate the index of the level below the departure distance, and the
+    ! height of the departure point
+    do k = 2, nlayers
+      k_dep(k) = MAX(k - int_disp(k) - INT(sign_offset(k), i_def), 1)
+      z_dep(k) = (                                                             &
+        z_arr(k_dep(k)) * (                                                    &
+          frac_dist(k)*sign_offset(k)                                          &
+          + (1.0_r_tran - frac_dist(k))*(1.0_r_tran - sign_offset(k))          &
+        )                                                                      &
+      + z_arr(k_dep(k)+1) * (                                                  &
+          (1.0_r_tran - frac_dist(k))*sign_offset(k)                           &
+          + frac_dist(k)*(1.0_r_tran - sign_offset(k))                         &
+        )                                                                      &
+      )
     end do
+    ! Force top departure point to be zero
+    k_dep(nlayers+1) = nlayers
+    z_dep(nlayers+1) = z_arr(nlayers+1)
 
-    ! Recover the physical departure points of cell edges zld
-    do k = 1, nzl
-       d     = abs(dist(k))
-       sr    = sign(1.0_r_tran,dist(k))
-       si    = int(sr,i_def)
-       km1   = int( d,i_def)
-       r     = d - real(km1,r_tran)
-       km1   = k - km1*si
-       km2   = km1 - si
-       km1   = max(1_i_def, min(km1,nzl))
-       km2   = max(1_i_def, min(km2,nzl))
-       zld(k) = zl(km1) - sr*r*abs(zl(km2)-zl(km1))
-       zld(k) = min(zl(nzl),max(zl(1),zld(k)))
-    end do
+    ! W3 departure heights and indices -----------------------------------------
+    if (ndf_wc == 1) then
+      ! W3 departure heights are the average of the Wtheta departure heights
+      z_dep_w3(:) = 0.5_r_tran*(z_dep(1:nlayers) + z_dep(2:nlayers+1))
+      z_arr_w3(:) = 0.5_r_tran*(z_arr(1:nlayers) + z_arr(2:nlayers+1))
+      dz(1:nlayers-1) = z_arr_w3(2:nlayers) - z_arr_w3(1:nlayers-1)
+      dz(nlayers) = dz(nlayers-1)  ! Copy top layer dz
 
-    if ( ndf_wc == 1 ) then
-      ! W3 field:
-      ! Create a local 1d SL problem for cell centres
-      ! Compute zm from zl and zmd from zld of cells where,
-      ! (zm,zmd) are averaged from (zl,zld)
-      do k = 1, nz
-        zm(k) = 0.5_r_tran*(zl(k) +  zl(k+1))
+      ! Bound W3 departure distances
+      z_dep_w3(:) = MIN(z_arr_w3(nlayers), MAX(z_arr_w3(1), z_dep_w3(:)))
+
+      ! Need to back out the indices of the corresponding levels
+      ! Note that these aren't simply the average of the Wtheta indices
+      k_dep_w3(1) = 1
+      do k = 2, nlayers-1
+        ! As first guesses, take the indices of the corresponding Wtheta dep pts
+        j_max = MIN(MAX(k_dep(k), k_dep(k+1)), nlayers)
+        j_min = MIN(k_dep(k), k_dep(k+1))
+        j_dep = j_min
+        ! Step downwards from upper guess to lower guess, to find the first
+        ! model level that is below the W3 departure height. This gives the
+        ! index to use for the interpolation
+        do j = j_max, j_min, -1
+          if (z_dep_w3(k) > z_arr_w3(j)) then
+            j_dep = j
+            EXIT
+          end if
+        end do
+        k_dep_w3(k) = j_dep
       end do
-      do k = 1, nz
-        zmd(k) = 0.5_r_tran*( zld(k) + zld(k+1) )
-        zmd(k) = min(zm(nz),max(zm(1),zmd(k)))
-      end do
-      ! Define the spacing dz between zm-points
-      do k = 1, nz - 1
-        dz(k) = zm(k+1) - zm(k)
-      end do
-      dz(nz) = dz(nz - 1)
-      ! Compute the linear-interpolation coefficients
-      call compute_linear_coeffs(zmd,zm,dz,cl,nz,nz)
+      k_dep_w3(nlayers) = nlayers-1
+
     else
-      ! Wtheta field:
-      ! Define the spacing dz between zl-points
-      do k = 1, nzl - 1
-        dz(k) = zl(k+1) - zl(k)
-      end do
-      dz(nzl) = dz(nzl-1)
-
-      call compute_linear_coeffs(zld, zl, dz, cl, nzl, nzl)
-
+      ! Just need to compute layer depths
+      dz(1:nlayers) = z_arr(2:nlayers+1) - z_arr(1:nlayers)
+      dz(nlayers+1) = dz(nlayers)  ! Copy top layer dz
     end if
 
-    ! Coeffs are W3/Wtheta fields
-    do k = 0, nl
-      linear_coef_1(map_wc(1)+k) = cl(1,k+1)
-      linear_coef_2(map_wc(1)+k) = cl(2,k+1)
-    end do
+    ! Compute coefficients -----------------------------------------------------
+    if ( ndf_wc == 1 ) then
+      ! W3
+      call compute_linear_coeffs(                                              &
+          k_dep_w3, z_dep_w3, z_arr_w3, dz, coeff_local, nlayers               &
+      )
+    else
+      ! Wtheta
+      call compute_linear_coeffs(                                              &
+          k_dep, z_dep, z_arr, dz, coeff_local, nlayers+1                      &
+      )
+    end if
+
+    ! Populate the global coefficient fields -----------------------------------
+    linear_coef_1(wc_idx : wc_idx+nl) = coeff_local(:,1)
+    linear_coef_2(wc_idx : wc_idx+nl) = coeff_local(:,2)
 
   end subroutine compute_vertical_linear_coef_code
 

@@ -106,6 +106,8 @@ module flux_precomputations_alg_mod
     ! Departure distances / fractional fluxes and stencil extents
     type(r_tran_field_type),  allocatable :: dep_dist(:,:)
     type(r_tran_field_type),  allocatable :: frac_flux(:,:)
+    type(integer_field_type), allocatable :: dep_lowest_k(:,:)
+    type(integer_field_type), allocatable :: dep_highest_k(:,:)
 
     ! Quantities only needed for horizontal steps
     type(r_tran_field_type),  allocatable :: ref_field_x(:,:)
@@ -114,6 +116,8 @@ module flux_precomputations_alg_mod
     type(r_tran_field_type),  allocatable :: ref_mass_y(:,:)
     type(r_tran_field_type),  allocatable :: dep_dist_outer(:,:)
     type(r_tran_field_type),  allocatable :: frac_flux_outer(:,:)
+    type(integer_field_type), allocatable :: dep_lowest_k_outer(:,:)
+    type(integer_field_type), allocatable :: dep_highest_k_outer(:,:)
     integer(kind=i_def),      allocatable :: dep_stencil_extent(:,:)
     integer(kind=i_def),      allocatable :: dep_stencil_extent_outer(:,:)
 
@@ -141,6 +145,8 @@ module flux_precomputations_alg_mod
     procedure, public  :: get_dep_dist
     procedure, public  :: get_frac_flux
     procedure, public  :: get_dep_stencil_extent
+    procedure, public  :: get_dep_lowest_k
+    procedure, public  :: get_dep_highest_k
     procedure, public  :: get_total_ref_flux
     procedure, public  :: set_total_ref_flux
     procedure, public  :: log_courant
@@ -194,8 +200,7 @@ contains
                                           enforce_min_value,                   &
                                           min_value
     use transport_enumerated_types_mod,                                        &
-                                    only: splitting_none,                      &
-                                          horizontal_monotone_none
+                                    only: splitting_none, monotone_none
 
 
     implicit none
@@ -247,7 +252,7 @@ contains
     ! Determine settings for extended mesh remapping of density
     if (extended_mesh) then
       ref_config = get_dry_config()
-      self%ref_monotone = (horizontal_monotone(ref_config) /= horizontal_monotone_none)
+      self%ref_monotone = (horizontal_monotone(ref_config) /= monotone_none)
       self%ref_enforce_min_value = enforce_min_value(ref_config)
       self%ref_min_value = real(min_value(ref_config), r_tran)
     end if
@@ -297,6 +302,8 @@ contains
     allocate( self%ref_flux( num_meshes, num_steps ) )
     allocate( self%dep_dist( num_meshes, num_steps ) )
     allocate( self%frac_flux( num_meshes, num_steps ) )
+    allocate( self%dep_lowest_k( num_meshes, num_steps ) )
+    allocate( self%dep_highest_k( num_meshes, num_steps ) )
 
     ! Things only needed for horizontal steps, allocate for all steps anyway
     ! but only the horizontal steps will be used
@@ -306,6 +313,8 @@ contains
     allocate( self%ref_mass_y( num_meshes, num_steps ) )
     allocate( self%dep_dist_outer( num_meshes, num_steps ) )
     allocate( self%frac_flux_outer( num_meshes, num_steps ) )
+    allocate( self%dep_lowest_k_outer( num_meshes, num_steps ) )
+    allocate( self%dep_highest_k_outer( num_meshes, num_steps ) )
     allocate( self%dep_stencil_extent( num_meshes, num_steps ) )
     allocate( self%dep_stencil_extent_outer( num_meshes, num_steps ) )
 
@@ -493,12 +502,18 @@ contains
     if ( allocated( self%ref_flux ) )        deallocate( self%ref_flux )
     if ( allocated( self%dep_dist ) )        deallocate( self%dep_dist )
     if ( allocated( self%frac_flux ) )       deallocate( self%frac_flux )
+    if ( allocated( self%dep_lowest_k ) )    deallocate( self%dep_lowest_k )
+    if ( allocated( self%dep_highest_k ) )   deallocate( self%dep_highest_k )
     if ( allocated( self%ref_field_x ) )     deallocate( self%ref_field_x )
     if ( allocated( self%ref_field_y ) )     deallocate( self%ref_field_y )
     if ( allocated( self%ref_mass_x ) )      deallocate( self%ref_mass_x )
     if ( allocated( self%ref_mass_y ) )      deallocate( self%ref_mass_y )
     if ( allocated( self%dep_dist_outer ) )  deallocate( self%dep_dist_outer )
     if ( allocated( self%frac_flux_outer ) ) deallocate( self%frac_flux_outer )
+    if ( allocated( self%dep_lowest_k_outer ) )                                &
+                                             deallocate( self%dep_lowest_k_outer )
+    if ( allocated( self%dep_highest_k_outer ) )                               &
+                                             deallocate( self%dep_highest_k_outer )
     if ( allocated( self%dep_stencil_extent ) )                                &
                                              deallocate( self%dep_stencil_extent )
     if ( allocated( self%dep_stencil_extent_outer ) )                          &
@@ -1346,6 +1361,96 @@ contains
 
   end function get_frac_flux
 
+  !> @brief Returns the indices of the lowest k-levels for each column when
+  !!        iterating over the integer parts of departure distances
+  !> @param[in]  mesh_id    Identifier of the mesh to get the field for
+  !> @param[in]  step       Index of the split step (of whole transport step)
+  !> @param[in]  outer_step Whether this is an horizontal FFSL outer step. If
+  !!                        .true. is passed but this step is vertical, an
+  !!                        error will be thrown.
+  !> @return The departure lowest k indices for the given mesh and step
+  function get_dep_lowest_k(self, mesh_id, step, outer_step) result(dep_lowest_k)
+
+    implicit none
+
+    class(flux_precomputations_type), target, intent(inout) :: self
+    integer(kind=i_def),                      intent(in)    :: mesh_id
+    integer(kind=i_def),                      intent(in)    :: step
+    logical(kind=l_def),            optional, intent(in)    :: outer_step
+
+    ! Internal variables
+    integer(kind=i_def)               :: mesh_idx, step_idx
+    logical(kind=l_def)               :: outer_step_local
+    type(integer_field_type), pointer :: dep_lowest_k
+
+    ! If substepping, step can exceed num_steps, so take that into account here
+    step_idx = MOD(step - 1, self%num_steps) + 1
+    mesh_idx = self%idx_from_mesh_id(mesh_id)
+    outer_step_local = .false.
+    if (present(outer_step)) outer_step_local = outer_step
+
+    if (outer_step_local .and.                                                 &
+        .not. self%dep_lowest_k_outer(mesh_idx, step_idx)%is_initialised()) then
+      call self%compute_dep_dist_outer(mesh_id, step)
+
+    else if (.not. outer_step_local .and.                                      &
+             .not. self%dep_lowest_k(mesh_idx, step_idx)%is_initialised()) then
+      call self%compute_dep_dist_inner(mesh_id, step)
+    end if
+
+    if (outer_step_local) then
+      dep_lowest_k => self%dep_lowest_k_outer(mesh_idx, step_idx)
+    else
+      dep_lowest_k => self%dep_lowest_k(mesh_idx, step_idx)
+    end if
+
+  end function get_dep_lowest_k
+
+  !> @brief Returns the indices of the highest k-levels for each column when
+  !!        iterating over the integer parts of departure distances
+  !> @param[in]  mesh_id    Identifier of the mesh to get the field for
+  !> @param[in]  step       Index of the split step (of whole transport step)
+  !> @param[in]  outer_step Whether this is an horizontal FFSL outer step. If
+  !!                        .true. is passed but this step is vertical, an
+  !!                        error will be thrown.
+  !> @return The departure highest k indices for the given mesh and step
+  function get_dep_highest_k(self, mesh_id, step, outer_step) result(dep_highest_k)
+
+    implicit none
+
+    class(flux_precomputations_type), target, intent(inout) :: self
+    integer(kind=i_def),                      intent(in)    :: mesh_id
+    integer(kind=i_def),                      intent(in)    :: step
+    logical(kind=l_def),            optional, intent(in)    :: outer_step
+
+    ! Internal variables
+    integer(kind=i_def)               :: mesh_idx, step_idx
+    logical(kind=l_def)               :: outer_step_local
+    type(integer_field_type), pointer :: dep_highest_k
+
+    ! If substepping, step can exceed num_steps, so take that into account here
+    step_idx = MOD(step - 1, self%num_steps) + 1
+    mesh_idx = self%idx_from_mesh_id(mesh_id)
+    outer_step_local = .false.
+    if (present(outer_step)) outer_step_local = outer_step
+
+    if (outer_step_local .and.                                                 &
+        .not. self%dep_highest_k_outer(mesh_idx, step_idx)%is_initialised()) then
+      call self%compute_dep_dist_outer(mesh_id, step)
+
+    else if (.not. outer_step_local .and.                                      &
+             .not. self%dep_highest_k(mesh_idx, step_idx)%is_initialised()) then
+      call self%compute_dep_dist_inner(mesh_id, step)
+    end if
+
+    if (outer_step_local) then
+      dep_highest_k => self%dep_highest_k_outer(mesh_idx, step_idx)
+    else
+      dep_highest_k => self%dep_highest_k(mesh_idx, step_idx)
+    end if
+
+  end function get_dep_highest_k
+
   !> @brief Returns the departure distance for a particular transport step
   !> @param[in]  mesh_id    Identifier of the mesh to get the value for
   !> @param[in]  step       Index of the split step (of whole transport step)
@@ -1451,10 +1556,8 @@ contains
   !> @param[in]  step     Index of the split step (of whole transport step)
   subroutine compute_ref_mass_x_and_y(self, mesh_id, step)
 
-    use ffsl_panel_swap_kernel_mod,  only: ffsl_panel_swap_kernel_type
     use fv_difference_x_kernel_mod,  only: fv_difference_x_kernel_type
     use fv_difference_y_kernel_mod,  only: fv_difference_y_kernel_type
-    use sci_geometric_constants_mod, only: get_panel_id
 
     implicit none
 
@@ -1472,7 +1575,6 @@ contains
     type(r_tran_field_type),   pointer :: ref_mass_prev
     type(r_tran_field_type),   pointer :: ref_flux
     type(r_tran_field_type),   pointer :: detj_w3
-    type(field_type),          pointer :: panel_id
     type(r_tran_field_type)            :: increment_x
     type(r_tran_field_type)            :: increment_y
     type(r_tran_field_type)            :: tmp_mass
@@ -1517,18 +1619,6 @@ contains
                  fv_difference_y_kernel_type(increment_y, ref_flux),           &
                  X_minus_Y(self%ref_mass_y(mesh_idx, step_idx),                &
                            ref_mass_prev, increment_y) )
-
-    ! On the cubed sphere, x and y directions may swap at panel boundaries
-    ! Swap the values in the halos to take this into account
-    if (topology == topology_fully_periodic                                    &
-        .AND. geometry == geometry_spherical                                   &
-        .AND. global_mpi%get_comm_size() > 1) then
-      panel_id => get_panel_id(mesh_id)
-      call invoke( ffsl_panel_swap_kernel_type(                                &
-                            self%ref_mass_x(mesh_idx, step_idx),               &
-                            self%ref_mass_y(mesh_idx, step_idx),               &
-                            panel_id, halo_depth) )
-    end if
 
     ! If using the extended mesh, remap the reference field here
     ! Store reference field as byproduct of this calculation
@@ -1585,6 +1675,7 @@ contains
   subroutine compute_dep_dist_inner(self, mesh_id, step)
 
     use calc_dep_pts_alg_mod,          only: calc_ffsl_hori_dep_pts
+    use transport_config_mod,          only: dep_pt_stencil_extent
     use vert_dep_dist_ffsl_kernel_mod, only: vert_dep_dist_ffsl_kernel_type
 
     implicit none
@@ -1597,7 +1688,10 @@ contains
     integer(kind=i_def)                :: mesh_idx, step_idx
     integer(kind=i_def)                :: step_of_substep
     integer(kind=i_def)                :: direction
+    integer(kind=i_def)                :: ndata
+    type(mesh_type),           pointer :: twod_mesh
     type(function_space_type), pointer :: w2_fs
+    type(function_space_type), pointer :: depk_fs
     type(r_tran_field_type),   pointer :: ref_mass
     type(r_tran_field_type),   pointer :: ref_flux
     character(len=str_def)             :: field_name
@@ -1628,10 +1722,18 @@ contains
                                 self%frac_flux(mesh_idx, step_idx),            &
                                 ref_flux, ref_mass) )
     case (direction_h)
+      ndata = 2*dep_pt_stencil_extent + 1
+      twod_mesh => mesh_collection%get_mesh(ref_flux%get_mesh(), TWOD)
+      depk_fs => function_space_collection%get_fs(twod_mesh, 0, 0, W2H, ndata)
+      call self%dep_lowest_k(mesh_idx, step_idx)%initialise(depk_fs)
+      call self%dep_highest_k(mesh_idx, step_idx)%initialise(depk_fs)
+
       call calc_ffsl_hori_dep_pts(                                             &
               self%dep_dist(mesh_idx, step_idx),                               &
               self%frac_flux(mesh_idx, step_idx),                              &
               self%dep_stencil_extent(mesh_idx, step_idx),                     &
+              self%dep_lowest_k(mesh_idx, step_idx),                           &
+              self%dep_highest_k(mesh_idx, step_idx),                          &
               ref_flux, ref_mass, ref_mass                                     &
       )
     end select
@@ -1661,6 +1763,7 @@ contains
   subroutine compute_dep_dist_outer(self, mesh_id, step)
 
     use calc_dep_pts_alg_mod, only: calc_ffsl_hori_dep_pts
+    use transport_config_mod, only: dep_pt_stencil_extent
 
     implicit none
 
@@ -1672,7 +1775,10 @@ contains
     integer(kind=i_def)                :: mesh_idx, step_idx
     integer(kind=i_def)                :: step_of_substep
     integer(kind=i_def)                :: direction
+    integer(kind=i_def)                :: ndata
+    type(mesh_type),           pointer :: twod_mesh
     type(function_space_type), pointer :: w2_fs
+    type(function_space_type), pointer :: depk_fs
     type(r_tran_field_type),   pointer :: ref_flux
     type(r_tran_field_type),   pointer :: ref_mass_x
     type(r_tran_field_type),   pointer :: ref_mass_y
@@ -1701,10 +1807,18 @@ contains
     call self%dep_dist_outer(mesh_idx, step_idx)%initialise(w2_fs)
     call self%frac_flux_outer(mesh_idx, step_idx)%initialise(w2_fs)
 
+    ndata = 2*dep_pt_stencil_extent + 1
+    twod_mesh => mesh_collection%get_mesh(ref_flux%get_mesh(), TWOD)
+    depk_fs => function_space_collection%get_fs(twod_mesh, 0, 0, W2H, ndata)
+    call self%dep_lowest_k_outer(mesh_idx, step_idx)%initialise(depk_fs)
+    call self%dep_highest_k_outer(mesh_idx, step_idx)%initialise(depk_fs)
+
     call calc_ffsl_hori_dep_pts(                                               &
             self%dep_dist_outer(mesh_idx, step_idx),                           &
             self%frac_flux_outer(mesh_idx, step_idx),                          &
             self%dep_stencil_extent_outer(mesh_idx, step_idx),                 &
+            self%dep_lowest_k_outer(mesh_idx, step_idx),                       &
+            self%dep_highest_k_outer(mesh_idx, step_idx),                      &
             ref_flux, ref_mass_y, ref_mass_x                                   &
     )
 

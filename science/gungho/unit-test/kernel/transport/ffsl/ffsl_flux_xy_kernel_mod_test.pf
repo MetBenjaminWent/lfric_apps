@@ -24,7 +24,7 @@ contains
 
     use, intrinsic :: iso_fortran_env,  only: real64
     use ffsl_flux_xy_kernel_mod,  only: ffsl_flux_xy_code
-    use transport_enumerated_types_mod, only: horizontal_monotone_none
+    use transport_enumerated_types_mod, only: monotone_none
 
     implicit none
 
@@ -33,27 +33,37 @@ contains
 
     integer(kind=i_def), parameter :: nlayers = 1
     integer(kind=i_def), parameter :: ndf_w3 = 1
+    integer(kind=i_def), parameter :: ndf_w3_2d = 1
     integer(kind=i_def), parameter :: ndf_w2 = 4
     integer(kind=i_def), parameter :: stencil_size = 9
     integer(kind=i_def), parameter :: stencil_extent = ( stencil_size - 1_i_def ) / 2_i_def
     integer(kind=i_def), parameter :: undf_w2 = ndf_w2*nlayers
     integer(kind=i_def), parameter :: undf_w3 = ndf_w3*nlayers*stencil_size
+    integer(kind=i_def), parameter :: undf_w3_2d = ndf_w3*nlayers
     integer(kind=i_def), parameter :: order = 2
     real(kind=r_tran),   parameter :: min_val = 0.0_r_tran
+    integer(kind=i_def), parameter :: ndep = stencil_size
+    integer(kind=i_def), parameter :: ndf_depk = 4
+    integer(kind=i_def), parameter :: ndep_half = (ndep - 1) / 2
+    integer(kind=i_def), parameter :: undf_depk = ndf_depk*ndep
 
     integer(kind=i_def), dimension(ndf_w3)              :: map_w3
+    integer(kind=i_def), dimension(ndf_w3_2d)           :: map_w3_2d
     integer(kind=i_def), dimension(ndf_w2)              :: map_w2
+    integer(kind=i_def), dimension(ndf_depk)            :: map_depk
     integer(kind=i_def), dimension(ndf_w3,stencil_size) :: stencil_map
 
-    real(kind=r_tran),   dimension(undf_w3) :: field_for_x
-    real(kind=r_tran),   dimension(undf_w3) :: field_for_y
-    real(kind=r_tran),   dimension(undf_w2) :: dep_pts
-    real(kind=r_tran),   dimension(undf_w2) :: flux
-    real(kind=r_tran),   dimension(undf_w3) :: dry_mass_for_x
-    real(kind=r_tran),   dimension(undf_w3) :: dry_mass_for_y
-    real(kind=r_tran),   dimension(undf_w2) :: frac_dry_flux
-    integer(kind=i_def), dimension(undf_w3) :: face_selector_ew
-    integer(kind=i_def), dimension(undf_w3) :: face_selector_ns
+    real(kind=r_tran),   dimension(undf_w3)    :: field_for_x
+    real(kind=r_tran),   dimension(undf_w3)    :: field_for_y
+    real(kind=r_tran),   dimension(undf_w2)    :: dep_pts
+    real(kind=r_tran),   dimension(undf_w2)    :: flux
+    real(kind=r_tran),   dimension(undf_w3)    :: dry_mass_for_x
+    real(kind=r_tran),   dimension(undf_w3)    :: dry_mass_for_y
+    real(kind=r_tran),   dimension(undf_w2)    :: frac_dry_flux
+    integer(kind=i_def), dimension(undf_w3_2d) :: face_selector_ew
+    integer(kind=i_def), dimension(undf_w3_2d) :: face_selector_ns
+    integer(kind=i_def), dimension(undf_depk)  :: dep_lowest_k
+    integer(kind=i_def), dimension(undf_depk)  :: dep_highest_k
 
     real(kind=r_tran)   :: dt
     integer(kind=i_def) :: monotone
@@ -61,10 +71,12 @@ contains
     ! Set up maps
     stencil_map(1,:) = (/ 5, 4, 3, 2, 1, 6, 7, 8, 9 /)
     map_w2(:) = (/ 1, 2, 3, 4 /)
-    map_w3(1) = 1
+    map_w3(1) = 5
+    map_w3_2d(1) = 1
+    map_depk(:) = (/ 1, 10, 19, 28 /)
 
     ! Set no monotonicity
-    monotone = horizontal_monotone_none
+    monotone = monotone_none
 
     ! Set up field to have quadratic profile
     field_for_x(:) = (/ 17.0_r_tran, 10.0_r_tran, 5.0_r_tran, &
@@ -89,6 +101,15 @@ contains
     dep_pts(:) = 1.0_r_tran
     frac_dry_flux(:) = 0.0_r_tran
     dt = 1.0_r_tran
+
+    ! Set up departure point indices
+    dep_lowest_k(:) = 0  ! Default is to not include any layers
+    dep_highest_k(:) = -1  ! Default is to not include any layers
+    dep_highest_k(map_depk(1) + ndep_half - 1) = 0
+    dep_highest_k(map_depk(2) + ndep_half) = 0
+    dep_highest_k(map_depk(3) + ndep_half) = 0
+    dep_highest_k(map_depk(4) + ndep_half + 1) = 0
+
     call ffsl_flux_xy_code( nlayers,          &
                             flux,             &
                             field_for_x,      &
@@ -105,12 +126,15 @@ contains
                             stencil_map,      &
                             dep_pts,          &
                             frac_dry_flux,    &
+                            dep_lowest_k,     &
+                            dep_highest_k,    &
                             face_selector_ew, &
                             face_selector_ns, &
                             order,            &
                             monotone,         &
                             min_val,          &
                             stencil_extent,   &
+                            ndep,             &
                             dt,               &
                             ndf_w2,           &
                             undf_w2,          &
@@ -118,9 +142,12 @@ contains
                             ndf_w3,           &
                             undf_w3,          &
                             map_w3,           &
-                            ndf_w3,           &
-                            undf_w3,          &
-                            map_w3 )
+                            ndf_depk,         &
+                            undf_depk,        &
+                            map_depk,         &
+                            ndf_w3_2d,        &
+                            undf_w3_2d,       &
+                            map_w3_2d )
     ! Get correct tolerance
     if ( r_tran == real64 ) then
       use_tol = tol
@@ -141,6 +168,11 @@ contains
     frac_dry_flux(:) = 1.2_r_tran
     dt = 1.0_r_tran
     flux(:) = 0.0_r_tran
+
+    ! Set up departure point indices
+    dep_lowest_k(:) = 0  ! Default is to not include any layers
+    dep_highest_k(:) = -1  ! Default is to not include any layers
+
     call ffsl_flux_xy_code( nlayers,          &
                             flux,             &
                             field_for_x,      &
@@ -157,12 +189,15 @@ contains
                             stencil_map,      &
                             dep_pts,          &
                             frac_dry_flux,    &
+                            dep_lowest_k,     &
+                            dep_highest_k,    &
                             face_selector_ew, &
                             face_selector_ns, &
                             order,            &
                             monotone,         &
                             min_val,          &
                             stencil_extent,   &
+                            ndep,             &
                             dt,               &
                             ndf_w2,           &
                             undf_w2,          &
@@ -170,9 +205,12 @@ contains
                             ndf_w3,           &
                             undf_w3,          &
                             map_w3,           &
-                            ndf_w3,           &
-                            undf_w3,          &
-                            map_w3 )
+                            ndf_depk,         &
+                            undf_depk,        &
+                            map_depk,         &
+                            ndf_w3_2d,        &
+                            undf_w3_2d,       &
+                            map_w3_2d )
     answer = 1.704_r_tran
     @assertEqual(answer, flux(1), use_tol)
     answer = 1.224_r_tran
@@ -187,6 +225,11 @@ contains
     frac_dry_flux(:) = -1.2_r_tran
     dt = 1.0_r_tran
     flux(:) = 0.0_r_tran
+
+    ! Set up departure point indices
+    dep_lowest_k(:) = 0  ! Default is to not include any layers
+    dep_highest_k(:) = -1  ! Default is to not include any layers
+
     call ffsl_flux_xy_code( nlayers,          &
                             flux,             &
                             field_for_x,      &
@@ -203,12 +246,15 @@ contains
                             stencil_map,      &
                             dep_pts,          &
                             frac_dry_flux,    &
+                            dep_lowest_k,     &
+                            dep_highest_k,    &
                             face_selector_ew, &
                             face_selector_ns, &
                             order,            &
                             monotone,         &
                             min_val,          &
                             stencil_extent,   &
+                            ndep,             &
                             dt,               &
                             ndf_w2,           &
                             undf_w2,          &
@@ -216,9 +262,12 @@ contains
                             ndf_w3,           &
                             undf_w3,          &
                             map_w3,           &
-                            ndf_w3,           &
-                            undf_w3,          &
-                            map_w3 )
+                            ndf_depk,         &
+                            undf_depk,        &
+                            map_depk,         &
+                            ndf_w3_2d,        &
+                            undf_w3_2d,       &
+                            map_w3_2d )
     answer = -1.224_r_tran
     @assertEqual(answer, flux(1), use_tol)
     answer = -1.704_r_tran

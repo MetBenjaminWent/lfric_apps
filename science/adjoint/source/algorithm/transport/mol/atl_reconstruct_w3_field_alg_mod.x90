@@ -31,7 +31,7 @@ module atl_reconstruct_w3_field_alg_mod
   use transport_enumerated_types_mod, only: direction_v,               &
                                             direction_h,               &
                                             direction_3d,              &
-                                            vertical_monotone_koren
+                                            monotone_koren
   use transport_metadata_mod,         only: transport_metadata_type
   use adj_sci_combine_multidata_field_kernel_mod, &
                                       only: adj_combine_multidata_field_kernel_type
@@ -185,7 +185,7 @@ contains
       vertical_order = fv_vertical_order
     end if
 
-    if ( monotonicity == vertical_monotone_koren ) then
+    if ( monotonicity == monotone_koren ) then
       call log_event('A.T.L. vertical Koren not implemented', LOG_LEVEL_ERROR)
 
     else

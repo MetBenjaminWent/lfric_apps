@@ -86,7 +86,7 @@ contains
     real(kind=r_tran),   dimension(undf_w2v), intent(in)    :: mass_flux
     real(kind=r_tran),   dimension(undf_w3),  intent(in)    :: detj_w3
 
-    integer(kind=i_def) :: k
+    integer(kind=i_def) :: nl, w3_idx, B_idx
 
     ! This is based on the lowest order W2v dof map
     !
@@ -96,10 +96,13 @@ contains
     !    |     |
     !    ---1---
 
-    do k = 0,nlayers-1
-      divergence( map_w3(1)+k ) =                                              &
-          ( mass_flux(map_w2v(2)+k) - mass_flux(map_w2v(1)+k) ) / detj_w3(map_w3(1)+k)
-    end do
+    w3_idx = map_w3(1)
+    B_idx  = map_w2v(1)
+    nl = nlayers - 1
+
+    divergence(w3_idx : w3_idx+nl) = (                                         &
+        mass_flux(B_idx+1 : B_idx+nl+1) - mass_flux(B_idx : B_idx+nl)          &
+    ) / detj_w3(w3_idx : w3_idx+nl)
 
   end subroutine fv_divergence_z_code
 

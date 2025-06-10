@@ -415,12 +415,9 @@ contains
                                     only: equation_form_advective,             &
                                           split_method_ffsl,                   &
                                           split_method_sl,                     &
-                                          horizontal_monotone_qm_pos,          &
-                                          horizontal_monotone_strict,          &
-                                          horizontal_monotone_none,            &
-                                          vertical_monotone_qm_pos,            &
-                                          vertical_monotone_strict,            &
-                                          vertical_monotone_none
+                                          monotone_qm_pos,                     &
+                                          monotone_strict,                     &
+                                          monotone_none
 
     implicit none
 
@@ -439,21 +436,21 @@ contains
         if (self%horizontal_method == split_method_ffsl) then
           self%horizontal_method = split_method_sl
           ! Ensure correct monotone options
-          if (self%horizontal_monotone == horizontal_monotone_qm_pos ) then
-            self%horizontal_monotone = horizontal_monotone_strict
+          if (self%horizontal_monotone == monotone_qm_pos ) then
+            self%horizontal_monotone = monotone_strict
           end if
         end if
         if (self%vertical_method == split_method_ffsl) then
           self%vertical_method = split_method_sl
           ! Ensure correct monotone options
-          if (self%vertical_monotone == vertical_monotone_qm_pos ) then
-            self%vertical_monotone = vertical_monotone_strict
+          if (self%vertical_monotone == monotone_qm_pos ) then
+            self%vertical_monotone = monotone_strict
           end if
         end if
 
       else if (si_outer_transport == si_outer_transport_no_mono) then
-        self%horizontal_monotone = horizontal_monotone_none
-        self%vertical_monotone = vertical_monotone_none
+        self%horizontal_monotone = monotone_none
+        self%vertical_monotone = monotone_none
       end if
 
     end if

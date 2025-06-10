@@ -41,14 +41,18 @@ contains
     integer(kind=i_def)              :: stencil_extent, max_stencil_size
     integer(kind=i_def)              :: ndf_w2h, ndf_w3, k
     integer(kind=i_def)              :: undf_w2h, undf_w3, undf_w2x, undf_w2y
+    integer(kind=i_def)              :: ndf_depk, undf_depk, ndep
     logical(kind=l_def)              :: cap_dep_points
     integer(kind=i_def), allocatable :: map_w2h(:,:)
     integer(kind=i_def), allocatable :: map_w3(:,:)
+    integer(kind=i_def), allocatable :: map_depk(:,:)
     integer(kind=i_def), allocatable :: stencil_size(:)
     integer(kind=i_def), allocatable :: stencil_map(:,:,:)
     integer(kind=i_def), allocatable :: face_selector_ew(:)
     integer(kind=i_def), allocatable :: face_selector_ns(:)
     integer(kind=i_def), allocatable :: error_flag(:)
+    integer(kind=i_def), allocatable :: dep_lowest_k(:)
+    integer(kind=i_def), allocatable :: dep_highest_k(:)
     real(kind=r_tran),   allocatable :: rho_d(:)
     real(kind=r_tran),   allocatable :: dry_flux(:)
     real(kind=r_tran),   allocatable :: x_w2x(:)
@@ -61,6 +65,8 @@ contains
     real(kind=r_tran),   allocatable :: frac_dry_flux(:)
     real(kind=r_tran),   allocatable :: true_dep_pts_answer(:)
     real(kind=r_tran),   allocatable :: true_frac_flux_answer(:)
+    integer(kind=i_def), allocatable :: dep_lowest_k_answer(:)
+    integer(kind=i_def), allocatable :: dep_highest_k_answer(:)
 
     ! Set integer values to describe mesh (single layer)
     nlayers = 1
@@ -72,11 +78,15 @@ contains
     ndf_w3 = 1
     undf_w2x = ncells + 1
     undf_w2y = ncells + 1
+    ndf_depk = 4
+    undf_depk = ((ncells + 1) + 2*ncells)*(2*stencil_extent+1)
+    ndep = 2*stencil_extent + 1
     max_stencil_size = 2*stencil_extent + 1
     cap_dep_points = .false.
 
     allocate(map_w2h(ndf_w2h,ncells))
     allocate(map_w3(ndf_w3,ncells))
+    allocate(map_depk(ndf_depk,ncells))
     allocate(stencil_size(ncells))
     allocate(stencil_map(ndf_w3,max_stencil_size,ncells))
     allocate(rho_d(undf_w3))
@@ -93,6 +103,10 @@ contains
     allocate(face_selector_ew(undf_w3))
     allocate(face_selector_ns(undf_w3))
     allocate(error_flag(undf_w3))
+    allocate(dep_lowest_k(undf_depk))
+    allocate(dep_highest_k(undf_depk))
+    allocate(dep_lowest_k_answer(undf_depk))
+    allocate(dep_highest_k_answer(undf_depk))
 
     ! DoF maps
     map_w3 = reshape((/ 1, 2, 3, 4, 5, 6, 7, 8, &
@@ -102,6 +116,7 @@ contains
                          18, 20, 21, 22, 21, 23, 24, 25, 24, 26, 27, 28,       &
                          27, 29, 30, 31, 30, 32, 33, 34, 33, 35, 36, 37,       &
                          36, 38, 39, 40, 39, 41, 42, 43, 42, 44, 45, 46 /), [ndf_w2h, ncells])
+    map_depk(:,:) = 7*map_w2h(:,:) - 6
     stencil_size = (/ 4, 5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 6, 5, 4 /)
     stencil_map = reshape( (/ (/ 1, 2, 3, 4, 0, 0, 0 /),          &
                               (/ 2, 1, 3, 4, 5, 0, 0 /),          &
@@ -193,10 +208,25 @@ contains
                                0.0_r_tran, 0.0_r_tran, 0.0_r_tran,             &
                                0.0_r_tran, 0.0_r_tran, 0.0_r_tran,             &
                                0.0_r_tran, 0.0_r_tran, 0.0_r_tran /)
+    dep_lowest_k_answer(:) = 0
+    dep_highest_k_answer(:) = -1
+    dep_highest_k_answer(101) = 0
+    dep_highest_k_answer(115) = 0
+    dep_highest_k_answer(165) = 0
+    dep_highest_k_answer(179) = 0
+    dep_highest_k_answer(186) = 0
+    dep_highest_k_answer(187) = 0
+    dep_highest_k_answer(200) = 0
+    dep_highest_k_answer(201) = 0
+    dep_highest_k_answer(207) = 0
+    dep_highest_k_answer(221) = 0
+
 
     ! Set initial values of output fields to be zero
     dep_pts(:) = 0.0_r_tran
     frac_dry_flux(:) = 0.0_r_tran
+    dep_lowest_k(:) = 0
+    dep_highest_k(:) = -1
 
     do cell = 1, ncells
       call hori_dep_dist_ffsl_code( nlayers,               &
@@ -209,10 +239,13 @@ contains
                                     dry_mass_for_y,        &
                                     stencil_size(cell),    &
                                     stencil_map(:,:,cell), &
+                                    dep_lowest_k,          &
+                                    dep_highest_k,         &
                                     face_selector_ew,      &
                                     face_selector_ns,      &
                                     error_flag,            &
                                     stencil_extent,        &
+                                    ndep,                  &
                                     cap_dep_points,        &
                                     ndf_w2h,               &
                                     undf_w2h,              &
@@ -220,6 +253,9 @@ contains
                                     ndf_w3,                &
                                     undf_w3,               &
                                     map_w3(:,cell),        &
+                                    ndf_depk,              &
+                                    undf_depk,             &
+                                    map_depk(:,cell),      &
                                     ndf_w3,                &
                                     undf_w3,               &
                                     map_w3(:,cell) )
@@ -227,9 +263,12 @@ contains
 
     @assertEqual( dep_pts, true_dep_pts_answer, tol )
     @assertEqual( frac_dry_flux, true_frac_flux_answer, tol )
+    @assertEqual( dep_lowest_k, dep_lowest_k_answer )
+    @assertEqual( dep_highest_k, dep_highest_k_answer )
 
     deallocate(map_w2h)
     deallocate(map_w3)
+    deallocate(map_depk)
     deallocate(stencil_map)
     deallocate(stencil_size)
     deallocate(frac_dry_flux)
@@ -245,6 +284,11 @@ contains
     deallocate(true_frac_flux_answer)
     deallocate(face_selector_ew)
     deallocate(face_selector_ns)
+    deallocate(error_flag)
+    deallocate(dep_lowest_k)
+    deallocate(dep_highest_k)
+    deallocate(dep_lowest_k_answer)
+    deallocate(dep_highest_k_answer)
 
   end subroutine test_all
 
