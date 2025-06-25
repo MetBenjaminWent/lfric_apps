@@ -479,6 +479,7 @@ contains
     else
       call u_inc%initialise( vector_space = self%rhs_u%get_function_space() )
       call invoke( name = "compute_increments",                                &
+                   setval_c(u_inc, 0.0_r_solver),                              &
                    setval_X(u_inc, self%rhs_u),                                &
                    scaled_matrix_vector_kernel_type(u_inc, exner_inc,          &
                                                     div_star, u_normalisation, &
