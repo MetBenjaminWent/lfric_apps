@@ -96,32 +96,17 @@ def trans(psyir):
     if fortran_file_name in SCRIPT_OPTIONS_DICT:
         file_overrides = SCRIPT_OPTIONS_DICT[fortran_file_name]
         # Update the respective lists if the filename override exists
-        try:
+        if "options" in file_overrides.keys():
             options = file_overrides["options"]
-        # pylint: disable=bare-except
-        except:  # noqa: E722
-            pass
-        try:
+        if "first_private_list" in file_overrides.keys():
             first_private_list = file_overrides["first_private_list"]
-        # pylint: disable=bare-except
-        except:  # noqa: E722
-            pass
-        try:
+        if "safe_pure_calls" in file_overrides.keys():
             safe_pure_calls = file_overrides["safe_pure_calls"]
-        # pylint: disable=bare-except
-        except:  # noqa: E722
-            pass
-        try:
+        if "max_threads_parse" in file_overrides.keys():
             max_threads_parse = file_overrides["max_threads_parse"]
-        # pylint: disable=bare-except
-        except:  # noqa: E722
-            pass
-        try:
+        if "loop_type_init" in file_overrides.keys():
             for name in file_overrides["loop_type_init"]:
                 loop_type_init.append(name)
-        # pylint: disable=bare-except
-        except:  # noqa: E722
-            pass
 
     # Set up some specifics to this local script
 

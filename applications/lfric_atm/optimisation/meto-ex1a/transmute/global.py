@@ -7,6 +7,9 @@
 A global script to add OpenMP to loops present in the file provided.
 This script imports a SCRIPT_OPTIONS_DICT which can be used to override
 small aspects of this script per file it is applied to.
+Overrides currently include:
+* Options list for transformations
+* safe pure calls for loops over calls which can be parallelised
 '''
 
 import logging
@@ -14,9 +17,9 @@ from psyclone.transformations import (
     TransformationError)
 from psyclone.psyir.nodes import Loop
 from transmute_psytrans.transmute_functions import (
-    OMP_PARALLEL_LOOP_DO_TRANS_STATIC
+    OMP_PARALLEL_LOOP_DO_TRANS_STATIC,
+    set_pure_subroutines,
 )
-#from transmute_psytrans.script_options import (
 from script_options import (
     SCRIPT_OPTIONS_DICT
 )
@@ -28,19 +31,29 @@ def trans(psyir):
     each schedule (or subroutine) and apply paralleldo transformations
     to each loop.
     '''
+
+    # options list for transformation.
     options = {}
+
+    # Designate calls in regions as safe to parallelise over.
+    safe_pure_calls = []
+
     fortran_file_name = str(psyir.root.name)
     # Check if file is in the script_options_dict
     # Copy out anything that's needed
-    # Only the options list is currently
+    # options list and a pure calls override
     if fortran_file_name in SCRIPT_OPTIONS_DICT:
         file_overrides = SCRIPT_OPTIONS_DICT[fortran_file_name]
-        try:
+        if "options" in file_overrides.keys():
             options = file_overrides["options"]
-        # pylint: disable=bare-except
-        except:
-            pass  # noqa: E722
+        if "safe_pure_calls" in file_overrides.keys():
+            safe_pure_calls = file_overrides["safe_pure_calls"]
 
+    # Set the pure calls if needed
+    if safe_pure_calls:
+        set_pure_subroutines(psyir, safe_pure_calls)
+
+    # Work through each loop in the file and OMP PARALLEL DO
     for loop in psyir.walk(Loop):
         if not loop.ancestor(Loop):
             try:
