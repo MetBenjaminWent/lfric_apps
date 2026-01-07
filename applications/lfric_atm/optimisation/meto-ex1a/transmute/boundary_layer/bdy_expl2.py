@@ -14,7 +14,7 @@ from transmute_psytrans.transmute_functions import (
     replace_n_threads,
     get_compiler,
     first_priv_red_init,
-    set_pure_calls,
+    set_pure_subroutines,
     get_ancestors,
     loop_init_under,
     ancestor_loop_init_over,
@@ -45,27 +45,20 @@ def trans(psyir):
     # Each time a region is spanned, under the hood this list is updated by
     # PSyclone and the next index changes as the new region becomes a node in
     # this list.
-    # It might be perceived as fragile, however capturing the right loop any
-    # other way is currently impractical, and there is a simple tool to assist
-    # finding the node added with this ticket, #1056.
-    # Parallelise over these specific nodes:
-    # parallel_section_index_locations = [
-    #     [5,10],
-    #     [6,19],
-    #     [8,10],
-    #     [11,13],
-    #     [17,19],
-    #     [22,23],
-    #     [27,30],
-    #     [30,36],
-    # ]
     parallel_section_descriptors = [
-        ["ntml_save","ntml"], # start
-        ["BL_diag","fb_surf"], # stop
-        ["grad_t_adj","min"],
-        ["seg_slice_start","ii"],
-        # ["grad_t_adj","max_t_grad"],
-        # ["BL_diag","dvdzm"],
+        # LHS  , # RHS
+        ["ntml_save","ntml"],         # start
+        ["bl_diag","fb_surf"],        # stop
+        ["grad_t_adj","min"],         # start
+        ["seg_slice_start","ii"],     # stop
+        ["ftl","zero"],               # start
+        ["wtrac_bl","zero"],          # stop
+        ["weight1","r_theta_levels"], # start
+        ["ntml","ntml_local"],        # stop
+        ["mix_len_bm","max"],         # start
+        ["mix_len_bm","bm_tiny"],     # stop
+        ["visc_m","visc_m"],          # start
+        ["rhokm","visc_m"],           # stop
         ]
     # Note: These only go one level deep when spanning.
     # If blocks count as nodes, and this routine is full of them. 
@@ -103,7 +96,7 @@ def trans(psyir):
     replace_n_threads(psyir, "max_threads")
 
     # Set the pure
-    set_pure_calls(psyir, safe_pure_calls)
+    set_pure_subroutines(psyir, safe_pure_calls)
 
     # Strip out loops relating to cells_j loop type.
     for routine in psyir.walk(Routine):
@@ -137,39 +130,53 @@ def trans(psyir):
             
 
     # Setup for both inside region and otherwise
-    check_loop_value = {}
-    check_loop_value["k"] = 2
     dynamic_loop_type = ["ii"]
 
     # Setup options for the do inside a spanned region
-    avoid_loop_ancestor = ["k","i","ii"]
-    avoid_loop_type = ["i_wt"]
+    avoid_loop_ancestor = ["i","ii"]
+    avoid_loop_type = ["k","i_wt","ient"]
     options = {"ignore_dependencies_for": ["sigma_h","bl_diag%dvdzm","topbl","zh_local"]}
 
     #First pass to add the OMP DO
-    # parallelise_loops(
-    #     psyir,
-    #     True,
-    #     avoid_loop_type,
-    #     avoid_loop_ancestor,
-    #     check_loop_value,
-    #     dynamic_loop_type,
-    #     options)   
+    parallelise_loops(
+        psyir,
+        True,
+        avoid_loop_type,
+        avoid_loop_ancestor,
+        dynamic_loop_type,
+        options)   
 
     # A loop type which a loop cannot have an OMP parallel do section
-    avoid_loop_type = ["i_wt","ient","k"]
-    avoid_loop_ancestor = ["i","ii"]
-    options = {"ignore_dependencies_for": ["visc_m","visc_h"]}
+    # avoid_loop_type = [
+    #     "i_wt",
+    #     "ient"
+    #     ]
+    # avoid_loop_ancestor = [
+    #     "i",
+    #     "ii"
+    #     ]
+    options = {
+        "ignore_dependencies_for": [
+            "visc_m",
+            "visc_h",
+            "sigma_h",
+            "cumulus",
+            "l_shallow",
+            "bl_type_5",
+            "bl_type_6",
+            "cu_over_orog",
+            "ntml",
+            "topbl",
+            "zh_local"]}
 
     # Second pass to add OMP Parallel do over remaining loops
-    # parallelise_loops(
-    #     psyir,
-    #     False,
-    #     avoid_loop_type,
-    #     avoid_loop_ancestor,
-    #     check_loop_value,
-    #     dynamic_loop_type,
-    #     options)
+    parallelise_loops(
+        psyir,
+        False,
+        avoid_loop_type,
+        avoid_loop_ancestor,
+        dynamic_loop_type,
+        options)
 
     if get_compiler() == "cce":
         for routine in psyir.walk(Routine):
@@ -185,7 +192,6 @@ def parallelise_loops(
     inside_parallel=False,
     avoid_loop_type=[],
     avoid_loop_ancestor=[],
-    check_loop_value={},
     dynamic_loop_type=[],
     options={}):
 
@@ -210,7 +216,6 @@ def parallelise_loops(
         if str(loop.loop_type) not in avoid_loop_type:
             # Setup some basic checks to be used below
             nest_loop = False
-            is_safe_loop = True
             proceed_with_do = False
         
             # Check the OMP Parallel Ancestry against our expectation
@@ -236,18 +241,6 @@ def parallelise_loops(
                 except:
                     pass
 
-                # Check if this is a safe loop, default is it is
-                is_safe_loop = loop_init_under(
-                    loop, 
-                    check_loop_value)
-
-                # Check if the loop is under a node which we are not
-                # parallelising over, making this nestable
-                nest_loop = ancestor_loop_init_over(
-                    loop,
-                    loop_ancestor_type, 
-                    check_loop_value)
-
                 # The main if for guarding adding a directive
                 # It is strict on the ancestry, with given exceptions.
                 # ( There is not an ancestor
@@ -259,10 +252,8 @@ def parallelise_loops(
                 # AND (everything) the loop is safe given the above checks
                 if (
                 (not loop.ancestor(Loop) or
-                (((loop_ancestor_type not in avoid_loop_ancestor) or 
-                nest_loop) and
-                len(all_ancestors) <=1 )) and
-                is_safe_loop):
+                (((loop_ancestor_type not in avoid_loop_ancestor) and
+                len(all_ancestors) <=1 )))):
                     # Depending on whether we want the schedule to be
                     # OMP static or dynamic for this loop.
                     if loop.loop_type in dynamic_loop_type:
@@ -283,18 +274,12 @@ def find_node_index(routine_children, parallel_section_descriptors):
     which matches the values in the inside array.
     If multiple nodes have similar lhs/rhs, it is good to pick unique references.
     '''
-
-    # parallel_section_descriptors = [
-    #     ["ntml_save","ntml"],["BL_diag","fb_surf"],
-    #     ["grad_t_adj","max_t_grad"],["BL_diag","dvdzm"],
-    #     ]
     
     # work inits
     next_region = []
     parallel_section_index_locations = []
     step_indexer = 0
     
-    #print(a_parallel_section)
     for index, node in enumerate(routine_children):
         match_index = None
         list_of_attributes = []
@@ -304,15 +289,10 @@ def find_node_index(routine_children, parallel_section_descriptors):
             pass
 
         for assignment in list_of_attributes:
-            # insert new bits here
-            
-            #print(a_parallel_section[step_indexer])
             match_index = check_parallel_section_list(
                 index, 
                 parallel_section_descriptors[step_indexer],
                 assignment)
-
-            print(match_index)
 
             if match_index is not None:
             
@@ -324,10 +304,8 @@ def find_node_index(routine_children, parallel_section_descriptors):
                     next_region = []
                 
                 step_indexer+=1
-                print(step_indexer)
 
             if step_indexer >= len(parallel_section_descriptors):
-                print(parallel_section_index_locations)
                 return parallel_section_index_locations
 
     return []
@@ -338,68 +316,66 @@ def check_parallel_section_list(index, lhs_rhs_node, assignment):
     rhs_string = ""
 
     if lhs_string.lower() == lhs_rhs_node[0].lower():
-        print("Found LHS")
         rhs_name_found = False
         rhs_ast_found = False
         found_rhs=False
         check_string = str(lhs_rhs_node[1].lower())
         rhs_string = ""
-        print(lhs_rhs_node)
         try:
             rhs_store1 = assignment.rhs.name
             if rhs_store1 is not None:
                 rhs_name_found = True
-            # if rhs_string == check_string:
-            #     found_rhs =   True
         except:
             pass
         try:
             rhs_store2 = assignment.rhs.ast
             if rhs_store2 is not None:
                 rhs_ast_found = True
-            # # Check if check_string is in rhs_string
-            # # in does not seem to work, this does.
-            # if rhs_string.find(check_string) != -1:
-            #     found_rhs = True
         except:
             pass
 
+        # This has to loop through the children too sadly
+        if not rhs_name_found and not rhs_ast_found:
+            for child in assignment.rhs.children:
+                try:
+                    rhs_store3 = str(child.name).lower()
+                    if rhs_store3 == check_string:
+                        found_rhs = True
+                        break
+                except:
+                    pass
+
         if rhs_name_found and not rhs_ast_found:
-            #print("1st")
             rhs_string = str(assignment.rhs.name).lower()
             if rhs_string == check_string:
                 found_rhs = True
 
         elif not rhs_name_found and rhs_ast_found:
-           # print("Second")
             # Check if check_string is in rhs_string
             # in does not seem to work, this does.
             rhs_string = str(assignment.rhs.ast).lower()
             if rhs_string.find(check_string) != -1:
                 found_rhs = True
 
-        # print(rhs_name_found)
-        # print(rhs_ast_found)
-
         if found_rhs:
-            print("Found RHS - Y")
-            # print(index)
-            # print(rhs_string)
-            # #print(rhs_string1)
-            # print(check_string)
-            # we find the first match and return
-            # if there are duplicates, pick a different one
             return index
+
+    return None
 
 
 def correct_index_list_for_trans(index_list):
+    '''
+    Each time a parallel section is spanned, all of the nodes contained inside
+    are placed inside a the new node. This means that the index list is out of
+    date. This function corrects the indexes by reducing them by the number
+    of nodes spanned inside each new node.
+    '''
 
     reduce_by = 0
     for start_stop_pair in index_list:
         start_stop_pair[0] = start_stop_pair[0] - reduce_by
         start_stop_pair[1] = start_stop_pair[1] - reduce_by
 
-        reduce_by = start_stop_pair[1] - start_stop_pair[0] - 1
+        reduce_by = reduce_by + (start_stop_pair[1] - start_stop_pair[0] - 1)
 
-    print(index_list)
     return index_list

@@ -685,15 +685,6 @@ def remove_unspanable_nodes(
     routine_children = routine_itr.children
     return_copy_span = []
     delete_node_indexes = []
-
-    #For debugging, remove before commit
-    # print("Origonal copy")
-    # for index, routine_child in enumerate(routine_children):
-    #     print(index)
-    #     print(type(routine_child))
-    #     if isinstance(routine_child,Assignment):
-    #         print(routine_child.lhs.name)
-
     # Remove calipers
     for index, routine_child in enumerate(routine_children):
 
@@ -728,14 +719,6 @@ def remove_unspanable_nodes(
     for index, routine_child in enumerate(routine_children):
         if index not in delete_node_indexes:
             return_copy_span.append(routine_child)
-
-    #For debugging, remove before commit
-    # print("Spanning over:")
-    # for index, routine_child in enumerate(return_copy_span):
-    #     print(index)
-    #     print(type(routine_child))
-    #     if isinstance(routine_child,Assignment):
-    #         print(routine_child.lhs.name)
 
     return return_copy_span
 
@@ -777,38 +760,3 @@ def get_ancestors(
         ancestors = [a for a in ancestors if a.depth == depth]
     return ancestors
 
-
-def loop_init_under(loop, check_loop_value):
-    '''
-    Check if a the loop type of the loopr is in the provided dictionary.
-    If so, check against the threshold value and return True if the loop
-    initialisation is equal too or less than value than that in the dictionary.
-    The default is that the loop is assumed to be safe unless otherwise found.
-    '''
-    is_safe_loop = True
-    if loop.loop_type in check_loop_value:
-        loop_litterals = loop.walk(Literal)
-        if (int(loop_litterals[0].value) <=
-            int(check_loop_value[str(loop.loop_type)])):
-            is_safe_loop = True
-        else:
-            is_safe_loop = False
-    return is_safe_loop
-
-
-def ancestor_loop_init_over(loop, loop_ancestor_type, check_loop_value):
-    '''
-    Check if a the loop type of the direct/immediate loop ancestor is in
-    the provided dictionary. If so, check against the threshold value
-    and return True if the ancestor above has loop which is initialised
-    with a larger value than that in the dictionary.
-    The default is that we shouldn't be nesting directives over loops,
-    and so we are confirming whether it is safe to nest given the ancestor.
-    '''
-    nest_loop = False
-    if loop_ancestor_type in check_loop_value:
-        loop_litterals = loop.ancestor(Loop).walk(Literal)
-        if (int(loop_litterals[0].value) >
-            int(check_loop_value[str(loop_ancestor_type)])):
-            nest_loop = True
-    return nest_loop
