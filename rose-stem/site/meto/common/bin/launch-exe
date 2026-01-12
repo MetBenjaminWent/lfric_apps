@@ -26,7 +26,7 @@
 
 EXEC_PATH="${BIN_DIR}/${EXEC_NAME}${PAT_EXE_EXTEN}"
 NAMELIST_FILE=${EXTRA_NAMELIST_FILES:=configuration.nml}
-XIOS_SERVER_EXEC_PATH="xios_server.exe+pat"
+XIOS_SERVER_EXEC_PATH="xios_server.exe"${PAT_EXE_EXTEN}
 SLURM_MPMD_FILE="lfric_xios_mpmd"
 
 # Set to run mode or script test mode

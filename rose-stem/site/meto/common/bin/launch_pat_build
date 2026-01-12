@@ -10,16 +10,17 @@ EXEC_NAME="$1"
 
 echo "Running Pat build script"
 
-#This is where the gungho exe is
+# This is where the executable is found
 EXEC_PATH="${BIN_DIR}/${EXEC_NAME}"
 echo "${EXEC_PATH}"
 
 PAT_LIBS=
 
-#Make sure we are in the location, otherwise the exe we wll end up with the exe in the wrong place
+# Test we are in the bin dir, otherwise the exe will end up in the wrong place
 cd "${BIN_DIR}"
 rm -f "${EXEC_NAME}+pat"
 
-#build into exisiting exe with craypat
-#EXs
-pat_build -w -u -g pnetcdf,io "${EXEC_NAME}"
+# Call pat_build on the executable
+# Unfortunately, we have to use these flags:
+# -w :
+pat_build -u -g pnetcdf,io,mpi "${EXEC_NAME}" -Vv

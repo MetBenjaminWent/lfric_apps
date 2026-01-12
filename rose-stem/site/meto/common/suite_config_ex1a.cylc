@@ -49,7 +49,7 @@ export LD_LIBRARY_PATH=$XIOS_ROOT/lib:$LD_LIBRARY_PATH
     [[EX1A_BASE]]
         platform = {{site_vars.host_ex}}
         [[[environment]]]
-            BUILD_ROOT = ${TMPDIR}
+            BUILD_ROOT = ${CYLC_TASK_WORK_DIR}/local_build
             HYPERTHREADS    = 1
             CORES_PER_NODE  = 128
             NUMA_REGIONS_PER_NODE = 2
