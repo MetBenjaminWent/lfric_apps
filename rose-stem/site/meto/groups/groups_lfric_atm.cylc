@@ -263,6 +263,7 @@
     ],
     "lfric_atm_perftools": [
         "lfric_atm_nwp_gal9-C896_MG_ex1a_perftools-cce_fast-debug-32bit",
+        "lfric_atm_nwp_gal9-C224_MG_ex1a_perftools-cce_fast-debug-32bit",
     ],
     }) %}
 

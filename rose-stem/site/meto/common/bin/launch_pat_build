@@ -23,4 +23,4 @@ rm -f "${EXEC_NAME}+pat"
 # Call pat_build on the executable
 # Unfortunately, we have to use these flags:
 # -w :
-pat_build -u -g pnetcdf,io,mpi "${EXEC_NAME}" -Vv
+pat_build -u -g pnetcdf,io "${EXEC_NAME}" -Vv
