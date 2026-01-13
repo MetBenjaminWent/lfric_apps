@@ -9,9 +9,11 @@ Transmute script for bdy_expl2
 import logging
 from psyclone.psyir.nodes import (
     OMPParallelDirective,
+    OMPBarrierDirective,
     Routine,
     Loop,
-    Assignment
+    Assignment,
+    Call
 )
 from psyclone.transformations import (TransformationError)
 from transmute_psytrans.transmute_functions import (
@@ -21,6 +23,7 @@ from transmute_psytrans.transmute_functions import (
     first_priv_red_init,
     set_pure_subroutines,
     get_ancestors,
+    get_descendents,
     OMP_PARALLEL_REGION_TRANS,
     OMP_PARALLEL_LOOP_DO_TRANS_STATIC,
     OMP_PARALLEL_LOOP_DO_TRANS_DYNAMIC,
@@ -53,15 +56,17 @@ def trans(psyir):
         ["ntml_save", "ntml"],          # start
         ["bl_diag", "fb_surf"],         # stop
         ["grad_t_adj", "min"],          # start
-        ["seg_slice_start", "ii"],      # stop
-        ["ftl", "zero"],                # start
-        ["wtrac_bl", "zero"],           # stop
+        ["bl_diag","dvdzm"],      # stop
+        ["zh", "z_uv"],          # start
+        # ["wtrac_bl", "zero"],           # stop 
+        # ["cumulus", "false"],           # start
+        ["cloud_base_found", "true"],  # stop
         ["weight1", "r_theta_levels"],  # start
         ["ntml", "ntml_local"],         # stop
-        ["mix_len_bm", "max"],          # start
-        ["mix_len_bm", "bm_tiny"],      # stop
-        ["visc_m", "visc_m"],           # start
-        ["rhokm", "visc_m"],            # stop
+        # ["mix_len_bm", "max"],          # start
+        # ["mix_len_bm", "bm_tiny"],      # stop
+        # ["visc_m", "visc_m"],           # start
+        # ["rhokm", "visc_m"],            # stop
         ]
     # Note: These only go one level deep when spanning.
     # If blocks count as nodes, and this routine is full of them.
@@ -95,45 +100,62 @@ def trans(psyir):
         "kp",
         "var_fac"]
 
+    ## Currently identical to avoid_loop_type ## 
+    parrallel_avoid_loop_type = [
+        "k",
+        "i_wt",
+        "ient"
+        ]
+
     # Replace max_threads = 1
     replace_n_threads(psyir, "max_threads")
 
     # Set the pure
     set_pure_subroutines(psyir, safe_pure_calls)
 
+    bdy_expl2_routine = None
+    # Grab the routine reference to use throughout the script
+    for routine in psyir.walk(Routine):
+        if routine.name == "bdy_expl2":
+            bdy_expl2_routine = routine
+
     # Strip out loops relating to cells_j loop type.
-    for routine in psyir.walk(Routine):
-        if routine.name == "bdy_expl2":
-            loop_replacement_of(routine, "j")
+    # for routine in psyir.walk(Routine):
+    #     if routine.name == "bdy_expl2":
+    #         loop_replacement_of(routine, "j")
+    loop_replacement_of(bdy_expl2_routine, "j")
 
-    for routine in psyir.walk(Routine):
-        if routine.name == "bdy_expl2":
-            routine_children = routine.children
+    # for routine in psyir.walk(Routine):
+    #     if routine.name == "bdy_expl2":
+    routine_children = bdy_expl2_routine.children
 
-            # Grab the indexes given the provided list of nodes and targets
-            parallel_section_index_locations = find_node_index(
-                routine_children,
-                parallel_section_descriptors)
+    current_node = bdy_expl2_routine
+    
 
-            # These are intially indexes in a unaltered tree.
-            # As we span sections, we need to account for the loss in nodes
-            parallel_section_index_locations = correct_index_list_for_trans(
-                parallel_section_index_locations)
+    # # Grab the indexes given the provided list of nodes and targets
+    parallel_section_index_locations = find_node_index(
+        routine_children,
+        parallel_section_descriptors)
 
-            # span parallel regions
-            for parallel_region_bounds in parallel_section_index_locations:
-                start = parallel_region_bounds[0]
-                end = parallel_region_bounds[1]
-                try:
-                    OMP_PARALLEL_REGION_TRANS.apply(
-                        routine_children[start:end])
-                except (TransformationError, IndexError) as err:
-                    logging.warning(
-                       "Could not transform because:\n %s", err)
+    # # These are intially indexes in a unaltered tree.
+    # # As we span sections, we need to account for the loss in nodes
+    parallel_section_index_locations = correct_index_list_for_trans(
+        parallel_section_index_locations)
+
+    # span parallel regions
+    for parallel_region_bounds in parallel_section_index_locations:
+        start = parallel_region_bounds[0]
+        end = parallel_region_bounds[1]
+        try:
+            OMP_PARALLEL_REGION_TRANS.apply(
+                routine_children[start:end])
+        except (TransformationError, IndexError) as err:
+            logging.warning(
+                "Could not transform because:\n %s", err)
 
     # Setup for both inside region and otherwise
     dynamic_loop_type = ["ii"]
-    avoid_loop_ancestor = [
+    avoid_loop_direct_ancestor = [
         "i",
         "ii"
         ]
@@ -143,20 +165,10 @@ def trans(psyir):
         "ient"
         ]
 
-    # Setup options for the do inside a spanned region
-    options = {
-        "ignore_dependencies_for": [
-            "zh_local"
-            ]}
-
-    # First pass to add the OMP DO
-    parallelise_loops(
-        psyir,
-        True,
-        avoid_loop_type,
-        avoid_loop_ancestor,
-        dynamic_loop_type,
-        options)
+    # options = {
+    #     "ignore_dependencies_for": [
+    #         "zh_local"
+    #         ]}
 
     options = {
         "ignore_dependencies_for": [
@@ -170,23 +182,121 @@ def trans(psyir):
             "cu_over_orog",
             "ntml",
             "topbl",
-            "zh_local"]}
+            "zh_local",
+            "pstar",
+            "qssurf",
+            "tstar",
+            "p_theta_levels",
+            "qs_tl",
+            "tl"],
+        "nowait": True
+        }
 
-    # Second pass to add OMP Parallel do over remaining loops
-    parallelise_loops(
-        psyir,
-        False,
-        avoid_loop_type,
-        avoid_loop_ancestor,
-        dynamic_loop_type,
-        options)
+    for node in routine_children:
 
-    if get_compiler() == "cce":
-        for routine in psyir.walk(Routine):
-            for node in routine.children:
-                if isinstance(node, OMPParallelDirective):
-                    first_priv_red_init(node, first_private_list)
-                    break
+        if isinstance(node, Call):
+            for pure_call in safe_pure_calls:
+                node_ast_string = str(node.ast).lower()
+                if node_ast_string.find(pure_call) != -1:
+                    print("Found a pure call")
+            # if node.name not in safe_pure_calls:
+            #     print(node)
+
+        if isinstance(node,OMPParallelDirective):
+
+            parallel_dir_loops = node.walk(Loop)
+            parallel_dir_loops = get_descendents(node, Loop)
+
+           # print(parallel_dir_loops)
+            
+            for loop in parallel_dir_loops:
+
+                if str(loop.loop_type) not in avoid_loop_type:
+                    #print(loop.loop_type)
+                    static_transformation = OMP_DO_LOOP_TRANS_STATIC
+
+                    # pylint: disable=bare-except
+                    loop_ancestor_type = ""
+                    try:
+                        loop_ancestor_type = loop.ancestor(Loop).loop_type
+                    except:  # noqa: E722
+                        pass
+
+                    # all_ancestors = []
+                    all_ancestors = get_ancestors(loop)
+                    
+                    if (not loop.ancestor(Loop) or
+                            ((loop_ancestor_type not in avoid_loop_direct_ancestor))): #and
+                                #len(all_ancestors) <= 1))):
+                        try:
+                            static_transformation.apply(
+                                loop, options)
+                        except (TransformationError, IndexError) as err:
+                            # logging.warning(
+                            #     "Could not transform because:\n %s", err)
+                            print("Could not transform as")
+                            print(err)
+
+    removing_unsafe_barriers = True
+    while removing_unsafe_barriers is True:
+        removing_unsafe_barriers = False
+        for node in routine_children:
+            if isinstance(node, OMPBarrierDirective):
+                print("Unsafe Barrier removal, should be fixed in PSyclone")
+                tmp = node.detach()
+                removing_unsafe_barriers = True
+                break
+
+    # # Setup options for the do inside a spanned region
+    # options = {
+    #     "ignore_dependencies_for": [
+    #         "zh_local"
+    #         ]}
+    #     #     ,
+    #     # "nowait": True
+    #     # }
+
+    # for node in routine_children:
+    #     print(node)
+
+    # # First pass to add the OMP DO
+    # parallelise_loops(
+    #     psyir,
+    #     True,
+    #     avoid_loop_type,
+    #     avoid_loop_direct_ancestor,
+    #     dynamic_loop_type,
+    #     options)
+
+    # options = {
+    #     "ignore_dependencies_for": [
+    #         "visc_m",
+    #         "visc_h",
+    #         "sigma_h",
+    #         "cumulus",
+    #         "l_shallow",
+    #         "bl_type_5",
+    #         "bl_type_6",
+    #         "cu_over_orog",
+    #         "ntml",
+    #         "topbl",
+    #         "zh_local"]}
+
+    # # Second pass to add OMP Parallel do over remaining loops
+    # parallelise_loops(
+    #     psyir,
+    #     False,
+    #     avoid_loop_type,
+    #     avoid_loop_direct_ancestor,
+    #     dynamic_loop_type,
+    #     options)
+
+    # if get_compiler() == "cce":
+    #     for routine in psyir.walk(Routine):
+    #         for node in routine.children:
+    #             if isinstance(node, OMPParallelDirective):
+    #                 first_priv_red_init(node, first_private_list)
+    #                 break
 
 
 # Loop through loops and parallelise
@@ -197,7 +307,7 @@ def parallelise_loops(
     psyir,
     inside_parallel=False,
     avoid_loop_type=[],
-    avoid_loop_ancestor=[],
+    avoid_loop_direct_ancestor=[],
     dynamic_loop_type=[],
     options={}
 ):
@@ -256,7 +366,7 @@ def parallelise_loops(
                 #    AND there are not multiple ancestors )
                 # AND (everything) the loop is safe given the above checks.
                 if (not loop.ancestor(Loop) or
-                        (((loop_ancestor_type not in avoid_loop_ancestor) and
+                        (((loop_ancestor_type not in avoid_loop_direct_ancestor) and
                             len(all_ancestors) <= 1))):
                     # Depending on whether we want the schedule to be
                     # OMP static or dynamic for this loop.
@@ -346,6 +456,10 @@ def check_parallel_section_list(lhs_rhs_node, assignment):
     # The RHS is not known yet
     rhs_string = ""
 
+    # if lhs_string.lower() == "cumulus":
+    #     print(assignment.rhs)
+    #     print(assignment.rhs.value)
+
     # If the LHS matches the LHS of the 'node representation' from our
     # list of a desired targeted nodes properties.
     if lhs_string.lower() == lhs_rhs_node[0].lower():
@@ -354,10 +468,11 @@ def check_parallel_section_list(lhs_rhs_node, assignment):
         # We try and capture them below.
 
         # Setup some defaults
-        rhs_name_found = False
-        rhs_ast_found = False
         check_string = str(lhs_rhs_node[1].lower())
         rhs_string = ""
+        rhs_name_found = False
+        rhs_ast_found = False
+        rhs_value_found = False
 
         # Try and get the RHS name
         # pylint: disable=bare-except
@@ -373,6 +488,15 @@ def check_parallel_section_list(lhs_rhs_node, assignment):
             rhs_ast = assignment.rhs.ast
             if rhs_ast is not None:
                 rhs_ast_found = True
+        except:  # noqa: E722
+            pass
+
+        # Try and get the assignment (intrinsic function) reference
+        # pylint: disable=bare-except
+        try:
+            rhs_value = assignment.rhs.value
+            if rhs_value is not None:
+                rhs_value_found = True
         except:  # noqa: E722
             pass
 
@@ -395,11 +519,17 @@ def check_parallel_section_list(lhs_rhs_node, assignment):
                 return True
 
         # If there is not a name, but is a ast (intrinsic function)
-        elif not rhs_name_found and rhs_ast_found:
+        elif rhs_ast_found and not rhs_name_found:
             # Check if check_string is in rhs_string
             # in does not seem to work, this does.
             rhs_string = str(assignment.rhs.ast).lower()
             if rhs_string.find(check_string) != -1:
+                return True
+
+        # If there is a tre/false value
+        elif rhs_value_found and not rhs_name_found and not rhs_ast_found:
+            rhs_string = str(assignment.rhs.value).lower()
+            if rhs_string == check_string:
                 return True
 
         else:

@@ -53,7 +53,7 @@ from psyclone.transformations import (
 OMP_PARALLEL_REGION_TRANS = OMPParallelTrans()
 
 # Default: static schedule for heavy loops
-OMP_DO_LOOP_TRANS_STATIC = OMPLoopTrans(omp_schedule="static")
+OMP_DO_LOOP_TRANS_STATIC = OMPLoopTrans(omp_schedule="static", omp_directive='do')
 OMP_PARALLEL_LOOP_DO_TRANS_STATIC = OMPParallelLoopTrans(
     omp_schedule="static", omp_directive="paralleldo"
 )
@@ -760,3 +760,39 @@ def get_ancestors(
     if depth is not None:
         ancestors = [a for a in ancestors if a.depth == depth]
     return ancestors
+
+
+def get_descendents(
+    node, node_type=Node, inclusive=False, exclude=(), depth=None
+):
+    """
+    Lifted from PSyTran.
+    Get all ancestors of a Node with a given type.
+
+    :arg node: the Node to search for descendents of.
+    :type node: :py:class:`Node`
+    :kwarg node_type: the type of node to search for.
+    :type node_type: :py:class:`type`
+    :kwarg inclusive: if ``True``, the current node is included.
+    :type inclusive: :py:class:`bool`
+    :kwarg exclude: type(s) of node to exclude.
+    :type exclude: :py:class:`bool`
+    :kwarg depth: specify a depth for the descendents to have.
+    :type depth: :py:class:`int`
+
+    :returns: list of descendents according to specifications.
+    :rtype: :py:class:`list`
+    """
+    assert isinstance(node, Node), f"Expected a Node, not '{type(node)}'."
+    assert isinstance(
+        inclusive, bool
+    ), f"Expected a bool, not '{type(inclusive)}'."
+    assert isinstance(node_type, tuple) or issubclass(node_type, Node)
+    if depth is not None:
+        assert isinstance(depth, int), f"Expected an int, not '{type(depth)}'."
+    return [
+        descendent
+        for descendent in node.walk(node_type, depth=depth)
+        if not isinstance(descendent, exclude)
+        and (inclusive or descendent is not node)
+    ]

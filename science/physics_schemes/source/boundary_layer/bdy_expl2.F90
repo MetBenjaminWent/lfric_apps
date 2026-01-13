@@ -23,6 +23,8 @@ use tuning_segments_mod, only: bl_segment_size
 
 use um_types, only: r_bl
 
+use timer_mod, only: timer
+
 implicit none
 
 !Automatic segment size tuning
@@ -829,6 +831,7 @@ integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call timer('bdy_expl2')
 
 ! Set up blocking for OMP sections
 max_threads = 1
@@ -999,27 +1002,27 @@ else ! l_use_surf_in_ri = true
       if (l_noice_in_turb) then
         ! use qsat_wat
         if ( l_mr_physics ) then
-          call qsat_wat_mix(qssurf(seg_slice_start:seg_slice_end,j), &
-                            tstar(seg_slice_start:seg_slice_end,j),  &
-                            pstar(seg_slice_start:seg_slice_end,j),  &
+          call qsat_wat_mix(qssurf(seg_slice_start,j), &
+                            tstar(seg_slice_start,j),  &
+                            pstar(seg_slice_start,j),  &
                             bl_segment_range) ! No halos
         else
-          call qsat_wat(qssurf(seg_slice_start:seg_slice_end,j),  &
-                        tstar(seg_slice_start:seg_slice_end,j),   &              
-                        pstar(seg_slice_start:seg_slice_end,j),   &
+          call qsat_wat(qssurf(seg_slice_start,j),  &
+                        tstar(seg_slice_start,j),   &              
+                        pstar(seg_slice_start,j),   &
                         bl_segment_range) ! No halos
         end if
       else ! l_noice_in_turb
         ! use qsat
         if ( l_mr_physics ) then
-          call qsat_mix(qssurf(seg_slice_start:seg_slice_end,j),  &
-                        tstar(seg_slice_start:seg_slice_end,j),   &
-                        pstar(seg_slice_start:seg_slice_end,j),   &
+          call qsat_mix(qssurf(seg_slice_start,j),  &
+                        tstar(seg_slice_start,j),   &
+                        pstar(seg_slice_start,j),   &
                         bl_segment_range) ! No halos
         else
-          call qsat(qssurf(seg_slice_start:seg_slice_end,j),  &
-                    tstar(seg_slice_start:seg_slice_end,j),   &
-                    pstar(seg_slice_start:seg_slice_end,j),   &
+          call qsat(qssurf(seg_slice_start,j),  &
+                    tstar(seg_slice_start,j),   &
+                    pstar(seg_slice_start,j),   &
                     bl_segment_range) ! No halos
         end if
       end if ! l_noice_in_turb
@@ -1123,15 +1126,15 @@ case (i_interp_local_cf_dbdz)
 
       ! Calculate qsat(Tl)...
       if ( l_mr_physics ) then
-        call qsat_mix(qs_tl(seg_slice_start:seg_slice_end,:,k),                &
-                      tl(seg_slice_start:seg_slice_end,:,k),                   &
-                      p_theta_levels(seg_slice_start:seg_slice_end,:,k),       &
+        call qsat_mix(qs_tl(seg_slice_start,:,k),                &
+                      tl(seg_slice_start,:,k),                   &
+                      p_theta_levels(seg_slice_start,:,k),       &
                       bl_segment_range,                                        &
                       tdims%j_len )
       else
-        call qsat(qs_tl(seg_slice_start:seg_slice_end,:,k),                    &
-                  tl(seg_slice_start:seg_slice_end,:,k),                       &
-                  p_theta_levels(seg_slice_start:seg_slice_end,:,k),           &
+        call qsat(qs_tl(seg_slice_start,:,k),                    &
+                  tl(seg_slice_start,:,k),                       &
+                  p_theta_levels(seg_slice_start,:,k),           &
                   bl_segment_range,                                            &
                   tdims%j_len )
       end if
@@ -2990,14 +2993,14 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
       bl_segment_range = (seg_slice_end - seg_slice_start) + 1
 
       if ( l_mr_physics ) then
-        call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),       &
-                          tl(seg_slice_start:seg_slice_end,j,k-1),              &
-                          p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),  &
+        call qsat_wat_mix(qsw_arr(seg_slice_start, j, k-1),       &
+                          tl(seg_slice_start,j,k-1),              &
+                          p_theta_levels(seg_slice_start,j,k-1),  &
                           bl_segment_range )
       else
-        call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),            &
-                      tl(seg_slice_start:seg_slice_end,j,k-1),                   &
-                      p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),       &
+        call qsat_wat(qsw_arr(seg_slice_start, j, k-1),            &
+                      tl(seg_slice_start,j,k-1),                   &
+                      p_theta_levels(seg_slice_start,j,k-1),       &
                       bl_segment_range )
       end if
 
@@ -3115,14 +3118,14 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
         bl_segment_range = (seg_slice_end - seg_slice_start) + 1
 
         if ( l_mr_physics ) then
-          call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),      &
-                            tl(seg_slice_start:seg_slice_end,j,k-1),             &
-                            p_theta_levels(seg_slice_start:seg_slice_end,j,k-1), &
+          call qsat_wat_mix(qsw_arr(seg_slice_start, j, k-1),      &
+                            tl(seg_slice_start,j,k-1),             &
+                            p_theta_levels(seg_slice_start,j,k-1), &
                             bl_segment_range)
         else
-          call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),          &
-                        tl(seg_slice_start:seg_slice_end,j,k-1),                 &
-                        p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),     &
+          call qsat_wat(qsw_arr(seg_slice_start, j, k-1),          &
+                        tl(seg_slice_start,j,k-1),                 &
+                        p_theta_levels(seg_slice_start,j,k-1),     &
                         bl_segment_range)
         end if
 
@@ -3299,11 +3302,12 @@ if ( i_cld_vn == i_cld_bimodal .or.                                            &
 !$OMP end do
 !$OMP end PARALLEL
 
+
 end if ! i_cld_vn == i_cld_bimodal
 
 !If autotuning is active, decide what to do with the
 !trial segment size and report the current status.
-
+call timer('bdy_expl2')
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bdy_expl2
