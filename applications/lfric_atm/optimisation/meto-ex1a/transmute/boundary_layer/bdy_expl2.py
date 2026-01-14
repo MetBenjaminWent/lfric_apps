@@ -194,40 +194,34 @@ def trans(psyir):
 
     for node in routine_children:
 
+        # To be used in the parallel sections to help determine good nodes
         if isinstance(node, Call):
             for pure_call in safe_pure_calls:
                 node_ast_string = str(node.ast).lower()
                 if node_ast_string.find(pure_call) != -1:
                     print("Found a pure call")
-            # if node.name not in safe_pure_calls:
-            #     print(node)
 
         if isinstance(node,OMPParallelDirective):
 
             parallel_dir_loops = node.walk(Loop)
             parallel_dir_loops = get_descendents(node, Loop)
-
-           # print(parallel_dir_loops)
             
             for loop in parallel_dir_loops:
 
                 if str(loop.loop_type) not in avoid_loop_type:
-                    #print(loop.loop_type)
+
                     static_transformation = OMP_DO_LOOP_TRANS_STATIC
 
-                    # pylint: disable=bare-except
-                    loop_ancestor_type = ""
-                    try:
-                        loop_ancestor_type = loop.ancestor(Loop).loop_type
-                    except:  # noqa: E722
-                        pass
-
-                    # all_ancestors = []
                     all_ancestors = get_ancestors(loop)
-                    
-                    if (not loop.ancestor(Loop) or
-                            ((loop_ancestor_type not in avoid_loop_direct_ancestor))): #and
-                                #len(all_ancestors) <= 1))):
+
+                    loop_check_ancestors = True
+                    for loop_ancestor in all_ancestors:
+                        if loop_ancestor.variable.name in avoid_loop_direct_ancestor:
+                            print(loop_ancestor.variable.name)
+                            print(avoid_loop_direct_ancestor)
+                            loop_check_ancestors = False
+
+                    if (not loop.ancestor(Loop) or loop_check_ancestors): 
                         try:
                             static_transformation.apply(
                                 loop, options)

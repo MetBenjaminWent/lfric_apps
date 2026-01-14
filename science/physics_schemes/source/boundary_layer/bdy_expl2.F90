@@ -1002,27 +1002,27 @@ else ! l_use_surf_in_ri = true
       if (l_noice_in_turb) then
         ! use qsat_wat
         if ( l_mr_physics ) then
-          call qsat_wat_mix(qssurf(seg_slice_start,j), &
-                            tstar(seg_slice_start,j),  &
-                            pstar(seg_slice_start,j),  &
+          call qsat_wat_mix(qssurf(seg_slice_start:seg_slice_end,j), &
+                            tstar(seg_slice_start:seg_slice_end,j),  &
+                            pstar(seg_slice_start:seg_slice_end,j),  &
                             bl_segment_range) ! No halos
         else
-          call qsat_wat(qssurf(seg_slice_start,j),  &
-                        tstar(seg_slice_start,j),   &              
-                        pstar(seg_slice_start,j),   &
+          call qsat_wat(qssurf(seg_slice_start:seg_slice_end,j),  &
+                        tstar(seg_slice_start:seg_slice_end,j),   &              
+                        pstar(seg_slice_start:seg_slice_end,j),   &
                         bl_segment_range) ! No halos
         end if
       else ! l_noice_in_turb
         ! use qsat
         if ( l_mr_physics ) then
-          call qsat_mix(qssurf(seg_slice_start,j),  &
-                        tstar(seg_slice_start,j),   &
-                        pstar(seg_slice_start,j),   &
+          call qsat_mix(qssurf(seg_slice_start:seg_slice_end,j),  &
+                        tstar(seg_slice_start:seg_slice_end,j),   &
+                        pstar(seg_slice_start:seg_slice_end,j),   &
                         bl_segment_range) ! No halos
         else
-          call qsat(qssurf(seg_slice_start,j),  &
-                    tstar(seg_slice_start,j),   &
-                    pstar(seg_slice_start,j),   &
+          call qsat(qssurf(seg_slice_start:seg_slice_end,j),  &
+                    tstar(seg_slice_start:seg_slice_end,j),   &
+                    pstar(seg_slice_start:seg_slice_end,j),   &
                     bl_segment_range) ! No halos
         end if
       end if ! l_noice_in_turb
@@ -1126,17 +1126,15 @@ case (i_interp_local_cf_dbdz)
 
       ! Calculate qsat(Tl)...
       if ( l_mr_physics ) then
-        call qsat_mix(qs_tl(seg_slice_start,:,k),                &
-                      tl(seg_slice_start,:,k),                   &
-                      p_theta_levels(seg_slice_start,:,k),       &
-                      bl_segment_range,                                        &
-                      tdims%j_len )
+        call qsat_mix(qs_tl(seg_slice_start:seg_slice_end,j,k),                &
+                      tl(seg_slice_start:seg_slice_end,j,k),                   &
+                      p_theta_levels(seg_slice_start:seg_slice_end,j,k),       &
+                      bl_segment_range )
       else
-        call qsat(qs_tl(seg_slice_start,:,k),                    &
-                  tl(seg_slice_start,:,k),                       &
-                  p_theta_levels(seg_slice_start,:,k),           &
-                  bl_segment_range,                                            &
-                  tdims%j_len )
+        call qsat(qs_tl(seg_slice_start:seg_slice_end,j,k),                    &
+                  tl(seg_slice_start:seg_slice_end,j,k),                       &
+                  p_theta_levels(seg_slice_start:seg_slice_end,j,k),           &
+                  bl_segment_range )
       end if
     end do ! ii
     ! ...then subtract from qw to get supersaturation, and multiply by
@@ -2993,14 +2991,14 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
       bl_segment_range = (seg_slice_end - seg_slice_start) + 1
 
       if ( l_mr_physics ) then
-        call qsat_wat_mix(qsw_arr(seg_slice_start, j, k-1),       &
-                          tl(seg_slice_start,j,k-1),              &
-                          p_theta_levels(seg_slice_start,j,k-1),  &
+        call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),       &
+                          tl(seg_slice_start:seg_slice_end,j,k-1),              &
+                          p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),  &
                           bl_segment_range )
       else
-        call qsat_wat(qsw_arr(seg_slice_start, j, k-1),            &
-                      tl(seg_slice_start,j,k-1),                   &
-                      p_theta_levels(seg_slice_start,j,k-1),       &
+        call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),            &
+                      tl(seg_slice_start:seg_slice_end,j,k-1),                   &
+                      p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),       &
                       bl_segment_range )
       end if
 
@@ -3118,14 +3116,14 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
         bl_segment_range = (seg_slice_end - seg_slice_start) + 1
 
         if ( l_mr_physics ) then
-          call qsat_wat_mix(qsw_arr(seg_slice_start, j, k-1),      &
-                            tl(seg_slice_start,j,k-1),             &
-                            p_theta_levels(seg_slice_start,j,k-1), &
+          call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),      &
+                            tl(seg_slice_start:seg_slice_end,j,k-1),             &
+                            p_theta_levels(seg_slice_start:seg_slice_end,j,k-1), &
                             bl_segment_range)
         else
-          call qsat_wat(qsw_arr(seg_slice_start, j, k-1),          &
-                        tl(seg_slice_start,j,k-1),                 &
-                        p_theta_levels(seg_slice_start,j,k-1),     &
+          call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),          &
+                        tl(seg_slice_start:seg_slice_end,j,k-1),                 &
+                        p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),     &
                         bl_segment_range)
         end if
 
