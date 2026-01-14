@@ -237,15 +237,18 @@ def trans(psyir):
                             print("Could not transform as")
                             print(err)
 
-    removing_unsafe_barriers = True
-    while removing_unsafe_barriers is True:
-        removing_unsafe_barriers = False
-        for node in routine_children:
-            if isinstance(node, OMPBarrierDirective):
-                print("Unsafe Barrier removal, should be fixed in PSyclone")
-                tmp = node.detach()
-                removing_unsafe_barriers = True
-                break
+    ###### WORKAROUND COMMENTED ######
+    # removing_unsafe_barriers = True
+    # while removing_unsafe_barriers is True:
+    #     removing_unsafe_barriers = False
+    #     for node in routine_children:
+    #         if isinstance(node, OMPBarrierDirective):
+    #             print("Unsafe Barrier removal, should be fixed in PSyclone")
+    #             tmp = node.detach()
+    #             removing_unsafe_barriers = True
+    #             break
+
+    ###### WORKAROUND COMMENTED ######
 
     # # Setup options for the do inside a spanned region
     # options = {
