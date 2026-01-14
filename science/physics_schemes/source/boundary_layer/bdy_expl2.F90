@@ -1126,15 +1126,17 @@ case (i_interp_local_cf_dbdz)
 
       ! Calculate qsat(Tl)...
       if ( l_mr_physics ) then
-        call qsat_mix(qs_tl(seg_slice_start:seg_slice_end,j,k),                &
-                      tl(seg_slice_start:seg_slice_end,j,k),                   &
-                      p_theta_levels(seg_slice_start:seg_slice_end,j,k),       &
-                      bl_segment_range )
+        call qsat_mix(qs_tl(seg_slice_start:seg_slice_end,:,k),                &
+                      tl(seg_slice_start:seg_slice_end,:,k),                   &
+                      p_theta_levels(seg_slice_start:seg_slice_end,:,k),       &
+                      bl_segment_range,                                        &
+                      tdims%j_len )
       else
-        call qsat(qs_tl(seg_slice_start:seg_slice_end,j,k),                    &
-                  tl(seg_slice_start:seg_slice_end,j,k),                       &
-                  p_theta_levels(seg_slice_start:seg_slice_end,j,k),           &
-                  bl_segment_range )
+        call qsat(qs_tl(seg_slice_start:seg_slice_end,:,k),                    &
+                  tl(seg_slice_start:seg_slice_end,:,k),                       &
+                  p_theta_levels(seg_slice_start:seg_slice_end,:,k),           &
+                  bl_segment_range,                                            &
+                  tdims%j_len )
       end if
     end do ! ii
     ! ...then subtract from qw to get supersaturation, and multiply by
@@ -3299,7 +3301,6 @@ if ( i_cld_vn == i_cld_bimodal .or.                                            &
   end do
 !$OMP end do
 !$OMP end PARALLEL
-
 
 end if ! i_cld_vn == i_cld_bimodal
 
