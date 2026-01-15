@@ -117,10 +117,12 @@ integer ::                                                                     &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: imp_mix
 
 character(len=*), parameter :: RoutineName='IMP_MIX'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( imp_mix, '__imp_mix__ ')
 
 blm1 = bl_levels-1
 
@@ -301,7 +303,7 @@ do k = 1, bl_levels
 end do
 !$OMP end do
 !$OMP end PARALLEL
-
+call stop_timing( imp_mix )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine imp_mix

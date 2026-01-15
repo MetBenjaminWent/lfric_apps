@@ -73,6 +73,8 @@ use jules_surface_types_mod, only: ntype, soil
 use planet_constants_mod, only: g
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
 
 implicit none
 
@@ -146,9 +148,12 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
+integer(tik)              :: dust_srce
+
 character(len=*), parameter :: RoutineName='DUST_SRCE'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( dust_srce, '__dust_srce__ ')
 
 ! parameters in block below - ndivh, ndivl
 !$OMP PARALLEL DEFAULT(none) private(idiv,m,n,l)                               &
@@ -387,7 +392,7 @@ else
 end if ! l_dust_emp_sc
 
 !$OMP end PARALLEL
-
+call stop_timing( dust_srce )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 

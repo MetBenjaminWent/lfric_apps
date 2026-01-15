@@ -35,6 +35,8 @@ use atm_fields_bounds_mod, only: pdims,tdims
 use bl_option_mod, only: one
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
 implicit none
 
 ! ARGUMENTS WITH intent in. IE: INPUT VARIABLES.
@@ -116,9 +118,13 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
+integer(tik)              :: btq_int
+
 character(len=*), parameter :: RoutineName='BTQ_INT'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( btq_int, '__btq_int__ ')
+
 !-----------------------------------------------------------------------
 ! 1.  Loop round levels.
 !-----------------------------------------------------------------------
@@ -156,6 +162,7 @@ do k = 2, bl_levels
 end do ! bl_levels
 !$OMP end PARALLEL do
 
+call stop_timing( btq_int )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine btq_int

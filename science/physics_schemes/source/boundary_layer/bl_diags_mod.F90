@@ -269,6 +269,8 @@ use nlsizes_namelist_mod, only: bl_levels
 use stash_array_mod, only: sf
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
 
 implicit none
 
@@ -282,9 +284,13 @@ real(kind=jprb)               :: zhook_handle
 ! Local variables
 integer :: i, j, k
 
+integer(tik)              :: alloc_bl_expl
+
+
 character(len=*), parameter :: RoutineName='ALLOC_BL_EXPL'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( alloc_bl_expl, '__alloc_bl_expl__ ')
 
 ! set the logical switches for whether diagnostic is requested
 select case (model_type)
@@ -1115,6 +1121,7 @@ else
   allocate(BL_diag%grad_t_adj(1,1))
 end if
 
+call stop_timing( alloc_bl_expl )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 

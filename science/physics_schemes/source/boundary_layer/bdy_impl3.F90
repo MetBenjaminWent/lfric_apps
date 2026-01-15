@@ -50,6 +50,7 @@ use vectlib_mod, only: oneover_v => oneover_v_interface
 use model_domain_mod, only: model_type, mt_single_column
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
 
 !$ use omp_lib, only: omp_get_num_threads
 
@@ -328,10 +329,12 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
+integer(tik)              :: bdy_imp3
+
 character(len=*), parameter :: RoutineName='BDY_IMPL3'
 
-
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( bdy_imp3, '__bdy_imp3__ ')
 
 !$OMP  PARALLEL DEFAULT(none) SHARED(l_correct,bl_levels,tdims,                &
 !$OMP  dqw_nt,dtl_nt,q_latest,qcl_latest, dtrdz_v,dtrdz_u,udims, rdz_v,        &
@@ -663,7 +666,7 @@ end if
 !-----------------------------------------------------------------------
 
 !$OMP end PARALLEL
-
+call stop_timing( bdy_imp3 )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bdy_impl3

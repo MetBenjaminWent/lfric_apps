@@ -45,6 +45,8 @@ use yomhook,  only: lhook, dr_hook   !DrHook
 use jules_surface_types_mod, only: npft, ntype, soil
 use pftparm, only: dust_veg_scj
 use dust_parameters_mod, only: dust_veg_emiss
+use timing_mod,             only: start_timing, stop_timing, tik
+
 
 implicit none
 
@@ -76,11 +78,14 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
+integer(tik)              :: dust_calc_emiss
+
 character(len=*), parameter :: RoutineName='DUST_CALC_EMISS_FRAC'
 
 ! End of header
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( dust_calc_emiss, '__dust_calc_emiss__ ')
 
 ! explicitly initialise the dust_emiss_frac array as all zeroes as it will be
 ! calculated as a sum over tiles
@@ -262,7 +267,7 @@ else if (dust_veg_emiss == 2 .or. dust_veg_emiss == 3) then
   end if ! ends 1 tile or multiple tile test
 
 end if ! Ends test on dust_veg_emiss switch (currently 0,1,2,3).
-
+call stop_timing( dust_calc_emiss )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 
 return
