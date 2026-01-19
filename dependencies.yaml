@@ -15,7 +15,10 @@
 #
 # The entry for this repository will have blank values for both source and ref
 # by default, which will cause the test suite to use the source code from the
-# local clone. These can be filled to set a different source if desired.
+# # local clone. These can be filled to set a different source if desired.
+#     source: git@github.com:MetOffice/lfric_core.git
+#     ref: 5d4d72f0e35f00e71b1757df6beadec21ece97f0
+
 
 casim:
     source: git@github.com:MetOffice/casim.git
@@ -30,8 +33,8 @@ lfric_apps:
     ref:
 
 lfric_core:
-    source: git@github.com:MetOffice/lfric_core.git
-    ref: 5d4d72f0e35f00e71b1757df6beadec21ece97f0
+    source: git@github.com:MetBenjaminWent/lfric_core.git
+    ref: 913bc5d1645d0c69dcfc946262fc82a76e2a3b20
 
 moci:
     source: git@github.com:MetOffice/moci.git

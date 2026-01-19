@@ -970,10 +970,10 @@ integer            :: jj         ! Block index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: kmkhz_9c
+integer(tik)              :: kmkhz_9c_tik
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( kmkhz_9c, '__kmkhz_9c__ ')
+call start_timing( kmkhz_9c_tik, '__kmkhz_9c__ ')
 
 
 ! Allocate water tracer working arrays
@@ -4999,7 +4999,7 @@ if (l_wtrac) then
   deallocate(ntdsc_start)
   deallocate(ntml_start)
 end if
-call stop_timing( kmkhz_9c )
+call stop_timing( kmkhz_9c_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine kmkhz_9c

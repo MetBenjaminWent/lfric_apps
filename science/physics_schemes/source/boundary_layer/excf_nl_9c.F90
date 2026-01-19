@@ -707,10 +707,10 @@ integer            :: jj          !Cache blocking - loop index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: excf_nl_9c
+integer(tik)              :: excf_nl_9c_tik
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( excf_nl_9c, '__excf_nl_9c__ ')
+call start_timing( excf_nl_9c_tik, '__excf_nl_9c__ ')
 
 ! Set up water tracer field
 if (l_wtrac) then
@@ -3445,7 +3445,7 @@ if (l_wtrac) deallocate(iset_wtrac)
 !     SCM Boundary Layer Diagnostics Package
 !-----------------------------------------------------------------------
 !------------------------------------------------------
-call stop_timing( excf_nl_9c )
+call stop_timing( excf_nl_9c_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine excf_nl_9c

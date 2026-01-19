@@ -560,11 +560,11 @@ use umPrintMgr, only: umPrint
 implicit none
 character(len=50000) :: lineBuffer
 real(kind=jprb)      :: zhook_handle
-integer(tik)              :: bl_option_mod
+integer(tik)              :: bl_option_mod_tik
 character(len=*), parameter :: RoutineName='PRINT_NLIST_RUN_BL'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( bl_option_mod, '__bl_option_mod__ ')
+call start_timing( bl_option_mod_tik, '__bl_option_mod__ ')
 call umPrint('Contents of namelist run_bl',                                    &
     src='bl_option_mod')
 
@@ -711,7 +711,7 @@ call umPrint(lineBuffer,src='bl_option_mod')
 call umPrint('- - - - - - end of namelist - - - - - -',                        &
     src='bl_option_mod')
 
-call stop_timing( bl_option_mod )
+call stop_timing( bl_option_mod_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 
 end subroutine print_nlist_run_bl

@@ -228,13 +228,13 @@ real(kind=r_bl),parameter:: alpha    = 12.0_r_bl,                              &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: fm_diag
+integer(tik)              :: fm_drag_tik
 
 
 character(len=*), parameter :: RoutineName='FM_DRAG'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( fm_diag, '__fm_diag__ ')
+call start_timing( fm_drag_tik, '__fm_diag__ ')
 
 if ( l_rp2 .and. i_rp_scheme == i_rp2b ) then
   orog_drag_param = orog_drag_param_rp(rp_idx)
@@ -459,7 +459,7 @@ if (land_pts > 0) then
 end if ! land_pts > 0
 
 !$OMP end PARALLEL
-call stop_timing( fm_diag )
+call stop_timing( fm_drag_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine fm_drag

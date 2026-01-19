@@ -134,10 +134,10 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
-integer(tik)              :: kmkh
+integer(tik)              :: kmkh_tik
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( kmkh, '__kmkh__ ')
+call start_timing( kmkh_tik, '__kmkh__ ')
 if (model_type == mt_single_column) then
   do k=1, bl_levels
     do j=pdims%j_start, pdims%j_end
@@ -352,7 +352,7 @@ end do ! BL_LEVELS
 !-----------------------------------------------------------------------
 !     SCM Boundary Layer Diagnostics Package
 !-----------------------------------------------------------------------
-call stop_timing( kmkh )
+call stop_timing( kmkh_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine kmkh

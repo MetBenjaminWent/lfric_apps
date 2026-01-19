@@ -61,11 +61,11 @@ integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
 character(len=*), parameter :: RoutineName='BL_LSP'
-integer(tik)              :: bl_lsp
+integer(tik)              :: bl_lsp_tik
 
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( bl_lsp, '__bl_lsp__ ')
+call start_timing( bl_lsp_tik, '__bl_lsp__ ')
 
 !$OMP PARALLEL do DEFAULT(none) SCHEDULE(STATIC)                               &
 !$OMP          private(i,j,k,newqcf)                                           &
@@ -90,7 +90,7 @@ do k = 1, bl_levels
 end do
 !$OMP end PARALLEL do
 ! End the subroutine
-call stop_timing( bl_lsp )
+call stop_timing( bl_lsp_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bl_lsp

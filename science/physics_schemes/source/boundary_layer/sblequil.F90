@@ -244,7 +244,7 @@ integer ::                                                                     &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: sblequil
+integer(tik)              :: sblequil_tik
 
 character(len=*), parameter :: RoutineName='SBLEQUIL'
 
@@ -252,7 +252,7 @@ character(len=*), parameter :: RoutineName='SBLEQUIL'
 ! Start of code
 !-----------------------------------------------------------------------
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( sblequil, '__sblequil__ ')
+call start_timing( sblequil_tik, '__sblequil__ ')
 
 rpow=npow
 rcb =cb
@@ -465,7 +465,7 @@ pktu  = (1.0-a1)*phitt*pkmzet *rcespw/f2
 !-----------------------------------------------------------------------
 ! Finish up
 !-----------------------------------------------------------------------
-call stop_timing( sblequil )
+call stop_timing( sblequil_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine sblequil

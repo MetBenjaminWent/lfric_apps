@@ -64,12 +64,12 @@ integer                       :: l, i1, j1
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: excfnl_compin
+integer(tik)              :: excfnl_compin_tik
 
 character(len=*), parameter :: RoutineName='EXCFNL_COMPIN'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( excfnl_compin, '__excfnl_compin__ ')
+call start_timing( excfnl_compin_tik, '__excfnl_compin__ ')
 
 !     Check for active elements
 select case (switch)
@@ -118,7 +118,7 @@ do n = 1, c_len_i
 end do
 c_len_i = m
 
-call stop_timing( excfnl_compin )
+call stop_timing( excfnl_compin_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 

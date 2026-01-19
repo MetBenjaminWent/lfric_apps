@@ -827,14 +827,14 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
-integer(tik)              :: bdy_expl2, handle_loop1, handle_loop2, &
+integer(tik)              :: bdy_expl2_tik, handle_loop1, handle_loop2,        &
                              handle_loop3, handle_loop4, handle_loop5,         &
                              qsat_first_four, handle_loop6,handle_loop7,       &
                              handle_loop8, handle_loop9, handle_loop10
 
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( bdy_expl2, '__bdy_expl2__ ')
+call start_timing( bdy_expl2_tik, '__bdy_expl2__ ')
 
 !Set up automatic segment tuning
 
@@ -3269,7 +3269,7 @@ end if ! i_cld_vn == i_cld_bimodal
 !If autotuning is active, decide what to do with the
 !trial segment size and report the current status.
 
-call stop_timing( bdy_expl2 )
+call stop_timing( bdy_expl2_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bdy_expl2

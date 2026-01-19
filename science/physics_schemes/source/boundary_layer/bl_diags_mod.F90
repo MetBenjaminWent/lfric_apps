@@ -284,13 +284,13 @@ real(kind=jprb)               :: zhook_handle
 ! Local variables
 integer :: i, j, k
 
-integer(tik)              :: alloc_bl_expl
+integer(tik)              :: alloc_bl_expl_tik
 
 
 character(len=*), parameter :: RoutineName='ALLOC_BL_EXPL'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( alloc_bl_expl, '__alloc_bl_expl__ ')
+call start_timing( alloc_bl_expl_tik, '__alloc_bl_expl__ ')
 
 ! set the logical switches for whether diagnostic is requested
 select case (model_type)
@@ -1121,7 +1121,7 @@ else
   allocate(BL_diag%grad_t_adj(1,1))
 end if
 
-call stop_timing( alloc_bl_expl )
+call stop_timing( alloc_bl_expl_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 

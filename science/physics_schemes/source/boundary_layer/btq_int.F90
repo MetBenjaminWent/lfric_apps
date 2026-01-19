@@ -118,12 +118,12 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
-integer(tik)              :: btq_int
+integer(tik)              :: btq_int_tik
 
 character(len=*), parameter :: RoutineName='BTQ_INT'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( btq_int, '__btq_int__ ')
+call start_timing( btq_int_tik, '__btq_int__ ')
 
 !-----------------------------------------------------------------------
 ! 1.  Loop round levels.
@@ -162,7 +162,7 @@ do k = 2, bl_levels
 end do ! bl_levels
 !$OMP end PARALLEL do
 
-call stop_timing( btq_int )
+call stop_timing( btq_int_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine btq_int

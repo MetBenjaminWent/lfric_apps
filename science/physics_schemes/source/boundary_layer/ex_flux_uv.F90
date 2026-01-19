@@ -116,12 +116,12 @@ real(kind=r_bl) ::                                                             &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: ex_flux_uv
+integer(tik)              :: ex_flux_uv_tik
 
 character(len=*), parameter :: RoutineName='EX_FLUX_UV'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( ex_flux_uv, '__ex_flux_uv__ ')
+call start_timing( ex_flux_uv_tik, '__ex_flux_uv__ ')
 
 !-----------------------------------------------------------------------
 !  1.  Calculate "explicit" surface fluxes of momentum
@@ -189,7 +189,7 @@ do k = 1, bl_levels
 end do
 !$OMP end do
 !$OMP end PARALLEL
-call stop_timing( ex_flux_uv )
+call stop_timing( ex_flux_uv_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine ex_flux_uv
