@@ -969,7 +969,8 @@ integer            :: ii         ! Block index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: kmkhz_9c_tik
+integer(tik)              :: kmkhz_9c_tik, call_calc_wtrac, call_excf_nl_9c, &
+                             repeat_calc_wtrac
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 call start_timing( kmkhz_9c_tik, '__kmkhz_9c__ ')
@@ -2549,7 +2550,7 @@ end do
 
 ! Repeat necessary parts of last loop for water tracers
 if (l_wtrac) then
-
+  call start_timing( call_calc_wtrac, '__call_calc_wtrac__ ')
   ! SML
   ! Create dummy field to provide SML equivalent of 'dsc' array which
   ! is needed in calc_dqw_inv_wtrac
@@ -2565,6 +2566,7 @@ if (l_wtrac) then
   call calc_dqw_inv_wtrac(bl_levels, ntdsc_start, ntdsc, dqw_dsc_meth,         &
                           dsc_disc_inv, rdz, z_tq, zhsc, dsc,                  &
                           qw_lapse_zero_dsc, wtrac_bl, dqw_dsc_wtrac)
+  call stop_timing( call_calc_wtrac )
 end if  ! l_wtrac
 
 ! Set flags used in the code to find max cloud-fraction at mixed-layer top...
@@ -3817,6 +3819,7 @@ end do
 
 !$OMP end PARALLEL
 
+call start_timing( call_excf_nl_9c, '__call_excf_nl_9c__ ')
 call excf_nl_9c (                                                              &
 ! in levels/switches
    bl_levels,BL_diag,nSCMDpkgs,L_SCMDiags,                                     &
@@ -3839,6 +3842,7 @@ call excf_nl_9c (                                                              &
    rhokh_top_ent, rhokh_dsct_ent, rhokh_surf_ent,                              &
    rhof2,rhofsc,f_ngstress,tke_nl,zdsc_base,nbdsc                              &
   )
+call stop_timing( call_excf_nl_9c )
 
 !do j = pdims%j_start, pdims%j_end
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
@@ -4638,10 +4642,10 @@ end do
 
 ! Repeat the last block of code for water tracers
 if (l_wtrac) then
+  call start_timing( repeat_calc_wtrac, '__repeat_calc_wtrac__ ')
   ! Set up temporary field for z_uv(:,:,ntml(i,j)+1) which is required in
   !  call to calc_fqw_inv_wtrac
   allocate(z_uv_ntmlp1(pdims%i_start:pdims%i_end,pdims%j_start:pdims%j_end))
-
 
   !do j = pdims%j_start, pdims%j_end
   !$OMP  PARALLEL  do SCHEDULE(STATIC) DEFAULT(SHARED) private(i,k)
@@ -4652,7 +4656,6 @@ if (l_wtrac) then
   !$OMP end PARALLEL do
   !end do
 
-
   call calc_fqw_inv_wtrac(bl_levels, ntml, totqf_efl_meth1,                    &
                           totqf_efl_meth2, t_frac, zh, zh_frac,                &
                           zrzi, z_uv_ntmlp1, dzl,                              &
@@ -4661,6 +4664,7 @@ if (l_wtrac) then
                           'SML', wtrac_bl)
   deallocate(z_uv_ntmlp1)
 
+  call stop_timing( repeat_calc_wtrac )
 end if   !l_wtrac
 
 !-----------------------------------------------------------------------
