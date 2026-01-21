@@ -1707,7 +1707,7 @@ else if ( sc_diag_opt == sc_diag_orig ) then
     end if
   end do
   ! !$OMP end do NOWAIT
-  !$OMP end do
+  !$OMP end do NOWAIT
 !end do
 
 end if  ! test on sc_diag_opt
@@ -3873,7 +3873,6 @@ end do
 ! Repeat for water tracers
 if (l_wtrac) then
   do i_wt = 1, n_wtrac
-
     ! do j = pdims%j_start, pdims%j_end
     !$OMP do SCHEDULE(STATIC)
     do i = pdims%i_start, pdims%i_end
@@ -3885,7 +3884,6 @@ if (l_wtrac) then
     end do
     !$OMP end do
     ! end do
-
   end do
 end if
 
