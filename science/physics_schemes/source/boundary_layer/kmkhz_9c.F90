@@ -963,7 +963,7 @@ real(kind=r_bl), allocatable :: z_uv_ntmlp1(:,:) ! Temporary copy of
                                                  ! z_uv at k=ntml+1
 
 !Variables for cache-blocking
-integer            :: jj         ! Block index
+integer            :: jj, ii        ! Block index
 
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
@@ -1011,17 +1011,17 @@ end if
 
 dz_disc_min = one_half * timestep * 1.0e-4_r_bl
 
+j = 1
 !Start OpenMP parallel region
 
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
-!$OMP  private (i, j, jj, k, kp, kl, km, i_wt, w_curv_nm, w_del_nm, w_curv,    &
+!$OMP  private (i, ii, k, kp, kl, km, i_wt, w_curv_nm, w_del_nm, w_curv,    &
 !$OMP  r_d_eta, rho_dz, z_surf, sl_plume, qw_plume,  q_liq_parc, q_liq_env,    &
 !$OMP  t_parc, q_vap_parc, t_dens_parc, t_dens_env, dpar_bydz,  denv_bydz,     &
 !$OMP  z_rad_lim,  k_rad_lim, dflw_inv, dfsw_inv, dfsw_top, svl_plume,         &
 !$OMP  svl_diff, monotonic_inv, svl_lapse, svl_lapse_base,                     &
 !$OMP  quad_a,  quad_bm, quad_c, dz_disc, dsvl_top, sl_lapse,  qw_lapse,       &
 !$OMP  kp2, rht_k, rht_kp1, rht_kp2, interp, z_cbase )
-
 !-----------------------------------------------------------------------
 ! Index to subroutine KMKHZ9C
 
@@ -1046,32 +1046,32 @@ dz_disc_min = one_half * timestep * 1.0e-4_r_bl
 ! 1.1 Calculate Z_TOP (top of levels) and NTML from previous timestep
 !-----------------------------------------------------------------------
 !$OMP do SCHEDULE(STATIC)
-do jj = pdims%j_start, pdims%j_end, bl_segment_size
-  do j = jj, min((jj+bl_segment_size)-1,pdims%j_end)
-    do i = pdims%i_start, pdims%i_end
-      ntml_prev(i,j) = 1
-    end do
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+    !do i = pdims%i_start, pdims%i_end
+    ntml_prev(i,j) = 1
+    !end do
   end do
   do k = 1, bl_levels-1
-    do j = jj, min((jj+bl_segment_size)-1,pdims%j_end)
-      do i = pdims%i_start, pdims%i_end
-        z_top(i,j,k) = z_uv(i,j,k+1)
-        !------------------------------------------------------------
-        !find NTML from previous TS (for accurate gradient adjustment
-        !of profiles - also note that NTML le BL_LEVELS-1)
-        !------------------------------------------------------------
-        if ( zh_prev(i,j)  >=  z_uv(i,j,k+1) ) ntml_prev(i,j)=k
-      end do
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      !do i = pdims%i_start, pdims%i_end
+      z_top(i,j,k) = z_uv(i,j,k+1)
+      !------------------------------------------------------------
+      !find NTML from previous TS (for accurate gradient adjustment
+      !of profiles - also note that NTML le BL_LEVELS-1)
+      !------------------------------------------------------------
+      if ( zh_prev(i,j)  >=  z_uv(i,j,k+1) ) ntml_prev(i,j)=k
+      !end do
     end do
   end do
 
   k = bl_levels
-  do j = jj, min((jj+bl_segment_size)-1,pdims%j_end)
-    do i = pdims%i_start, pdims%i_end
-      z_top(i,j,k) = z_uv(i,j,k) + dzl(i,j,k)
-    end do
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+    !do i = pdims%i_start, pdims%i_end
+    z_top(i,j,k) = z_uv(i,j,k) + dzl(i,j,k)
+    !end do
   end do
-end do ! jj
+end do ! ii
 !$OMP end do NOWAIT
 
 !-----------------------------------------------------------------------
@@ -1080,12 +1080,12 @@ end do ! jj
 
 !$OMP do SCHEDULE(STATIC)
 do k = 1, bl_levels
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      sl(i,j,k)  = tl(i,j,k) + grcp * z_tq(i,j,k)
-      svl(i,j,k) = sl(i,j,k) * ( one + c_virtual*qw(i,j,k) )
-    end do
+  !do j = pdims%j_start, pdims%j_end
+  do i = pdims%i_start, pdims%i_end
+    sl(i,j,k)  = tl(i,j,k) + grcp * z_tq(i,j,k)
+    svl(i,j,k) = sl(i,j,k) * ( one + c_virtual*qw(i,j,k) )
   end do
+  !end do
 end do
 !$OMP end do NOWAIT
 
@@ -1133,205 +1133,202 @@ end if ! test on l_noice_in_turb
 do k = 1, bl_levels
   km = max( 1, k-1 )
   kp = min( bl_levels, k+1 )
-!$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-
+  !do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
     ! If the Intel Compiler vs 12 is used, a job fails with segmentation
     ! fault when the following loop is vectorised. Thus the following
     ! directive stop vectorization of this loop  when an Intel Compiler
     ! is used. Other compilers, for example Cray, should vectorise this
-    ! loop automatically.
-#if defined (IFORT_VERSION)
-!DIR$ NOVECTOR
-#endif
-
-    do i = pdims%i_start, pdims%i_end
-      w_grad(i,j,k) = (w(i,j,k)-w(i,j,km))*rdz(i,j,k)
-      w_curv_nm = w(i,j,kp)-2.0_r_bl*w(i,j,k)+w(i,j,km)
-      w_del_nm  = w(i,j,kp)-w(i,j,km)
-      w_nonmono(i,j,k) = 0
-      if ( abs(w_curv_nm) > abs(w_del_nm) ) w_nonmono(i,j,k) = 1
-      sls_inc(i,j,k) = zero
-      qls_inc(i,j,k) = zero
-    end do ! i
-  end do ! j
-!$OMP end do NOWAIT
+    ! loop automatically.    
+! #if defined (IFORT_VERSION)
+! !DIR$ NOVECTOR
+! #endif
+    w_grad(i,j,k) = (w(i,j,k)-w(i,j,km))*rdz(i,j,k)
+    w_curv_nm = w(i,j,kp)-2.0_r_bl*w(i,j,k)+w(i,j,km)
+    w_del_nm  = w(i,j,kp)-w(i,j,km)
+    w_nonmono(i,j,k) = 0
+    if ( abs(w_curv_nm) > abs(w_del_nm) ) w_nonmono(i,j,k) = 1
+    sls_inc(i,j,k) = zero
+    qls_inc(i,j,k) = zero
+  end do ! i
+  !$OMP end do NOWAIT
+    !end do ! j
 end do ! k
 
 !$OMP BARRIER
 
 !$OMP do SCHEDULE(DYNAMIC)
-do jj = pdims%j_start, pdims%j_end, bl_segment_size
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
   do k = 2, bl_levels-1
-    do j = jj, min((jj+bl_segment_size)-1,pdims%j_end)
-      do i = pdims%i_start, pdims%i_end
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      !do i = pdims%i_start, pdims%i_end
 
-        if ( etadot(i,j,k)  < - tiny(one) .and.                                &
-             etadot(i,j,k-1)< - tiny(one) ) then
-            !-----------------------------------------------------------
-            ! Only needed in subsidence regions
-            ! Also don't attempt coupling with dynamics if w has
-            ! significant vertical structure
-            !-----------------------------------------------------------
-          w_curv = (w_grad(i,j,k+1)-w_grad(i,j,k))/dzl(i,j,k)
-          if (abs(w_curv) > 1.0e-6_r_bl .and. w_nonmono(i,j,k) == 1) then
-              ! large curvature at a turning point
-            sls_inc(i,j,k-1) = zero  ! need to make sure increments in
-            qls_inc(i,j,k-1) = zero  ! level below are also set to zero
-            etadot(i,j,k-1) = zero
-            etadot(i,j,k)   = zero
-            etadot(i,j,k+1) = zero
-            w(i,j,k-1) = zero
-            w(i,j,k)   = zero
-            w(i,j,k+1) = zero
-          else
-            r_d_eta=1.0/(eta_theta_levels(k+1)-eta_theta_levels(k))
-            sls_inc(i,j,k) = - etadot(i,j,k) * r_d_eta                         &
-                                      * ( sl(i,j,k+1) - sl(i,j,k) )
-            qls_inc(i,j,k) = - etadot(i,j,k) * r_d_eta                         &
-                                      * ( qw(i,j,k+1) - qw(i,j,k) )
-          end if  ! safe to calculate increments
-        end if
+      if ( etadot(i,j,k)  < - tiny(one) .and.                                &
+            etadot(i,j,k-1)< - tiny(one) ) then
+          !-----------------------------------------------------------
+          ! Only needed in subsidence regions
+          ! Also don't attempt coupling with dynamics if w has
+          ! significant vertical structure
+          !-----------------------------------------------------------
+        w_curv = (w_grad(i,j,k+1)-w_grad(i,j,k))/dzl(i,j,k)
+        if (abs(w_curv) > 1.0e-6_r_bl .and. w_nonmono(i,j,k) == 1) then
+            ! large curvature at a turning point
+          sls_inc(i,j,k-1) = zero  ! need to make sure increments in
+          qls_inc(i,j,k-1) = zero  ! level below are also set to zero
+          etadot(i,j,k-1) = zero
+          etadot(i,j,k)   = zero
+          etadot(i,j,k+1) = zero
+          w(i,j,k-1) = zero
+          w(i,j,k)   = zero
+          w(i,j,k+1) = zero
+        else
+          r_d_eta=1.0/(eta_theta_levels(k+1)-eta_theta_levels(k))
+          sls_inc(i,j,k) = - etadot(i,j,k) * r_d_eta                         &
+                                    * ( sl(i,j,k+1) - sl(i,j,k) )
+          qls_inc(i,j,k) = - etadot(i,j,k) * r_d_eta                         &
+                                    * ( qw(i,j,k+1) - qw(i,j,k) )
+        end if  ! safe to calculate increments
+      end if
 
-      end do
+      !end do
     end do
   end do
-end do !jj
+end do !ii
 !$OMP end do
-
+! do j = pdims%j_start, pdims%j_end
 ! Repeat for necessary parts of last 2 loops for water tracers
 if (l_wtrac) then
 !$OMP do SCHEDULE(STATIC)
   do i_wt = 1, n_wtrac
     do k = 1, bl_levels
-      do j = pdims%j_start, pdims%j_end
-        do i = pdims%i_start, pdims%i_end
-          qls_inc_wtrac(i,j,k,i_wt) = zero
-        end do ! i
-      end do ! j
+      do i = pdims%i_start, pdims%i_end
+        qls_inc_wtrac(i,j,k,i_wt) = zero
+      end do ! i
     end do ! k
   end do ! i_wt
 !$OMP end do
+ !end do ! j
 
 !$OMP do SCHEDULE(STATIC)
-  do jj = pdims%j_start, pdims%j_end, bl_segment_size
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
     do k = 2, bl_levels-1
-      do j = jj, min((jj+bl_segment_size)-1,pdims%j_end)
-        do i = pdims%i_start, pdims%i_end
+      do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+        !do i = pdims%i_start, pdims%i_end
 
-          if ( etadot(i,j,k)  < - tiny(one) .and.                              &
-               etadot(i,j,k-1)< - tiny(one) ) then
-            !-----------------------------------------------------------
-            ! Only needed in subsidence regions
-            ! Also don't attempt coupling with dynamics if w has
-            ! significant vertical structure
-            !-----------------------------------------------------------
-            w_curv = (w_grad(i,j,k+1)-w_grad(i,j,k))/dzl(i,j,k)
-            if (abs(w_curv) > 1.0e-6_r_bl .and. w_nonmono(i,j,k) == 1) then
-              ! large curvature at a turning point
-              do i_wt = 1, n_wtrac
-                ! level below are also set to zero
-                qls_inc_wtrac(i,j,k-1,i_wt) = zero
-              end do
-            else
-              kp = k+1
-              km = kp-1
-              r_d_eta=one/(eta_theta_levels(kp)-eta_theta_levels(km))
-              do i_wt = 1, n_wtrac
-                qls_inc_wtrac(i,j,k,i_wt) = - etadot(i,j,k) * r_d_eta          &
-                  * ( wtrac_bl(i_wt)%qw(i,j,kp) - wtrac_bl(i_wt)%qw(i,j,km) )
-              end do
-            end if  ! safe to calculate increments
-          end if
-        end do
+        if ( etadot(i,j,k)  < - tiny(one) .and.                              &
+              etadot(i,j,k-1)< - tiny(one) ) then
+          !-----------------------------------------------------------
+          ! Only needed in subsidence regions
+          ! Also don't attempt coupling with dynamics if w has
+          ! significant vertical structure
+          !-----------------------------------------------------------
+          w_curv = (w_grad(i,j,k+1)-w_grad(i,j,k))/dzl(i,j,k)
+          if (abs(w_curv) > 1.0e-6_r_bl .and. w_nonmono(i,j,k) == 1) then
+            ! large curvature at a turning point
+            do i_wt = 1, n_wtrac
+              ! level below are also set to zero
+              qls_inc_wtrac(i,j,k-1,i_wt) = zero
+            end do
+          else
+            kp = k+1
+            km = kp-1
+            r_d_eta=one/(eta_theta_levels(kp)-eta_theta_levels(km))
+            do i_wt = 1, n_wtrac
+              qls_inc_wtrac(i,j,k,i_wt) = - etadot(i,j,k) * r_d_eta          &
+                * ( wtrac_bl(i_wt)%qw(i,j,kp) - wtrac_bl(i_wt)%qw(i,j,km) )
+            end do
+          end if  ! safe to calculate increments
+        end if
+        !end do
       end do
     end do
-  end do !jj
+  end do !ii
 !$OMP end do
 end if   ! l_wtrac
 
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
-do j = pdims%j_start, pdims%j_end
-  do i = pdims%i_start, pdims%i_end
-      ! Non-turbulent fluxes are defined relative to the surface
-      ! so set them to zero at the surface
-    frad(i,j,1)  = zero
-    frad_lw(i,j,1) = zero
-    frad_sw(i,j,1) = zero
-    fsubs(i,j,1,1) = zero ! for heat
-    fsubs(i,j,1,2) = zero ! for humidity
-    fmic(i,j,1,1) = zero  ! for heat
-    fmic(i,j,1,2) = zero  ! for humidity
+do i = pdims%i_start, pdims%i_end
+    ! Non-turbulent fluxes are defined relative to the surface
+    ! so set them to zero at the surface
+  frad(i,j,1)  = zero
+  frad_lw(i,j,1) = zero
+  frad_sw(i,j,1) = zero
+  fsubs(i,j,1,1) = zero ! for heat
+  fsubs(i,j,1,2) = zero ! for humidity
+  fmic(i,j,1,1) = zero  ! for heat
+  fmic(i,j,1,2) = zero  ! for humidity
 
-    ! The two expressions are maintained as comment to highlight that
-    ! ft_nt and fq_net need to be updated if there are any eventual
-    ! changes in fmic/frad/fsubs at level 1.  A job fails with
-    ! segmentation fault when the Intel compiler is used if the two
-    ! arrays are not set to 0.0 directly at level 1.
+  ! The two expressions are maintained as comment to highlight that
+  ! ft_nt and fq_net need to be updated if there are any eventual
+  ! changes in fmic/frad/fsubs at level 1.  A job fails with
+  ! segmentation fault when the Intel compiler is used if the two
+  ! arrays are not set to 0.0 directly at level 1.
 
-    !ft_nt(i,j,1)  = frad(i,j,1) + fmic(i,j,1,1) + fsubs(i,j,1,1)
-    !fq_nt(i,j,1)  =               fmic(i,j,1,2) + fsubs(i,j,1,2)
+  !ft_nt(i,j,1)  = frad(i,j,1) + fmic(i,j,1,1) + fsubs(i,j,1,1)
+  !fq_nt(i,j,1)  =               fmic(i,j,1,2) + fsubs(i,j,1,2)
 
-    ft_nt(i,j,1)  = zero
-    fq_nt(i,j,1)  = zero
+  ft_nt(i,j,1)  = zero
+  fq_nt(i,j,1)  = zero
 
-  end do
 end do
 !$OMP end do NOWAIT
+!end do
 
 ! Repeat for necessary parts of last loop for water tracers
+   ! do j = pdims%j_start, pdims%j_end
 if (l_wtrac) then
 !$OMP do SCHEDULE(STATIC)
   do i_wt = 1, n_wtrac
-    do j = pdims%j_start, pdims%j_end
-      do i = pdims%i_start, pdims%i_end
-        ! Non-turbulent fluxes are defined relative to the surface
-        ! so set them to zero at the surface
-        fsubs_wtrac(i,j,1,i_wt)     = zero
-        fmic_wtrac(i,j,1,i_wt)      = zero
-        wtrac_bl(i_wt)%fq_nt(i,j,1) = zero
-      end do
+    do i = pdims%i_start, pdims%i_end
+      ! Non-turbulent fluxes are defined relative to the surface
+      ! so set them to zero at the surface
+      fsubs_wtrac(i,j,1,i_wt)     = zero
+      fmic_wtrac(i,j,1,i_wt)      = zero
+      wtrac_bl(i_wt)%fq_nt(i,j,1) = zero
     end do
   end do
 !$OMP end do
 end if
+! end do
 
 ! This is the most computational expensive loop of the subroutine. The
 ! following parallelisation obtains lower times than the ones obtained
-! by using the jj/bl_segment_size technique.  While it would be
+! by using the ii/bl_segment_size technique.  While it would be
 ! possible to remove the "df_over_cp", "dfmic", and "dfsubs" arrays,
 ! without them some jobs lose bit-comparability with the Intel
 ! compiler.
 
 do k = 1, bl_levels
   kp = k+1
+  !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      rho_dz = rho_mix_tq(i,j,k) * dzl(i,j,k)
+  do i = pdims%i_start, pdims%i_end
+    rho_dz = rho_mix_tq(i,j,k) * dzl(i,j,k)
 
-      dflw_over_cp(i,j,k) = - rad_hr(i,j,1,k) * rho_dz
-      dfsw_over_cp(i,j,k) = - rad_hr(i,j,2,k) * rho_dz
-      df_over_cp(i,j,k)   = dflw_over_cp(i,j,k) + dfsw_over_cp(i,j,k)
+    dflw_over_cp(i,j,k) = - rad_hr(i,j,1,k) * rho_dz
+    dfsw_over_cp(i,j,k) = - rad_hr(i,j,2,k) * rho_dz
+    df_over_cp(i,j,k)   = dflw_over_cp(i,j,k) + dfsw_over_cp(i,j,k)
 
-      dfmic(i,j,k,1)  = - micro_tends(i,j,1,k) * rho_dz
-      dfmic(i,j,k,2)  = - micro_tends(i,j,2,k) * rho_dz
-      dfsubs(i,j,k,1) = - sls_inc(i,j,k)       * rho_dz
-      dfsubs(i,j,k,2) = - qls_inc(i,j,k)       * rho_dz
+    dfmic(i,j,k,1)  = - micro_tends(i,j,1,k) * rho_dz
+    dfmic(i,j,k,2)  = - micro_tends(i,j,2,k) * rho_dz
+    dfsubs(i,j,k,1) = - sls_inc(i,j,k)       * rho_dz
+    dfsubs(i,j,k,2) = - qls_inc(i,j,k)       * rho_dz
 
-      frad(i,j,kp)   = frad(i,j,k)    + df_over_cp(i,j,k)
-      frad_lw(i,j,kp)= frad_lw(i,j,k) + dflw_over_cp(i,j,k)
-      frad_sw(i,j,kp)= frad_sw(i,j,k) + dfsw_over_cp(i,j,k)
-      fsubs(i,j,kp,1)= fsubs(i,j,k,1) + dfsubs(i,j,k,1)
-      fsubs(i,j,kp,2)= fsubs(i,j,k,2) + dfsubs(i,j,k,2)
-      fmic(i,j,kp,1) = fmic(i,j,k,1)  + dfmic(i,j,k,1)
-      fmic(i,j,kp,2) = fmic(i,j,k,2)  + dfmic(i,j,k,2)
+    frad(i,j,kp)   = frad(i,j,k)    + df_over_cp(i,j,k)
+    frad_lw(i,j,kp)= frad_lw(i,j,k) + dflw_over_cp(i,j,k)
+    frad_sw(i,j,kp)= frad_sw(i,j,k) + dfsw_over_cp(i,j,k)
+    fsubs(i,j,kp,1)= fsubs(i,j,k,1) + dfsubs(i,j,k,1)
+    fsubs(i,j,kp,2)= fsubs(i,j,k,2) + dfsubs(i,j,k,2)
+    fmic(i,j,kp,1) = fmic(i,j,k,1)  + dfmic(i,j,k,1)
+    fmic(i,j,kp,2) = fmic(i,j,k,2)  + dfmic(i,j,k,2)
 
-      ft_nt(i,j,kp)  = frad(i,j,kp) + fmic(i,j,kp,1) + fsubs(i,j,kp,1)
-      fq_nt(i,j,kp)  =                fmic(i,j,kp,2) + fsubs(i,j,kp,2)
-    end do ! i
-  end do !j
+    ft_nt(i,j,kp)  = frad(i,j,kp) + fmic(i,j,kp,1) + fsubs(i,j,kp,1)
+    fq_nt(i,j,kp)  =                fmic(i,j,kp,2) + fsubs(i,j,kp,2)
+  end do ! i
 !$OMP end do NOWAIT
+!end do !j
 end do ! k
 
 ! Repeat necessary parts of last loop for water tracer
@@ -1339,22 +1336,22 @@ if (l_wtrac) then
 !$OMP do SCHEDULE(STATIC)
   do i_wt = 1, n_wtrac
     do k = 1, bl_levels
-      do j = pdims%j_start, pdims%j_end
-        kp = k+1
-        do i = pdims%i_start, pdims%i_end
-          rho_dz = rho_mix_tq(i,j,k) * dzl(i,j,k)
-          dfmic_wtrac(i,j,k,i_wt)  =                                           &
-                    - wtrac_as(i_wt)%micro_tends(i,j,k) * rho_dz
-          dfsubs_wtrac(i,j,k,i_wt) = - qls_inc_wtrac(i,j,k,i_wt) * rho_dz
+      !do j = pdims%j_start, pdims%j_end
+      kp = k+1
+      do i = pdims%i_start, pdims%i_end
+        rho_dz = rho_mix_tq(i,j,k) * dzl(i,j,k)
+        dfmic_wtrac(i,j,k,i_wt)  =                                           &
+                  - wtrac_as(i_wt)%micro_tends(i,j,k) * rho_dz
+        dfsubs_wtrac(i,j,k,i_wt) = - qls_inc_wtrac(i,j,k,i_wt) * rho_dz
 
-          fsubs_wtrac(i,j,kp,i_wt)=                                            &
-                   fsubs_wtrac(i,j,k,i_wt) + dfsubs_wtrac(i,j,k,i_wt)
-          fmic_wtrac(i,j,kp,i_wt) =                                            &
-                   fmic_wtrac(i,j,k,i_wt)  + dfmic_wtrac(i,j,k,i_wt)
-          wtrac_bl(i_wt)%fq_nt(i,j,kp)  =                                      &
-                   fmic_wtrac(i,j,kp,i_wt) + fsubs_wtrac(i,j,kp,i_wt)
-        end do ! i
-      end do !j
+        fsubs_wtrac(i,j,kp,i_wt)=                                            &
+                  fsubs_wtrac(i,j,k,i_wt) + dfsubs_wtrac(i,j,k,i_wt)
+        fmic_wtrac(i,j,kp,i_wt) =                                            &
+                  fmic_wtrac(i,j,k,i_wt)  + dfmic_wtrac(i,j,k,i_wt)
+        wtrac_bl(i_wt)%fq_nt(i,j,kp)  =                                      &
+                  fmic_wtrac(i,j,kp,i_wt) + fsubs_wtrac(i,j,kp,i_wt)
+      end do ! i
+      !end do !j
     end do ! k
   end do   ! i_wt
 !$OMP end do NOWAIT
@@ -1364,12 +1361,12 @@ end if   ! l_wtrac
 ! 1.4 Set UNSTABLE flag and find first level above surface layer
 !-----------------------------------------------------------------------
 !$OMP do SCHEDULE(DYNAMIC)
-do jj = pdims%j_start, pdims%j_end, bl_segment_size
-  do j = jj, min(jj+bl_segment_size-1,pdims%j_end)
-    do i = pdims%i_start, pdims%i_end
-      unstable(i,j) = (fb_surf(i,j) >  zero)
-      k_plume(i,j)  = -1
-    end do
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min(ii+bl_segment_size-1,pdims%i_end)
+    !do i = pdims%i_start, pdims%i_end
+    unstable(i,j) = (fb_surf(i,j) >  zero)
+    k_plume(i,j)  = -1
+    !end do
   end do
 
       !------------------------------------------------------------
@@ -1381,33 +1378,33 @@ do jj = pdims%j_start, pdims%j_end, bl_segment_size
       !------------------------------------------------------------
 
   do k = 1, bl_levels-1
-    do j = jj, min(jj+bl_segment_size-1,pdims%j_end)
-      do i = pdims%i_start, pdims%i_end
+    do i = ii, min(ii+bl_segment_size-1,pdims%i_end)
+      !do i = pdims%i_start, pdims%i_end
 
-        if ( unstable(i,j) ) then
+      if ( unstable(i,j) ) then
 
-          z_surf = 0.1_r_bl * zh_prev(i,j)
-          if ( z_tq(i,j,k) >= z_surf .and. k_plume(i,j) == -1 ) then
-                 !reached z_surf
-            k_plume(i,j)=k
-          end if
-          if ( svl(i,j,k+1) >= svl(i,j,k)                                      &
-                  .and. k_plume(i,j) == -1 ) then
-                 !reached inversion
-            k_plume(i,j)=k
-          end if
-
+        z_surf = 0.1_r_bl * zh_prev(i,j)
+        if ( z_tq(i,j,k) >= z_surf .and. k_plume(i,j) == -1 ) then
+                !reached z_surf
+          k_plume(i,j)=k
         end if
-      end do
+        if ( svl(i,j,k+1) >= svl(i,j,k)                                      &
+                .and. k_plume(i,j) == -1 ) then
+                !reached inversion
+          k_plume(i,j)=k
+        end if
+
+      end if
+      !end do
     end do
   end do
 
-  do j = jj, min(jj+bl_segment_size-1,pdims%j_end)
-    do i = pdims%i_start, pdims%i_end
-      if (k_plume(i,j) == -1) k_plume(i,j)=1
-    end do
+  do i = ii, min(ii+bl_segment_size-1,pdims%i_end)
+    !do i = pdims%i_start, pdims%i_end
+    if (k_plume(i,j) == -1) k_plume(i,j)=1
+    !end do
   end do
-end do ! jj
+end do ! ii
 !$OMP end do NOWAIT
 
 !-----------------------------------------------------------------------
@@ -1423,147 +1420,147 @@ end do ! jj
 !-----------------------------------------------------------------------
 !      Initialise variables
 
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
-do j = pdims%j_start, pdims%j_end
-  do i = pdims%i_start, pdims%i_end
-    cloud_base(i,j) = .false.
-    dsc(i,j) = .false.
-    coupled(i,j) = .false.
-    zhsc(i,j)    = zero
-    ntdsc(i,j)   = 0
-  end do
+do i = pdims%i_start, pdims%i_end
+  cloud_base(i,j) = .false.
+  dsc(i,j) = .false.
+  coupled(i,j) = .false.
+  zhsc(i,j)    = zero
+  ntdsc(i,j)   = 0
 end do
 !$OMP end do
+!end do
 
 if ( .not. sc_diag_opt == sc_diag_all_rh_max ) then
 
   ! Use svl-gradient method to diagnose the Sc-top level at non-cumulus points
 
-!$OMP do SCHEDULE(DYNAMIC)
-  do jj = pdims%j_start, pdims%j_end, bl_segment_size
+  !$OMP do SCHEDULE(DYNAMIC)
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
     do k = 3, bl_levels-1
-      do j = jj, min(jj+bl_segment_size-1,pdims%j_end)
-        do i = pdims%i_start, pdims%i_end
+      do i = ii, min(ii+bl_segment_size-1,pdims%i_end)
+        !do i = pdims%i_start, pdims%i_end
 
-          !-----------------------------------------------------------------
-          !..Find cloud-base (where cloud here means CF > SC_CFTOL)
-          !-----------------------------------------------------------------
+        !-----------------------------------------------------------------
+        !..Find cloud-base (where cloud here means CF > SC_CFTOL)
+        !-----------------------------------------------------------------
 
-          if ( .not. cumulus(i,j) .and.                                        &
-               z_tq(i,j,k) < zmaxb_for_dsc .and.                               &
-               k  >   ntml(i,j)+1 .and. cf(i,j,k)  >   sc_cftol                &
-                                .and. .not. cloud_base(i,j)                    &
-            !                                  not yet found cloud-base
-                                          .and. .not. dsc(i,j) ) then
-            !                                  not yet found a Sc layer
-            cloud_base(i,j) = .true.
-          end if
-          if ( cloud_base(i,j) .and. .not. dsc(i,j) .and.                      &
-            !                 found cloud-base but not yet reached cloud-top
-                         cf(i,j,k+1) < sc_cftol .and.                          &
-                         z_tq(i,j,k) < zmaxt_for_dsc                           &
-            !                 got to cloud-top below ZMAXT_FOR_DSC
-                       ) then
-            cloud_base(i,j) = .false.         ! reset CLOUD_BASE
-            !-----------------------------------------------------------
-            ! Look to see if at least top of cloud is well mixed:
-            ! test SVL-gradient for top 2 pairs of levels, in case
-            ! cloud top extends into the inversion.
-            ! Parcel descent in Section 4.0 below will determine depth
-            ! of mixed layer.
-            !----------------------------------------------------------
-            if ( (svl(i,j,k)-svl(i,j,k-1))                                     &
-                         /(z_tq(i,j,k)-z_tq(i,j,k-1))                          &
-                                                <   max_svl_grad ) then
-              dsc(i,j) = .true.
-              ntdsc(i,j) = k
-              zhsc(i,j)  = z_uv(i,j,ntdsc(i,j)+1)
-            else if ( (svl(i,j,k-1)-svl(i,j,k-2))                              &
-                          /(z_tq(i,j,k-1)-z_tq(i,j,k-2))                       &
+        if ( .not. cumulus(i,j) .and.                                        &
+              z_tq(i,j,k) < zmaxb_for_dsc .and.                               &
+              k  >   ntml(i,j)+1 .and. cf(i,j,k)  >   sc_cftol                &
+                              .and. .not. cloud_base(i,j)                    &
+          !                                  not yet found cloud-base
+                                        .and. .not. dsc(i,j) ) then
+          !                                  not yet found a Sc layer
+          cloud_base(i,j) = .true.
+        end if
+        if ( cloud_base(i,j) .and. .not. dsc(i,j) .and.                      &
+          !                 found cloud-base but not yet reached cloud-top
+                        cf(i,j,k+1) < sc_cftol .and.                          &
+                        z_tq(i,j,k) < zmaxt_for_dsc                           &
+          !                 got to cloud-top below ZMAXT_FOR_DSC
+                      ) then
+          cloud_base(i,j) = .false.         ! reset CLOUD_BASE
+          !-----------------------------------------------------------
+          ! Look to see if at least top of cloud is well mixed:
+          ! test SVL-gradient for top 2 pairs of levels, in case
+          ! cloud top extends into the inversion.
+          ! Parcel descent in Section 4.0 below will determine depth
+          ! of mixed layer.
+          !----------------------------------------------------------
+          if ( (svl(i,j,k)-svl(i,j,k-1))                                     &
+                        /(z_tq(i,j,k)-z_tq(i,j,k-1))                          &
                                               <   max_svl_grad ) then
-              !---------------------------------------------------------
-              ! Well-mixed layer with top at k-1 or k.  Check whether
-              ! there is a buoyancy inversion between levels k-1 and k
-              ! in a manner similar to the surface-driven plume: compare
-              ! the buoyancy gradient between levels K-1 and K for an
-              ! undiluted parcel and the environment
-              !---------------------------------------------------------
-              sl_plume = tl(i,j,k-1) + grcp * z_tq(i,j,k-1)
-              qw_plume = qw(i,j,k-1)
-              ! ------------------------------------------------------------
-              ! calculate parcel water by linearising qsat about the
-              ! environmental temperature.
-              ! ------------------------------------------------------------
-              if (t(i,j,k) >  tm) then
-                q_liq_parc = max( zero, ( qw_plume - qs(i,j,k) -               &
-                  dqsdt(i,j,k)*                                                &
-                  ( sl_plume-grcp*z_tq(i,j,k)-t(i,j,k) )                       &
-                                       ) *a_qs(i,j,k) )
-                q_liq_env = max( zero, ( qw(i,j,k) - qs(i,j,k)                 &
-                            -dqsdt(i,j,k)*( tl(i,j,k) - t(i,j,k) )             &
-                                       ) *a_qs(i,j,k) )
-                ! add on the difference in the environment's ql as
-                ! calculated by the partial condensation scheme (using
-                ! some RH_CRIT value) and what it would be if
-                ! RH_CRIT=1. This then imitates partial condensation in
-                ! the parcel.
-                q_liq_parc = q_liq_parc + qcl(i,j,k) + qcf(i,j,k)              &
-                               - q_liq_env
-                t_parc = sl_plume - grcp * z_tq(i,j,k) +                       &
-                                 lcrcp*q_liq_parc
-              else
-                q_liq_parc = max( zero, ( qw_plume - qs(i,j,k) -               &
-                  dqsdt(i,j,k)*                                                &
-                    ( sl_plume - grcp*z_tq(i,j,k)-t(i,j,k) )                   &
-                                       ) *a_qs(i,j,k) )
-                q_liq_env = max( zero, ( qw(i,j,k) - qs(i,j,k)                 &
-                   -dqsdt(i,j,k)*( tl(i,j,k) - t(i,j,k) )                      &
-                                       ) *a_qs(i,j,k) )
-                ! add on difference in environment's ql between RH_CRIT and
-                ! RH_CRIT=1
-                q_liq_parc = q_liq_parc + qcl(i,j,k) + qcf(i,j,k)              &
-                               - q_liq_env
-                t_parc = sl_plume - grcp * z_tq(i,j,k) +                       &
-                                 lsrcp*q_liq_parc
-              end if
-              q_vap_parc=qw_plume - q_liq_parc
+            dsc(i,j) = .true.
+            ntdsc(i,j) = k
+            zhsc(i,j)  = z_uv(i,j,ntdsc(i,j)+1)
+          else if ( (svl(i,j,k-1)-svl(i,j,k-2))                              &
+                        /(z_tq(i,j,k-1)-z_tq(i,j,k-2))                       &
+                                            <   max_svl_grad ) then
+            !---------------------------------------------------------
+            ! Well-mixed layer with top at k-1 or k.  Check whether
+            ! there is a buoyancy inversion between levels k-1 and k
+            ! in a manner similar to the surface-driven plume: compare
+            ! the buoyancy gradient between levels K-1 and K for an
+            ! undiluted parcel and the environment
+            !---------------------------------------------------------
+            sl_plume = tl(i,j,k-1) + grcp * z_tq(i,j,k-1)
+            qw_plume = qw(i,j,k-1)
+            ! ------------------------------------------------------------
+            ! calculate parcel water by linearising qsat about the
+            ! environmental temperature.
+            ! ------------------------------------------------------------
+            if (t(i,j,k) >  tm) then
+              q_liq_parc = max( zero, ( qw_plume - qs(i,j,k) -               &
+                dqsdt(i,j,k)*                                                &
+                ( sl_plume-grcp*z_tq(i,j,k)-t(i,j,k) )                       &
+                                      ) *a_qs(i,j,k) )
+              q_liq_env = max( zero, ( qw(i,j,k) - qs(i,j,k)                 &
+                          -dqsdt(i,j,k)*( tl(i,j,k) - t(i,j,k) )             &
+                                      ) *a_qs(i,j,k) )
+              ! add on the difference in the environment's ql as
+              ! calculated by the partial condensation scheme (using
+              ! some RH_CRIT value) and what it would be if
+              ! RH_CRIT=1. This then imitates partial condensation in
+              ! the parcel.
+              q_liq_parc = q_liq_parc + qcl(i,j,k) + qcf(i,j,k)              &
+                              - q_liq_env
+              t_parc = sl_plume - grcp * z_tq(i,j,k) +                       &
+                                lcrcp*q_liq_parc
+            else
+              q_liq_parc = max( zero, ( qw_plume - qs(i,j,k) -               &
+                dqsdt(i,j,k)*                                                &
+                  ( sl_plume - grcp*z_tq(i,j,k)-t(i,j,k) )                   &
+                                      ) *a_qs(i,j,k) )
+              q_liq_env = max( zero, ( qw(i,j,k) - qs(i,j,k)                 &
+                  -dqsdt(i,j,k)*( tl(i,j,k) - t(i,j,k) )                      &
+                                      ) *a_qs(i,j,k) )
+              ! add on difference in environment's ql between RH_CRIT and
+              ! RH_CRIT=1
+              q_liq_parc = q_liq_parc + qcl(i,j,k) + qcf(i,j,k)              &
+                              - q_liq_env
+              t_parc = sl_plume - grcp * z_tq(i,j,k) +                       &
+                                lsrcp*q_liq_parc
+            end if
+            q_vap_parc=qw_plume - q_liq_parc
 
-              t_dens_parc=t_parc*(one+c_virtual*q_vap_parc-q_liq_parc)
-              t_dens_env=t(i,j,k)*                                             &
-                         (one+c_virtual*q(i,j,k)-qcl(i,j,k)-qcf(i,j,k))
-              ! find vertical gradients in parcel and environment SVL
-              ! (using values from level below (K-1))
-              env_svl_km1(i,j) = t(i,j,k-1) * ( one+c_virtual*q(i,j,k-1)       &
-                   -qcl(i,j,k-1)-qcf(i,j,k-1) ) + grcp*z_tq(i,j,k-1)
-              dpar_bydz=(t_dens_parc+grcp*z_tq(i,j,k)-                         &
-                          env_svl_km1(i,j)) /                                  &
-                      (z_tq(i,j,k)-z_tq(i,j,k-1))
-              denv_bydz=(t_dens_env+grcp*z_tq(i,j,k)-                          &
-                          env_svl_km1(i,j))/                                   &
-                      (z_tq(i,j,k)-z_tq(i,j,k-1))
+            t_dens_parc=t_parc*(one+c_virtual*q_vap_parc-q_liq_parc)
+            t_dens_env=t(i,j,k)*                                             &
+                        (one+c_virtual*q(i,j,k)-qcl(i,j,k)-qcf(i,j,k))
+            ! find vertical gradients in parcel and environment SVL
+            ! (using values from level below (K-1))
+            env_svl_km1(i,j) = t(i,j,k-1) * ( one+c_virtual*q(i,j,k-1)       &
+                  -qcl(i,j,k-1)-qcf(i,j,k-1) ) + grcp*z_tq(i,j,k-1)
+            dpar_bydz=(t_dens_parc+grcp*z_tq(i,j,k)-                         &
+                        env_svl_km1(i,j)) /                                  &
+                    (z_tq(i,j,k)-z_tq(i,j,k-1))
+            denv_bydz=(t_dens_env+grcp*z_tq(i,j,k)-                          &
+                        env_svl_km1(i,j))/                                   &
+                    (z_tq(i,j,k)-z_tq(i,j,k-1))
 
-              if ( denv_bydz >  1.25_r_bl*dpar_bydz ) then
-                ! there is an inversion between levels K-1 and K
-                if ( k  >=  ntml(i,j)+3 ) then
-                  ! if NTDSC == NTML+1 then assume we're looking
-                  ! at the same inversion and so don't set DSC
-                  ntdsc(i,j) = k-1
-                  zhsc(i,j)  = z_uv(i,j,ntdsc(i,j)+1)
-                  dsc(i,j) = .true.
-                end if
-              else
-                ! no inversion between levels K-1 and K, assume there
-                ! is an inversion between K and K+1 because of CF change
-                ntdsc(i,j) = k
+            if ( denv_bydz >  1.25_r_bl*dpar_bydz ) then
+              ! there is an inversion between levels K-1 and K
+              if ( k  >=  ntml(i,j)+3 ) then
+                ! if NTDSC == NTML+1 then assume we're looking
+                ! at the same inversion and so don't set DSC
+                ntdsc(i,j) = k-1
                 zhsc(i,j)  = z_uv(i,j,ntdsc(i,j)+1)
                 dsc(i,j) = .true.
               end if
+            else
+              ! no inversion between levels K-1 and K, assume there
+              ! is an inversion between K and K+1 because of CF change
+              ntdsc(i,j) = k
+              zhsc(i,j)  = z_uv(i,j,ntdsc(i,j)+1)
+              dsc(i,j) = .true.
             end if
           end if
-        end do ! i
+        end if
+        !end do ! i
       end do ! j
     end do ! k
-  end do ! jj
+  end do ! ii
 !$OMP end do
 
 end if  ! ( .not. sc_diag_opt == sc_diag_all_rh_max )
@@ -1581,141 +1578,143 @@ if ( sc_diag_opt == sc_diag_cu_rh_max .or.                                     &
   ! Options that diagnose the Sc-top using the max total-water RH method...
 
   ! j-loop outermost to allow parallelisation (k-loop is sequential)
-!$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-
-    do i = pdims%i_start, pdims%i_end
-      ! Initialise max RH in the column to zero
-      rht_max(i,j) = zero
-    end do
-
-    do k = 1, bl_levels-1
-      do i = pdims%i_start, pdims%i_end
-        if ( ( cumulus(i,j) .and. z_tq(i,j,k) > z_lcl(i,j) ) .or.              &
-             ( sc_diag_opt == sc_diag_all_rh_max .and. (.not. cumulus(i,j))    &
-               .and. k > ntml(i,j)+1 ) ) then
-          ! If sc_diag_opt == sc_diag_cu_rh_max, only check cumulus points
-          ! at heights above the LCL.
-          ! If sc_diag_opt == sc_diag_all_rh_max, also check non-cumulus points
-          ! at heights above ntml+1.
-
-          ! Find max of RHt = qw/qsat(Tl) in the column
-          ! (with extra check that value exceeds next level, to exclude
-          !  points at bl_levels-1 where a larger value occurs at bl_levels)
-          if ( cf(i,j,k) > sc_cftol .and. z_tq(i,j,k) < zmaxt_for_dsc ) then
-            if ( l_mr_physics ) then
-              call qsat_wat_mix( rht_k,   tl(i,j,k),   p(i,j,k) )
-              call qsat_wat_mix( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
-            else
-              call qsat_wat( rht_k,   tl(i,j,k),   p(i,j,k) )
-              call qsat_wat( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
-            end if
-            rht_k   = qw(i,j,k)   / rht_k
-            rht_kp1 = qw(i,j,k+1) / rht_kp1
-            if ( rht_k > rht_max(i,j) .and. rht_k > rht_kp1 ) then
-              ntdsc(i,j) = k
-              rht_max(i,j) = rht_k
-            end if
-          end if  ! ( cf(i,j,k) > sc_cftol etc )
-        end if  ! ( cumulus(i,j) etc )
-      end do  ! i = pdims%i_start, pdims%i_end
-    end do  ! k = 1, bl_levels-1
-
-    do i = pdims%i_start, pdims%i_end
-      if ( ntdsc(i,j) > 0 .and. ( .not. dsc(i,j) ) ) then
-        ! If we just found ntdsc above (exclude points where dsc already
-        ! set true by finding ntdsc at non-cumulus points earlier under
-        ! the option sc_diag_opt = sc_diag_cu_rh_max)...
-        ! Set flag indicating we found a potential Sc layer top
-        dsc(i,j) = .true.
-        ! Now we assume that theta-level ntdsc is wholly within the Sc-layer,
-        ! and that theta-level ntdsc+1 is composed of air with RH of
-        ! level ntdsc up to height zhsc, and air with RH of level ntdsc+2
-        ! above that height.  Interpolate to find the height of zhsc
-        ! (fraction of theta-level ntdsc+1 that is below the Sc-top).
-        k = ntdsc(i,j)
-        kp2 = min(k+2, bl_levels)  ! Avoid out-of-bounds when k = bl_levels-1
-        rht_k = rht_max(i,j)
-        if ( l_mr_physics ) then
-          call qsat_wat_mix( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
-          call qsat_wat_mix( rht_kp2, tl(i,j,kp2), p(i,j,kp2) )
-        else
-          call qsat_wat( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
-          call qsat_wat( rht_kp2, tl(i,j,kp2), p(i,j,kp2) )
-        end if
-        rht_kp1 = qw(i,j,k+1) / rht_kp1
-        rht_kp2 = qw(i,j,kp2) / rht_kp2
-        if ( rht_kp2 < rht_kp1 ) then
-          ! RHt(k+1) lies between RHt(k) and RHt(k+2); compute fraction
-          interp = (rht_kp1 - rht_kp2) / (rht_k - rht_kp2)
-          zhsc(i,j) = (one-interp) * z_uv(i,j,k+1)                             &
-                    +      interp  * z_uv(i,j,kp2)
-        else
-          ! Rht(k+1) is a local minimum; can't construct k+1 as a fraction
-          ! of properties from k and k+2.  Set zhsc to what it would be in
-          ! the limit RHt(k+2) = RHt(k+1)
-          zhsc(i,j) = z_uv(i,j,k+1)
-        end if
-      end if ! ( ntdsc(i,j) > 0 )
-    end do
+  !do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
+    ! Initialise max RH in the column to zero
+    rht_max(i,j) = zero
   end do
-!$OMP end do NOWAIT
+  !$OMP end do
+  do k = 1, bl_levels-1
+    !$OMP do SCHEDULE(STATIC)
+    do i = pdims%i_start, pdims%i_end
+      if ( ( cumulus(i,j) .and. z_tq(i,j,k) > z_lcl(i,j) ) .or.              &
+            ( sc_diag_opt == sc_diag_all_rh_max .and. (.not. cumulus(i,j))    &
+              .and. k > ntml(i,j)+1 ) ) then
+        ! If sc_diag_opt == sc_diag_cu_rh_max, only check cumulus points
+        ! at heights above the LCL.
+        ! If sc_diag_opt == sc_diag_all_rh_max, also check non-cumulus points
+        ! at heights above ntml+1.
+
+        ! Find max of RHt = qw/qsat(Tl) in the column
+        ! (with extra check that value exceeds next level, to exclude
+        !  points at bl_levels-1 where a larger value occurs at bl_levels)
+        if ( cf(i,j,k) > sc_cftol .and. z_tq(i,j,k) < zmaxt_for_dsc ) then
+          if ( l_mr_physics ) then
+            call qsat_wat_mix( rht_k,   tl(i,j,k),   p(i,j,k) )
+            call qsat_wat_mix( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
+          else
+            call qsat_wat( rht_k,   tl(i,j,k),   p(i,j,k) )
+            call qsat_wat( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
+          end if
+          rht_k   = qw(i,j,k)   / rht_k
+          rht_kp1 = qw(i,j,k+1) / rht_kp1
+          if ( rht_k > rht_max(i,j) .and. rht_k > rht_kp1 ) then
+            ntdsc(i,j) = k
+            rht_max(i,j) = rht_k
+          end if
+        end if  ! ( cf(i,j,k) > sc_cftol etc )
+      end if  ! ( cumulus(i,j) etc )
+    end do  ! i = pdims%i_start, pdims%i_end
+    !$OMP end do
+  end do  ! k = 1, bl_levels-1
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
+    if ( ntdsc(i,j) > 0 .and. ( .not. dsc(i,j) ) ) then
+      ! If we just found ntdsc above (exclude points where dsc already
+      ! set true by finding ntdsc at non-cumulus points earlier under
+      ! the option sc_diag_opt = sc_diag_cu_rh_max)...
+      ! Set flag indicating we found a potential Sc layer top
+      dsc(i,j) = .true.
+      ! Now we assume that theta-level ntdsc is wholly within the Sc-layer,
+      ! and that theta-level ntdsc+1 is composed of air with RH of
+      ! level ntdsc up to height zhsc, and air with RH of level ntdsc+2
+      ! above that height.  Interpolate to find the height of zhsc
+      ! (fraction of theta-level ntdsc+1 that is below the Sc-top).
+      k = ntdsc(i,j)
+      kp2 = min(k+2, bl_levels)  ! Avoid out-of-bounds when k = bl_levels-1
+      rht_k = rht_max(i,j)
+      if ( l_mr_physics ) then
+        call qsat_wat_mix( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
+        call qsat_wat_mix( rht_kp2, tl(i,j,kp2), p(i,j,kp2) )
+      else
+        call qsat_wat( rht_kp1, tl(i,j,k+1), p(i,j,k+1) )
+        call qsat_wat( rht_kp2, tl(i,j,kp2), p(i,j,kp2) )
+      end if
+      rht_kp1 = qw(i,j,k+1) / rht_kp1
+      rht_kp2 = qw(i,j,kp2) / rht_kp2
+      if ( rht_kp2 < rht_kp1 ) then
+        ! RHt(k+1) lies between RHt(k) and RHt(k+2); compute fraction
+        interp = (rht_kp1 - rht_kp2) / (rht_k - rht_kp2)
+        zhsc(i,j) = (one-interp) * z_uv(i,j,k+1)                             &
+                  +      interp  * z_uv(i,j,kp2)
+      else
+        ! Rht(k+1) is a local minimum; can't construct k+1 as a fraction
+        ! of properties from k and k+2.  Set zhsc to what it would be in
+        ! the limit RHt(k+2) = RHt(k+1)
+        zhsc(i,j) = z_uv(i,j,k+1)
+      end if
+    end if ! ( ntdsc(i,j) > 0 )
+  end do
+  !$OMP end do NOWAIT
+  !end do
 
 else if ( sc_diag_opt == sc_diag_cu_relax ) then
 
   ! Diagnosed simply if significant cloud fraction at ZHPAR
   ! below the height threshold zmaxt_for_dsc
+  !do j = pdims%j_start, pdims%j_end
 
-!$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      k = ntpar(i,j)
-      if ( cumulus(i,j) .and. k < bl_levels  ) then
-              ! cumulus layer within BL_LEVELS
-        if ( z_tq(i,j,k) < zmaxt_for_dsc .and.                                 &
-              ! cloud top below zmaxt_for_dsc
-             ( max( cf(i,j,k-1),cf(i,j,k),cf(i,j,k+1) ) > sc_cftol )           &
-              ! cloud-top sufficiently cloudy
-            ) then
-          dsc(i,j)  = .true.
-          zhsc(i,j) = zhpar(i,j)
-          ntdsc(i,j)= ntpar(i,j)
-        end if
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
+    k = ntpar(i,j)
+    if ( cumulus(i,j) .and. k < bl_levels  ) then
+            ! cumulus layer within BL_LEVELS
+      if ( z_tq(i,j,k) < zmaxt_for_dsc .and.                                 &
+            ! cloud top below zmaxt_for_dsc
+            ( max( cf(i,j,k-1),cf(i,j,k),cf(i,j,k+1) ) > sc_cftol )           &
+            ! cloud-top sufficiently cloudy
+          ) then
+        dsc(i,j)  = .true.
+        zhsc(i,j) = zhpar(i,j)
+        ntdsc(i,j)= ntpar(i,j)
       end if
-    end do
+    end if
   end do
-!$OMP end do NOWAIT
+  !$OMP end do NOWAIT
+!end do
 
 else if ( sc_diag_opt == sc_diag_orig ) then
 
   ! Original code, only diagnosed if shallow cu or not l_param_conv
 
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      if ( (l_param_conv .and.                                                 &
-              l_shallow(i,j) .and. ntpar(i,j)  <   bl_levels )                 &
-              ! shallow cumulus layer within BL_LEVELS
-           .or. (.not. l_param_conv .and.                                      &
-                cumulus(i,j) .and. ntpar(i,j)  <   bl_levels ) ) then
-              ! cumulus layer and inversion found
-        if ( cf(i,j,ntpar(i,j))  >   sc_cftol  .or.                            &
-             cf(i,j,ntpar(i,j)+1)  >   sc_cftol ) then
-           ! cloudy
-          dsc(i,j)  = .true.
-          zhsc(i,j) = zhpar(i,j)
-          ntdsc(i,j)= ntpar(i,j)
-        end if
+  do i = pdims%i_start, pdims%i_end
+    if ( (l_param_conv .and.                                                 &
+            l_shallow(i,j) .and. ntpar(i,j)  <   bl_levels )                 &
+            ! shallow cumulus layer within BL_LEVELS
+          .or. (.not. l_param_conv .and.                                      &
+              cumulus(i,j) .and. ntpar(i,j)  <   bl_levels ) ) then
+            ! cumulus layer and inversion found
+      if ( cf(i,j,ntpar(i,j))  >   sc_cftol  .or.                            &
+            cf(i,j,ntpar(i,j)+1)  >   sc_cftol ) then
+          ! cloudy
+        dsc(i,j)  = .true.
+        zhsc(i,j) = zhpar(i,j)
+        ntdsc(i,j)= ntpar(i,j)
       end if
-    end do
+    end if
   end do
-!$OMP end do NOWAIT
+  ! !$OMP end do NOWAIT
+  !$OMP end do NOWAIT
+!end do
 
 end if  ! test on sc_diag_opt
 
 if ( l_use_sml_dsc_fixes ) then
   ! Need to override "NOWAIT" on the previous blocks if going in here:
-!$OMP BARRIER
+  !$OMP BARRIER
   ! If conv_diag has diagnosed a SML rising significantly above cloud-base,
   ! abort any DSC diagnosis higher-up.
   ! This is because at present, diagnosing an elevated DSC-layer prompts
@@ -1727,26 +1726,26 @@ if ( l_use_sml_dsc_fixes ) then
   ! The code currently only permits us to have one DSC-layer in the column,
   ! so if we have a cloudy boundary-layer, we need to reserve the one possible
   ! DSC for the case where the cloudy SML-top decouples to make a DSC.
-!$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      if ( unstable(i,j) .and. (.not. cumulus(i,j)) .and. dsc(i,j) ) then
-        if ( zh(i,j) - z_lcl(i,j) >= 400.0  ) then
-          ! Using cloud-layer depth >= 400m consistent with cumulus_test
-          ! in conv_diag, as this indicates that conv_diag was prevented
-          ! from diagnosing cumulus by its test on whether the qw profile
-          ! looks well-mixed.  But it doesn't test on stability, so it can
-          ! give a very misleading diagnosis of a well-mixed cloudy layer.
-          ! In particular, it compares the cloud-layer qw gradient with the
-          ! sub-cloud-layer qw gradient, giving a well-mixed diagnosis if
-          ! they are similar even if both are large!
-          dsc(i,j) = .false.
-          ntdsc(i,j) = 0
-        end if
+!  do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
+    if ( unstable(i,j) .and. (.not. cumulus(i,j)) .and. dsc(i,j) ) then
+      if ( zh(i,j) - z_lcl(i,j) >= 400.0  ) then
+        ! Using cloud-layer depth >= 400m consistent with cumulus_test
+        ! in conv_diag, as this indicates that conv_diag was prevented
+        ! from diagnosing cumulus by its test on whether the qw profile
+        ! looks well-mixed.  But it doesn't test on stability, so it can
+        ! give a very misleading diagnosis of a well-mixed cloudy layer.
+        ! In particular, it compares the cloud-layer qw gradient with the
+        ! sub-cloud-layer qw gradient, giving a well-mixed diagnosis if
+        ! they are similar even if both are large!
+        dsc(i,j) = .false.
+        ntdsc(i,j) = 0
       end if
-    end do
+    end if
   end do
-!$OMP end do NOWAIT
+  !$OMP end do NOWAIT
+!  end do
 end if  ! ( l_use_sml_dsc_fixes )
 
 !-----------------------------------------------------------------------
@@ -1756,141 +1755,143 @@ end if  ! ( l_use_sml_dsc_fixes )
 !-----------------------------------------------------------------------
 !     Initialise variables
 !------------------------------
-
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
-do j = pdims%j_start, pdims%j_end
-  do i = pdims%i_start, pdims%i_end
-    k_cloud_dsct(i,j) = 0
-    df_dsct_over_cp(i,j) = zero
-    df_inv_dsc(i,j) = zero
-  end do
+do i = pdims%i_start, pdims%i_end
+  k_cloud_dsct(i,j) = 0
+  df_dsct_over_cp(i,j) = zero
+  df_inv_dsc(i,j) = zero
 end do
 !$OMP end do
+!end do
 
 if (l_new_kcloudtop) then
   !---------------------------------------------------------------------
   ! improved method of finding the k_cloud_dsct, the top of the mixed
   ! layer as seen by radiation
   !---------------------------------------------------------------------
-!$OMP do SCHEDULE(DYNAMIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-        !-------------------------------------------------------------
-        ! Find k_cloud_dsct as the equivalent to ntdsc (the top level
-        ! of the DSC) seen by radiation, which we take as the level two
-        ! levels below the lowest level with free tropospheric radiative
-        ! cooling.  This is done by finding the level with maximum LW
-        ! cooling, below z_rad_lim and above the SML and 0.5*ZHSC
-        ! (ie, restrict search to `close' to ZHSC)
-        ! Necessary as radiation is not usually called every timestep.
-        !-------------------------------------------------------------
-      if ( dsc(i,j) .and. ntdsc(i,j)+2 <= bl_levels ) then
-        z_rad_lim = max( z_tq(i,j,ntdsc(i,j)+2)+0.1_r_bl, 1.2_r_bl*zhsc(i,j) )
+!do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(DYNAMIC)
+  do i = pdims%i_start, pdims%i_end
+      !-------------------------------------------------------------
+      ! Find k_cloud_dsct as the equivalent to ntdsc (the top level
+      ! of the DSC) seen by radiation, which we take as the level two
+      ! levels below the lowest level with free tropospheric radiative
+      ! cooling.  This is done by finding the level with maximum LW
+      ! cooling, below z_rad_lim and above the SML and 0.5*ZHSC
+      ! (ie, restrict search to `close' to ZHSC)
+      ! Necessary as radiation is not usually called every timestep.
+      !-------------------------------------------------------------
+    if ( dsc(i,j) .and. ntdsc(i,j)+2 <= bl_levels ) then
+      z_rad_lim = max( z_tq(i,j,ntdsc(i,j)+2)+0.1_r_bl, 1.2_r_bl*zhsc(i,j) )
 
-        k = ntml(i,j)+2
-        do while (z_tq(i,j,k) < z_rad_lim .and. k < bl_levels)
-          if ( z_tq(i,j,k) > one_half*zhsc(i,j)                                &
-              .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
-            k_cloud_dsct(i,j) = k
-            df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
-          end if
-          k = k+1
-        end do ! k
-        ! Set K_CLOUD_DSCT to the level below if DF in the level
-        ! above is less than 1.5 times the level above that
-        ! (implies K_CLOUD_DSCT+1 is typical of free trop so
-        !  K_CLOUD_DSCT must be inversion level, instead of ntdsc).
-        ! DF in level K_CLOUD_DSCT+1 is then included as DF_INV_DSC
-        ! (see below).
-        k = k_cloud_dsct(i,j)
-        if ( k >  1 .and. k < bl_levels -1 ) then
-          if (dflw_over_cp(i,j,k+1) < 1.5_r_bl*dflw_over_cp(i,j,k+2))          &
-              k_cloud_dsct(i,j) = k-1
+      k = ntml(i,j)+2
+      do while (z_tq(i,j,k) < z_rad_lim .and. k < bl_levels)
+        if ( z_tq(i,j,k) > one_half*zhsc(i,j)                                &
+            .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
+          k_cloud_dsct(i,j) = k
+          df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
         end if
-      end if  ! DSC test separated out
-
-    end do ! i
-    !-----------------------------------------------------------------
-    !  Find bottom grid-level (K_LEVEL) for cloud-top radiative flux
-    !  divergence: higher of base of LW radiatively cooled layer,
-    !  ZH and 0.5*ZHSC, since cooling must be in upper part of layer
-    !  in order to generate turbulence.
-    !-----------------------------------------------------------------
-    do i = pdims%i_start, pdims%i_end
-      k_level(i,j) = k_cloud_dsct(i,j)
-      if ( k_cloud_dsct(i,j)  >   1 ) then
-        k_rad_lim = ntml(i,j)+1
-        k=k_cloud_dsct(i,j)-1
-        kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
-        do while ( k  >   k_rad_lim                                            &
-                .and. dflw_over_cp(i,j,kl)  >   zero                           &
-                .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
-          k_level(i,j) = k
-          k = k-1
-          kl=max(1,k)
-        end do ! k
+        k = k+1
+      end do ! k
+      ! Set K_CLOUD_DSCT to the level below if DF in the level
+      ! above is less than 1.5 times the level above that
+      ! (implies K_CLOUD_DSCT+1 is typical of free trop so
+      !  K_CLOUD_DSCT must be inversion level, instead of ntdsc).
+      ! DF in level K_CLOUD_DSCT+1 is then included as DF_INV_DSC
+      ! (see below).
+      k = k_cloud_dsct(i,j)
+      if ( k >  1 .and. k < bl_levels -1 ) then
+        if (dflw_over_cp(i,j,k+1) < 1.5_r_bl*dflw_over_cp(i,j,k+2))          &
+            k_cloud_dsct(i,j) = k-1
       end if
-    end do ! i
-  end do ! j
-!$OMP end do
+    end if  ! DSC test separated out
+
+  end do ! i
+  !$OMP end do
+  !-----------------------------------------------------------------
+  !  Find bottom grid-level (K_LEVEL) for cloud-top radiative flux
+  !  divergence: higher of base of LW radiatively cooled layer,
+  !  ZH and 0.5*ZHSC, since cooling must be in upper part of layer
+  !  in order to generate turbulence.
+  !-----------------------------------------------------------------
+  !$OMP do SCHEDULE(DYNAMIC)
+  do i = pdims%i_start, pdims%i_end
+    k_level(i,j) = k_cloud_dsct(i,j)
+    if ( k_cloud_dsct(i,j)  >   1 ) then
+      k_rad_lim = ntml(i,j)+1
+      k=k_cloud_dsct(i,j)-1
+      kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
+      do while ( k  >   k_rad_lim                                            &
+              .and. dflw_over_cp(i,j,kl)  >   zero                           &
+              .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
+        k_level(i,j) = k
+        k = k-1
+        kl=max(1,k)
+      end do ! k
+    end if
+  end do ! i
+  !$OMP end do
+  !end do ! j
+  !#####
 
 else
 
   ! original method of finding the k_cloud_dsct, the top of the mixed layer
   ! as seen by radiation, found to be resolution dependent
 
-!$OMP do SCHEDULE(DYNAMIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      !-------------------------------------------------------------
-      ! Find the layer with the greatest LW radiative flux jump in
-      ! the upper half of the boundary layer and assume that this
-      ! marks the top of the DSC layer.
-      ! Necessary as radiation is not usually called every timestep.
-      !-------------------------------------------------------------
-      ! Limit the search to above the SML.
-      k_rad_lim = ntml(i,j)+2
+  !do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(DYNAMIC)
+  do i = pdims%i_start, pdims%i_end
+    !-------------------------------------------------------------
+    ! Find the layer with the greatest LW radiative flux jump in
+    ! the upper half of the boundary layer and assume that this
+    ! marks the top of the DSC layer.
+    ! Necessary as radiation is not usually called every timestep.
+    !-------------------------------------------------------------
+    ! Limit the search to above the SML.
+    k_rad_lim = ntml(i,j)+2
 
-      do k = max(1,k_rad_lim), min(bl_levels,ntdsc(i,j)+2)
+    do k = max(1,k_rad_lim), min(bl_levels,ntdsc(i,j)+2)
 
-        if ( dsc(i,j) .and. z_tq(i,j,k) > one_half*zhsc(i,j)                   &
-              .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
-          k_cloud_dsct(i,j) = k
-            ! Set K_CLOUD_DSCT to the level below if its DF is greater
-            ! than half the maximum.  DF in level K_CLOUD_DSCT+1 is then
-            ! included as DF_INV_DSC below.
-          if (dflw_over_cp(i,j,k-1)  >   one_half*dflw_over_cp(i,j,k))         &
-             k_cloud_dsct(i,j) = k-1
-          df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
-        end if
-
-      end do ! k
-    end do ! i
-
-      !-----------------------------------------------------------------
-      !  Find bottom grid-level (K_LEVEL) for cloud-top radiative flux
-      !  divergence: higher of base of LW radiatively cooled layer,
-      !  ZH and 0.5*ZHSC, since cooling must be in upper part of layer
-      !  in order to generate turbulence.
-      !-----------------------------------------------------------------
-
-    do i = pdims%i_start, pdims%i_end
-      k_level(i,j) = k_cloud_dsct(i,j)
-      if ( k_cloud_dsct(i,j)  >   1 ) then
-        k_rad_lim = ntml(i,j)+1
-        k=k_cloud_dsct(i,j)-1
-        kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
-        do while ( k  >   k_rad_lim                                            &
-                  .and. dflw_over_cp(i,j,kl)  >   zero                         &
-                  .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
-          k_level(i,j) = k
-          k = k-1
-          kl=max(1,k)
-        end do ! k
+      if ( dsc(i,j) .and. z_tq(i,j,k) > one_half*zhsc(i,j)                   &
+            .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
+        k_cloud_dsct(i,j) = k
+          ! Set K_CLOUD_DSCT to the level below if its DF is greater
+          ! than half the maximum.  DF in level K_CLOUD_DSCT+1 is then
+          ! included as DF_INV_DSC below.
+        if (dflw_over_cp(i,j,k-1)  >   one_half*dflw_over_cp(i,j,k))         &
+            k_cloud_dsct(i,j) = k-1
+        df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
       end if
-    end do ! i
-  end do ! j
-!$OMP end do
+
+    end do ! k
+  end do ! i
+  !$OMP end do
+    !-----------------------------------------------------------------
+    !  Find bottom grid-level (K_LEVEL) for cloud-top radiative flux
+    !  divergence: higher of base of LW radiatively cooled layer,
+    !  ZH and 0.5*ZHSC, since cooling must be in upper part of layer
+    !  in order to generate turbulence.
+    !-----------------------------------------------------------------
+  !$OMP do SCHEDULE(DYNAMIC)
+  do i = pdims%i_start, pdims%i_end
+    k_level(i,j) = k_cloud_dsct(i,j)
+    if ( k_cloud_dsct(i,j)  >   1 ) then
+      k_rad_lim = ntml(i,j)+1
+      k=k_cloud_dsct(i,j)-1
+      kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
+      do while ( k  >   k_rad_lim                                            &
+                .and. dflw_over_cp(i,j,kl)  >   zero                         &
+                .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
+        k_level(i,j) = k
+        k = k-1
+        kl=max(1,k)
+      end do ! k
+    end if
+  end do ! i
+  !$OMP end do
+  !end do ! j
 
 end if  ! test on l_new_kcloudtop
 
@@ -1902,53 +1903,52 @@ end if  ! test on l_new_kcloudtop
       ! representative of clear-air rad divergence and so subtract this
       ! `clear-air' part from the grid-level divergence.
       !-----------------------------------------------------------------
-
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
-do j = pdims%j_start, pdims%j_end
-  do i = pdims%i_start, pdims%i_end
+do i = pdims%i_start, pdims%i_end
 
-    if ( k_cloud_dsct(i,j)  >   0 ) then
-      dflw_inv = zero
-      dfsw_inv = zero
-      if ( k_cloud_dsct(i,j) <  bl_levels ) then
-        k = k_cloud_dsct(i,j)+1
-        if ( k  <   bl_levels ) then
-          dflw_inv = dflw_over_cp(i,j,k)                                       &
-                     - dflw_over_cp(i,j,k+1)                                   &
-                            * dzl(i,j,k)/dzl(i,j,k+1)
-          dfsw_inv = dfsw_over_cp(i,j,k)                                       &
-                     - dfsw_over_cp(i,j,k+1)                                   &
-                            * dzl(i,j,k)/dzl(i,j,k+1)
-        else
-          dflw_inv = dflw_over_cp(i,j,k)
-          dfsw_inv = dfsw_over_cp(i,j,k)
-        end if
-        dflw_inv = max( dflw_inv, zero )
-        dfsw_inv = min( dfsw_inv, zero )
+  if ( k_cloud_dsct(i,j)  >   0 ) then
+    dflw_inv = zero
+    dfsw_inv = zero
+    if ( k_cloud_dsct(i,j) <  bl_levels ) then
+      k = k_cloud_dsct(i,j)+1
+      if ( k  <   bl_levels ) then
+        dflw_inv = dflw_over_cp(i,j,k)                                       &
+                    - dflw_over_cp(i,j,k+1)                                   &
+                          * dzl(i,j,k)/dzl(i,j,k+1)
+        dfsw_inv = dfsw_over_cp(i,j,k)                                       &
+                    - dfsw_over_cp(i,j,k+1)                                   &
+                          * dzl(i,j,k)/dzl(i,j,k+1)
+      else
+        dflw_inv = dflw_over_cp(i,j,k)
+        dfsw_inv = dfsw_over_cp(i,j,k)
       end if
-      df_inv_dsc(i,j) = dflw_inv + dfsw_inv
-
-      df_dsct_over_cp(i,j) = frad_lw(i,j,k_cloud_dsct(i,j)+1)                  &
-                           - frad_lw(i,j,k_level(i,j))                         &
-                           + dflw_inv
-
-      dfsw_top = frad_sw(i,j,k_cloud_dsct(i,j)+1)                              &
-               - frad_sw(i,j,k_level(i,j))                                     &
-               + dfsw_inv
-
-        !-----------------------------------------------------------
-        ! Combine SW and LW cloud-top divergences into a net
-        ! divergence by estimating SW flux divergence at a given
-        ! LW divergence = DF_SW * (1-exp{-A*kappa_sw/kappa_lw})
-        ! Empirically (from LEM data) a reasonable fit is found
-        ! with A small and (1-exp{-A*kappa_sw/kappa_lw}) = dfsw_frac
-        !-----------------------------------------------------------
-      df_dsct_over_cp(i,j) = max( zero,                                        &
-                    df_dsct_over_cp(i,j) + dfsw_frac * dfsw_top )
+      dflw_inv = max( dflw_inv, zero )
+      dfsw_inv = min( dfsw_inv, zero )
     end if
-  end do
+    df_inv_dsc(i,j) = dflw_inv + dfsw_inv
+
+    df_dsct_over_cp(i,j) = frad_lw(i,j,k_cloud_dsct(i,j)+1)                  &
+                          - frad_lw(i,j,k_level(i,j))                         &
+                          + dflw_inv
+
+    dfsw_top = frad_sw(i,j,k_cloud_dsct(i,j)+1)                              &
+              - frad_sw(i,j,k_level(i,j))                                     &
+              + dfsw_inv
+
+      !-----------------------------------------------------------
+      ! Combine SW and LW cloud-top divergences into a net
+      ! divergence by estimating SW flux divergence at a given
+      ! LW divergence = DF_SW * (1-exp{-A*kappa_sw/kappa_lw})
+      ! Empirically (from LEM data) a reasonable fit is found
+      ! with A small and (1-exp{-A*kappa_sw/kappa_lw}) = dfsw_frac
+      !-----------------------------------------------------------
+    df_dsct_over_cp(i,j) = max( zero,                                        &
+                  df_dsct_over_cp(i,j) + dfsw_frac * dfsw_top )
+  end if
 end do
 !$OMP end do
+!end do
 
 !-----------------------------------------------------------------------
 ! 2.4 Set NBDSC, the bottom level of the DSC layer.
@@ -1967,86 +1967,85 @@ end do
 !-----------------------------------------------------------------------
 
 !$OMP do SCHEDULE(DYNAMIC)
-do jj = pdims%j_start, pdims%j_end, bl_segment_size
-  do j = jj, min(jj+bl_segment_size-1,pdims%j_end)
-    do i = pdims%i_start, pdims%i_end
-      nbdsc(i,j) = ntdsc(i,j)+1
-      if (dsc(i,j)) then
-        ! The depth of the radiatively-cooled layer tends to be less
-        ! than O(50m) and so RAD_HR will be an underestimate of the
-        ! cooling tendency there.  Compensate by multiplying by
-        ! DZL/50. (~4) Recall that DF_OVER_CP(I,j,K) = RAD_HR *
-        ! RHO_MIX_TQ * DZL Thus use cloud-top radiative forcing as
-        ! follows:
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min(ii+bl_segment_size-1,pdims%i_end)
+    !do i = pdims%i_start, pdims%i_end
+    nbdsc(i,j) = ntdsc(i,j)+1
+    if (dsc(i,j)) then
+      ! The depth of the radiatively-cooled layer tends to be less
+      ! than O(50m) and so RAD_HR will be an underestimate of the
+      ! cooling tendency there.  Compensate by multiplying by
+      ! DZL/50. (~4) Recall that DF_OVER_CP(I,j,K) = RAD_HR *
+      ! RHO_MIX_TQ * DZL Thus use cloud-top radiative forcing as
+      ! follows:
 
-        k = ntdsc(i,j)
-        rho_dz = rho_mix_tq(i,j,k) * dzl(i,j,k)
-        svl_plume=svl(i,j,k-1)                                                 &
-           - ct_resid * dzl(i,j,k)*df_dsct_over_cp(i,j) / ( 50.0_r_bl*rho_dz )
-      else
-        svl_plume=zero
+      k = ntdsc(i,j)
+      rho_dz = rho_mix_tq(i,j,k) * dzl(i,j,k)
+      svl_plume=svl(i,j,k-1)                                                 &
+          - ct_resid * dzl(i,j,k)*df_dsct_over_cp(i,j) / ( 50.0_r_bl*rho_dz )
+    else
+      svl_plume=zero
+    end if
+    do k = min(bl_levels-1, ntdsc(i,j)-1), 1, -1
+      if (svl_plume  <   svl(i,j,k) ) then
+        nbdsc(i,j) = k+1     ! marks lowest level within ML
       end if
-      do k = min(bl_levels-1, ntdsc(i,j)-1), 1, -1
-        if (svl_plume  <   svl(i,j,k) ) then
-          nbdsc(i,j) = k+1     ! marks lowest level within ML
-        end if
-      end do ! k
-    end do ! i
+    end do ! k
+    !end do ! i
   end do ! j
-end do !jj
+end do !ii
 !$OMP end do
 !----------------------------------------------------------------------
 ! 2.5 Tidy up variables associated with decoupled layer
 !       NOTE that NTDSC ge 3 if non-zero
 !----------------------------------------------------------------------
-
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
-do j = pdims%j_start, pdims%j_end
-  do i = pdims%i_start, pdims%i_end
-    ! Note that ZHSC-Z_UV(NTML+2) may = 0, so this test comes first!
-    if (cumulus(i,j) .and. dsc(i,j))                                           &
-                     nbdsc(i,j) = max( nbdsc(i,j), ntml(i,j)+2 )
-    if ( ntdsc(i,j)  >=  1 ) then
-      if ( nbdsc(i,j) <   ntdsc(i,j)+1 ) then
-        if (sc_diag_opt==sc_diag_orig .or. sc_diag_opt==sc_diag_cu_relax) then
-          ! Initial zhsc is normally on rho-level ntdsc+1
-          dscdepth(i,j) = z_uv(i,j,ntdsc(i,j)+1) - z_uv(i,j,nbdsc(i,j))
-        else
-          ! Initial zhsc was interpolated between levels; use accurate zhsc
-          dscdepth(i,j) = zhsc(i,j)              - z_uv(i,j,nbdsc(i,j))
-        end if
+do i = pdims%i_start, pdims%i_end
+  ! Note that ZHSC-Z_UV(NTML+2) may = 0, so this test comes first!
+  if (cumulus(i,j) .and. dsc(i,j))                                           &
+                    nbdsc(i,j) = max( nbdsc(i,j), ntml(i,j)+2 )
+  if ( ntdsc(i,j)  >=  1 ) then
+    if ( nbdsc(i,j) <   ntdsc(i,j)+1 ) then
+      if (sc_diag_opt==sc_diag_orig .or. sc_diag_opt==sc_diag_cu_relax) then
+        ! Initial zhsc is normally on rho-level ntdsc+1
+        dscdepth(i,j) = z_uv(i,j,ntdsc(i,j)+1) - z_uv(i,j,nbdsc(i,j))
       else
-        !----------------------------------------------------------
-        ! Indicates a layer of zero depth
-        !----------------------------------------------------------
-        if ( ( sc_diag_opt==sc_diag_orig .or. sc_diag_opt==sc_diag_cu_relax )  &
-             .and. ntdsc(i,j) == ntpar(i,j) ) then
-          !----------------------------------------------------------
-          ! Indicates a Sc layer at the top of Cu: force mixing
-          ! over single layer.
-          !----------------------------------------------------------
-          dscdepth(i,j) = dzl(i,j,ntdsc(i,j))
-        else
-          dsc(i,j)=.false.
-          ntdsc(i,j)=0
-          zhsc(i,j)=zero
-          df_dsct_over_cp(i,j) = zero
-          k_cloud_dsct(i,j) = 0
-          df_inv_dsc(i,j)   = zero
-          dscdepth(i,j) = zero
-        end if
+        ! Initial zhsc was interpolated between levels; use accurate zhsc
+        dscdepth(i,j) = zhsc(i,j)              - z_uv(i,j,nbdsc(i,j))
       end if
-    else  ! ntdsc == 0, just to make sure
-      dscdepth(i,j)=zero
-      dsc(i,j)=.false.
-      zhsc(i,j)=zero
-      df_dsct_over_cp(i,j) = zero
-      k_cloud_dsct(i,j) = 0
-      df_inv_dsc(i,j)   = zero
+    else
+      !----------------------------------------------------------
+      ! Indicates a layer of zero depth
+      !----------------------------------------------------------
+      if ( ( sc_diag_opt==sc_diag_orig .or. sc_diag_opt==sc_diag_cu_relax )  &
+            .and. ntdsc(i,j) == ntpar(i,j) ) then
+        !----------------------------------------------------------
+        ! Indicates a Sc layer at the top of Cu: force mixing
+        ! over single layer.
+        !----------------------------------------------------------
+        dscdepth(i,j) = dzl(i,j,ntdsc(i,j))
+      else
+        dsc(i,j)=.false.
+        ntdsc(i,j)=0
+        zhsc(i,j)=zero
+        df_dsct_over_cp(i,j) = zero
+        k_cloud_dsct(i,j) = 0
+        df_inv_dsc(i,j)   = zero
+        dscdepth(i,j) = zero
+      end if
     end if
-  end do
+  else  ! ntdsc == 0, just to make sure
+    dscdepth(i,j)=zero
+    dsc(i,j)=.false.
+    zhsc(i,j)=zero
+    df_dsct_over_cp(i,j) = zero
+    k_cloud_dsct(i,j) = 0
+    df_inv_dsc(i,j)   = zero
+  end if
 end do
 !$OMP end do NOWAIT
+!end do
 
 !----------------------------------------------------------------------
 !2.6 If decoupled cloud-layer found test to see if it is, in fact,
@@ -2067,71 +2066,70 @@ if ( entr_smooth_dec == on .or. entr_smooth_dec == entr_taper_zh ) then
   ! ON  - taper off surface terms to zero for svl_diff between
   !       svl_coup and svl_coup_max; also ignore cumulus diags
   !-------------------------------------------------------------
-!$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      coupled(i,j)       = .false.
-      svl_diff_frac(i,j) = zero   ! Fully coupled by default
-      if ( dsc(i,j) ) then
-        !-------------------------------------------------------------
-        ! Calculate cloud to surface mixed layer SVL difference
-        ! - avoid ntdsc as can be within base of inversion
-        !-------------------------------------------------------------
-        svl_diff = zero
-        if ( ntdsc(i,j) >= 2 )                                                 &
-                 svl_diff = svl(i,j,ntdsc(i,j)-1) - svl(i,j,ntml(i,j))
-        if ( svl_diff  < svl_coup_max ) then
-          coupled(i,j) = .true.
-          svl_diff_frac(i,j) = one - max( zero,                                &
-                               (svl_diff-svl_coup)/(svl_coup_max-svl_coup) )
-                              ! to give 1 for svl_diff<svl_coup and
-                              ! decrease linearly to 0 at svl_coup_max
-          if ( entr_smooth_dec == entr_taper_zh ) then
-            ! Adjust DSC depth smoothly from existing value to full height
-            ! of the Sc-top as a function of coupling strength.
-            dscdepth(i,j) =      svl_diff_frac(i,j)  * zhsc(i,j)               &
-                          + (one-svl_diff_frac(i,j)) * dscdepth(i,j)
-          else
-            ! Not using smooth height option; jump fully to Sc-top if coupled
-            dscdepth(i,j) = zhsc(i,j)
-          end if
+!do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
+    coupled(i,j)       = .false.
+    svl_diff_frac(i,j) = zero   ! Fully coupled by default
+    if ( dsc(i,j) ) then
+      !-------------------------------------------------------------
+      ! Calculate cloud to surface mixed layer SVL difference
+      ! - avoid ntdsc as can be within base of inversion
+      !-------------------------------------------------------------
+      svl_diff = zero
+      if ( ntdsc(i,j) >= 2 )                                                 &
+                svl_diff = svl(i,j,ntdsc(i,j)-1) - svl(i,j,ntml(i,j))
+      if ( svl_diff  < svl_coup_max ) then
+        coupled(i,j) = .true.
+        svl_diff_frac(i,j) = one - max( zero,                                &
+                              (svl_diff-svl_coup)/(svl_coup_max-svl_coup) )
+                            ! to give 1 for svl_diff<svl_coup and
+                            ! decrease linearly to 0 at svl_coup_max
+        if ( entr_smooth_dec == entr_taper_zh ) then
+          ! Adjust DSC depth smoothly from existing value to full height
+          ! of the Sc-top as a function of coupling strength.
+          dscdepth(i,j) =      svl_diff_frac(i,j)  * zhsc(i,j)               &
+                        + (one-svl_diff_frac(i,j)) * dscdepth(i,j)
+        else
+          ! Not using smooth height option; jump fully to Sc-top if coupled
+          dscdepth(i,j) = zhsc(i,j)
         end if
-      end if  ! dsc test
-    end do
+      end if
+    end if  ! dsc test
   end do
-!$OMP end do
+  !$OMP end do
+!end do
 
 else  ! entr_smooth_dec test
-
-!$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      coupled(i,j)       = .false.
-      svl_diff_frac(i,j) = zero   ! Fully coupled by default
-      if ( dsc(i,j) .and. .not. cumulus(i,j) ) then
-        !-----------------------------------------------------------
-        ! Note this if test structure is required because if DSC is
-        ! false then NTDSC = 0 and cannot be used to index SVL.
-        !-----------------------------------------------------------
-        if ( svl(i,j,ntdsc(i,j)) - svl(i,j,ntml(i,j)) < svl_coup )             &
-               coupled(i,j) = .true.
-      end if
-    end do
+  !do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
+    coupled(i,j)       = .false.
+    svl_diff_frac(i,j) = zero   ! Fully coupled by default
+    if ( dsc(i,j) .and. .not. cumulus(i,j) ) then
+      !-----------------------------------------------------------
+      ! Note this if test structure is required because if DSC is
+      ! false then NTDSC = 0 and cannot be used to index SVL.
+      !-----------------------------------------------------------
+      if ( svl(i,j,ntdsc(i,j)) - svl(i,j,ntml(i,j)) < svl_coup )             &
+              coupled(i,j) = .true.
+    end if
   end do
-!$OMP end do
+  !$OMP end do
+    !end do
 
 end if  ! entr_smooth_dec test
 
 ! Store current values of ntml and ntdsc for water tracer use
 if (l_wtrac) then
-!$OMP do SCHEDULE(STATIC)
-  do j = pdims%j_start, pdims%j_end
-    do i = pdims%i_start, pdims%i_end
-      ntml_start(i,j)  = ntml(i,j)
-      ntdsc_start(i,j) = ntdsc(i,j)
-    end do
+  !do j = pdims%j_start, pdims%j_end
+  !$OMP do SCHEDULE(STATIC)
+  do i = pdims%i_start, pdims%i_end
+    ntml_start(i,j)  = ntml(i,j)
+    ntdsc_start(i,j) = ntdsc(i,j)
   end do
-!$OMP end do
+  !$OMP end do
+  !end do
 end if
 
 !-----------------------------------------------------------------------
@@ -2155,95 +2153,275 @@ end if
        ! marginally affected.  Conversely, it allows a subsiding
        ! inversion to fall more readily.
 
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
-do j = pdims%j_start, pdims%j_end
-  do i = pdims%i_start, pdims%i_end
+do i = pdims%i_start, pdims%i_end
 
-    if (l_wtrac) then
-      dqw_sml_meth(i,j) = 0
-      qw_lapse_zero_sml(i,j) = .false.
-    end if
+  if (l_wtrac) then
+    dqw_sml_meth(i,j) = 0
+    qw_lapse_zero_sml(i,j) = .false.
+  end if
 
-    sml_disc_inv(i,j) = 0  ! initialise flags to indicate whether a
-    dsc_disc_inv(i,j) = 0  ! discontinuous inversion is diagnosed
-    res_inv(i,j)      = 0  ! Flag for whether inversion is resolved
-    if ( bl_res_inv /= off .and. .not. cumulus(i,j) .and.                      &
-         dzh(i,j) > one .and. ntml(i,j)+2 <= bl_levels ) then
-      if (zh(i,j)+dzh(i,j) > z_uv(i,j,ntml(i,j)+2) ) res_inv(i,j) = 1
-    end if
+  sml_disc_inv(i,j) = 0  ! initialise flags to indicate whether a
+  dsc_disc_inv(i,j) = 0  ! discontinuous inversion is diagnosed
+  res_inv(i,j)      = 0  ! Flag for whether inversion is resolved
+  if ( bl_res_inv /= off .and. .not. cumulus(i,j) .and.                      &
+        dzh(i,j) > one .and. ntml(i,j)+2 <= bl_levels ) then
+    if (zh(i,j)+dzh(i,j) > z_uv(i,j,ntml(i,j)+2) ) res_inv(i,j) = 1
+  end if
 
-    !..First interpolate to find ZH
+  !..First interpolate to find ZH
 
-    k = ntml(i,j)
-    !..by default, keep ZH at the half-level where it was diagnosed
+  k = ntml(i,j)
+  !..by default, keep ZH at the half-level where it was diagnosed
+  !..initially and use grid-level jumps
+
+  dsl_sml(i,j) = sl(i,j,k+1) - sl(i,j,k)
+  dqw_sml(i,j) = qw(i,j,k+1) - qw(i,j,k)
+
+  if ( .not. cumulus(i,j) .and. .not. coupled(i,j) .and.                     &
+        res_inv(i,j) == 0 .and. k > 1 .and. k <= bl_levels-2 ) then
+
+      !  Require SVL and SL to be monotonically increasing
+      !  and QW to be simply monotonic
+    monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                      &
+                      svl(i,j,k+1) > svl(i,j,k) )                            &
+              .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                        &
+                      sl(i,j,k+1) > sl(i,j,k) )                              &
+              .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                      &
+                        qw(i,j,k+1) > qw(i,j,k) )                            &
+                  .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                     &
+                        qw(i,j,k+1) < qw(i,j,k) ) )
+
+    if ( monotonic_inv ) then
+
+      if ( k  <=  bl_levels-3 ) then
+        ! need to test for K+1 to K+2 gradient in case profile is
+        ! concave (would mess up the inversion diagnosis so best
+        ! just to ignore lapse)
+        svl_lapse = max(zero,                                                &
+              ( svl(i,j,k+3) - svl(i,j,k+2) ) * rdz(i,j,k+3)  )
+        if ( svl_lapse  >                                                    &
+              ( svl(i,j,k+2) - svl(i,j,k+1) ) * rdz(i,j,k+2) )               &
+              svl_lapse = zero
+      else
+        svl_lapse = zero
+      end if
+      if ( k  >=  k_plume(i,j)+2 ) then
+            ! Use mean mixed layer gradient (if resolved) to allow
+            ! for stablisation by gradient-adjustment
+            ! Ignore level K in case inversion is dropping
+        svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,k_plume(i,j)) )/             &
+                      (z_tq(i,j,k-1)-z_tq(i,j,k_plume(i,j)))
+        svl_lapse_base = max( zero, svl_lapse_base )
+      else
+        svl_lapse_base = zero
+      end if
+
+      quad_a  = one_half*( svl_lapse - svl_lapse_base )
+      quad_bm = svl(i,j,k+2) - svl(i,j,k)                                    &
+          - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                      &
+          - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                   &
+                                                  dzl(i,j,k+1) )
+      quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                   &
+          svl_lapse_base * (                                                 &
+            z_uv(i,j,k+1)-z_tq(i,j,k) + one_half*dzl(i,j,k+1) ) )
+
+      if ( quad_bm  >   zero ) then
+        if ( quad_c  <=  zero) then
+              ! SVL extrapolated from K to K+1 is greater than
+              ! the level K+1 value - inversion needs to rise so
+              ! place it as high as possible
+          dz_disc = dz_disc_min
+        else if ( quad_bm*quad_bm  >=  4.0_r_bl*quad_a*quad_c ) then
+              ! solve equation for DZ_DISC...
+          if ( abs(quad_a)  >=  rbl_eps ) then
+                !   ...quadratic if QUAD_A /= 0
+            dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                      &
+                                      - 4.0_r_bl*quad_a*quad_c )              &
+                            ) / (2.0_r_bl*quad_a)
+          else
+                !   ...linear if QUAD_A == 0
+            dz_disc = quad_c / quad_bm
+          end if
+        else
+          dz_disc = 99999.9_r_bl  ! large dummy value
+        end if
+
+        if ( dz_disc  >   0.9_r_bl * dzl(i,j,k+1) ) then
+            ! ZH diagnosed very close to or below Z_UV(K+1):
+          if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
+                ! top of ML stably stratified so lower NTML but
+                ! set ZH only fractionally (DZ_DISC_MIN)
+                ! below the top of the inversion level.
+            ntml(i,j) = ntml(i,j) - 1
+            k=ntml(i,j)
+            dz_disc = dz_disc_min
+          else
+                ! top of ML well-mixed so don't lower the inversion
+                ! level but set ZH just (DZ_DISC_MIN) above the
+                ! half-level to allow the inversion to subside if
+                ! necessary.
+            dz_disc = dzl(i,j,k+1) - dz_disc_min
+          end if
+        end if
+
+      else
+        !.. ignoring lapse rates
+        dsvl_top = svl(i,j,k+2) - svl(i,j,k)
+        dz_disc = dzl(i,j,k+1) *                                             &
+                        (svl(i,j,k+1)-svl(i,j,k)) / dsvl_top
+      end if
+
+      zh(i,j) = z_uv(i,j,k+2) - dz_disc
+      sml_disc_inv(i,j) = 1 ! set flag to indicate disc inv found
+
+      !-----------------------------------------------------------
+      !..Calculate SML inversion discontinuous jumps of SL and QW
+      !-----------------------------------------------------------
+                  ! Allow for lapse rate above inversion, if known
+      dz_disc = z_tq(i,j,k+2) - zh(i,j)
+      sl_lapse = zero
+      qw_lapse = zero
+      if ( k  <=  bl_levels-3 ) then
+        sl_lapse = max( zero,                                                &
+            ( sl(i,j,k+3) - sl(i,j,k+2) )*rdz(i,j,k+3) )
+        qw_lapse = min( zero,                                                &
+            ( qw(i,j,k+3) - qw(i,j,k+2) )*rdz(i,j,k+3) )
+
+        if (l_wtrac) then      ! Store method
+          if (qw_lapse >= 0.0) then
+            qw_lapse_zero_sml(i,j) = .true.
+          end if
+        end if
+
+      end if
+
+        !-----------------
+        ! First SL jump
+        !-----------------
+        ! Only reduce 2 level jump by at most half
+      dsl_sml(i,j) = sl(i,j,k+2) - sl(i,j,k)
+      dsl_sml(i,j) = dsl_sml(i,j) -                                          &
+              min( one_half*dsl_sml(i,j), sl_lapse*dz_disc )
+        !-----------------
+        ! Next QW jump
+        !-----------------
+      if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                   &
+            qw(i,j,k+1) < qw(i,j,k) ) then
+          ! QW monotonically decreasing across inversion
+          ! Only allow for QW lapse rate if both it and the
+          ! 2 grid-level jump are negative (expected sign)
+        dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
+        if (l_wtrac) dqw_sml_meth(i,j) = 1
+
+        if ( dqw_sml(i,j) < zero ) then
+          if (l_wtrac) then           ! Store method
+            if (one_half*dqw_sml(i,j) > qw_lapse*dz_disc) then
+              dqw_sml_meth(i,j) = 2
+            else
+              dqw_sml_meth(i,j) = 3
+            end if
+          end if
+          dqw_sml(i,j) = dqw_sml(i,j) -                                      &
+            max( one_half*dqw_sml(i,j), qw_lapse*dz_disc )
+        end if
+      else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                              &
+                qw(i,j,k+1) > qw(i,j,k) ) then
+          ! QW monotonically increasing across inversion
+          ! Suggests something unusual is going so not clear how
+          ! to proceed, so currently leaving DQW as 2 level jump
+        dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
+        if (l_wtrac) dqw_sml_meth(i,j) = 1
+      end if
+
+    end if  ! Monotonic inversion
+  end if ! not cumulus and not at top of bl_levels
+
+  !-------------------------------------------------------------------
+  !..Second interpolate to find ZHSC
+  !-------------------------------------------------------------------
+  if (l_wtrac) then
+    dqw_dsc_meth(i,j) = 0
+    qw_lapse_zero_dsc(i,j) = .false.
+  end if
+
+  if ( dsc(i,j) ) then
+    k = ntdsc(i,j)
+    !..by default, keep ZHSC at the half-level where it was diagnosed
     !..initially and use grid-level jumps
+    dsl_dsc(i,j) = sl(i,j,k+1) - sl(i,j,k)
+    dqw_dsc(i,j) = qw(i,j,k+1) - qw(i,j,k)
 
-    dsl_sml(i,j) = sl(i,j,k+1) - sl(i,j,k)
-    dqw_sml(i,j) = qw(i,j,k+1) - qw(i,j,k)
+    if ( k  <=  bl_levels-2 ) then
 
-    if ( .not. cumulus(i,j) .and. .not. coupled(i,j) .and.                     &
-         res_inv(i,j) == 0 .and. k > 1 .and. k <= bl_levels-2 ) then
-
-        !  Require SVL and SL to be monotonically increasing
-        !  and QW to be simply monotonic
-      monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                      &
-                        svl(i,j,k+1) > svl(i,j,k) )                            &
-                .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                        &
-                        sl(i,j,k+1) > sl(i,j,k) )                              &
-                .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                      &
-                          qw(i,j,k+1) > qw(i,j,k) )                            &
-                    .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                     &
+      !  Require SVL and SL to be monotonically increasing
+      !  and QW to be simply monotonic
+      monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                    &
+                        svl(i,j,k+1) > svl(i,j,k) )                          &
+                .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                      &
+                        sl(i,j,k+1) > sl(i,j,k) )                            &
+                .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                    &
+                          qw(i,j,k+1) > qw(i,j,k) )                          &
+                    .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                   &
                           qw(i,j,k+1) < qw(i,j,k) ) )
 
       if ( monotonic_inv ) then
 
+        if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
+              sc_diag_opt == sc_diag_all_rh_max ) then
+          ! The initial zhsc can be between model-levels rather than exactly
+          ! on a rho-level.
+          ! Store height of base of DSC layer
+          z_cbase = zhsc(i,j) - dscdepth(i,j)
+        end if
+
         if ( k  <=  bl_levels-3 ) then
           ! need to test for K+1 to K+2 gradient in case profile is
           ! concave (would mess up the inversion diagnosis so best
-          ! just to ignore lapse)
-          svl_lapse = max(zero,                                                &
-                ( svl(i,j,k+3) - svl(i,j,k+2) ) * rdz(i,j,k+3)  )
-          if ( svl_lapse  >                                                    &
-                ( svl(i,j,k+2) - svl(i,j,k+1) ) * rdz(i,j,k+2) )               &
+          ! just to ignore)
+          svl_lapse = max(zero,                                              &
+                ( svl(i,j,k+3) - svl(i,j,k+2) )*rdz(i,j,k+3) )
+          if ( svl_lapse  >                                                  &
+                ( svl(i,j,k+2) - svl(i,j,k+1) )*rdz(i,j,k+2) )               &
                 svl_lapse = zero
         else
           svl_lapse = zero
         end if
-        if ( k  >=  k_plume(i,j)+2 ) then
-              ! Use mean mixed layer gradient (if resolved) to allow
-              ! for stablisation by gradient-adjustment
-              ! Ignore level K in case inversion is dropping
-          svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,k_plume(i,j)) )/             &
-                        (z_tq(i,j,k-1)-z_tq(i,j,k_plume(i,j)))
+        if ( k  >=  nbdsc(i,j)+2 ) then
+            ! Use mean mixed layer gradient (if resolved) to allow
+            ! for stablisation by gradient-adjustment
+            ! Ignore level K in case inversion is dropping
+          svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,nbdsc(i,j)) )/             &
+                        (z_tq(i,j,k-1)-z_tq(i,j,nbdsc(i,j)))
           svl_lapse_base = max( zero, svl_lapse_base )
         else
           svl_lapse_base = zero
         end if
 
         quad_a  = one_half*( svl_lapse - svl_lapse_base )
-        quad_bm = svl(i,j,k+2) - svl(i,j,k)                                    &
-            - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                      &
-            - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                   &
+        quad_bm = svl(i,j,k+2) - svl(i,j,k)                                  &
+              - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                   &
+              - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                &
                                                     dzl(i,j,k+1) )
-        quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                   &
-            svl_lapse_base * (                                                 &
+        quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                 &
+              svl_lapse_base * (                                              &
               z_uv(i,j,k+1)-z_tq(i,j,k) + one_half*dzl(i,j,k+1) ) )
 
         if ( quad_bm  >   zero ) then
           if ( quad_c  <=  zero) then
-                ! SVL extrapolated from K to K+1 is greater than
-                ! the level K+1 value - inversion needs to rise so
-                ! place it as high as possible
+              ! SVL extrapolated from K to K+1 is greater than
+              ! the level K+1 value - inversion needs to rise
             dz_disc = dz_disc_min
           else if ( quad_bm*quad_bm  >=  4.0_r_bl*quad_a*quad_c ) then
-                ! solve equation for DZ_DISC...
-            if ( abs(quad_a)  >=  rbl_eps ) then
-                  !   ...quadratic if QUAD_A /= 0
-              dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                      &
-                                       - 4.0_r_bl*quad_a*quad_c )              &
+              ! solve equation for DZ_DISC...
+            if ( abs(quad_a) >= rbl_eps ) then
+                !   ...quadratic if QUAD_A ne 0
+              dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                    &
+                                        - 4.0_r_bl*quad_a*quad_c )            &
                               ) / (2.0_r_bl*quad_a)
             else
-                  !   ...linear if QUAD_A == 0
+                !   ...linear if QUAD_A = 0
               dz_disc = quad_c / quad_bm
             end if
           else
@@ -2251,298 +2429,118 @@ do j = pdims%j_start, pdims%j_end
           end if
 
           if ( dz_disc  >   0.9_r_bl * dzl(i,j,k+1) ) then
-              ! ZH diagnosed very close to or below Z_UV(K+1):
-            if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
-                  ! top of ML stably stratified so lower NTML but
-                  ! set ZH only fractionally (DZ_DISC_MIN)
-                  ! below the top of the inversion level.
-              ntml(i,j) = ntml(i,j) - 1
-              k=ntml(i,j)
-              dz_disc = dz_disc_min
+            if ( ntdsc(i,j) == 2 ) then
+              dz_disc = dzl(i,j,k+1)
             else
-                  ! top of ML well-mixed so don't lower the inversion
-                  ! level but set ZH just (DZ_DISC_MIN) above the
-                  ! half-level to allow the inversion to subside if
-                  ! necessary.
-              dz_disc = dzl(i,j,k+1) - dz_disc_min
+              ! ZHSC diagnosed very close to or below Z_UV(K+1):
+              if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
+                ! top of ML stably stratified so lower NTDSC but
+                ! set ZHSC only fractionally (DZ_DISC_MIN)
+                ! below the top of the inversion level.
+                ntdsc(i,j) = ntdsc(i,j) - 1
+                k=ntdsc(i,j)
+                dz_disc = dz_disc_min
+                dscdepth(i,j) = dscdepth(i,j) - dzl(i,j,k+1)
+                ! Note that all but DZ_DISC_MIN of this layer will
+                ! be added back on to DSCDEPTH a few lines below
+              else
+                ! top of ML well-mixed so don't lower the inversion
+                ! level but set ZHSC just (DZ_DISC_MIN) above the
+                ! half-level to allow the inversion to subside if
+                ! necessary.
+                dz_disc = dzl(i,j,k+1) - dz_disc_min
+              end if
             end if
           end if
 
-        else
+        else  ! QUAD_BM le 0
           !.. ignoring lapse rates
           dsvl_top = svl(i,j,k+2) - svl(i,j,k)
-          dz_disc = dzl(i,j,k+1) *                                             &
+          dz_disc = dzl(i,j,k+1) *                                           &
                           (svl(i,j,k+1)-svl(i,j,k)) / dsvl_top
         end if
 
-        zh(i,j) = z_uv(i,j,k+2) - dz_disc
-        sml_disc_inv(i,j) = 1 ! set flag to indicate disc inv found
+        zhsc(i,j) = z_uv(i,j,k+2) - dz_disc
+
+        if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
+              sc_diag_opt == sc_diag_all_rh_max ) then
+          ! The initial zhsc can be between model-levels rather than exactly
+          ! on a rho-level.  Assuming height of base of DSC layer stays the
+          ! same, set new depth based on updated DSC top height:
+          dscdepth(i,j) = zhsc(i,j) - z_cbase
+        else
+          ! The initial zhsc is always at rho-level ntdsc+1;
+          ! increment the DSC depth consistent with this:
+          dscdepth(i,j) = dscdepth(i,j) + zhsc(i,j) - z_uv(i,j,k+1)
+        end if
+
+        dsc_disc_inv(i,j) = 1  ! set flag to indicate disc inv found
 
         !-----------------------------------------------------------
-        !..Calculate SML inversion discontinuous jumps of SL and QW
+        !..Calculate DSC inversion discontinuous jumps of SL and QW
         !-----------------------------------------------------------
                     ! Allow for lapse rate above inversion, if known
-        dz_disc = z_tq(i,j,k+2) - zh(i,j)
+        dz_disc = z_tq(i,j,k+2) - zhsc(i,j)
         sl_lapse = zero
         qw_lapse = zero
         if ( k  <=  bl_levels-3 ) then
-          sl_lapse = max( zero,                                                &
-             ( sl(i,j,k+3) - sl(i,j,k+2) )*rdz(i,j,k+3) )
-          qw_lapse = min( zero,                                                &
-             ( qw(i,j,k+3) - qw(i,j,k+2) )*rdz(i,j,k+3) )
+          sl_lapse = max( zero,                                              &
+              ( sl(i,j,k+3) - sl(i,j,k+2) )*rdz(i,j,k+3) )
+          qw_lapse = min( zero,                                              &
+              ( qw(i,j,k+3) - qw(i,j,k+2) )*rdz(i,j,k+3) )
 
           if (l_wtrac) then      ! Store method
             if (qw_lapse >= 0.0) then
-              qw_lapse_zero_sml(i,j) = .true.
+              qw_lapse_zero_dsc(i,j) = .true.
             end if
           end if
 
         end if
 
-          !-----------------
-          ! First SL jump
-          !-----------------
-          ! Only reduce 2 level jump by at most half
-        dsl_sml(i,j) = sl(i,j,k+2) - sl(i,j,k)
-        dsl_sml(i,j) = dsl_sml(i,j) -                                          &
-               min( one_half*dsl_sml(i,j), sl_lapse*dz_disc )
-          !-----------------
-          ! Next QW jump
-          !-----------------
-        if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                   &
-             qw(i,j,k+1) < qw(i,j,k) ) then
-            ! QW monotonically decreasing across inversion
-            ! Only allow for QW lapse rate if both it and the
-            ! 2 grid-level jump are negative (expected sign)
-          dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
-          if (l_wtrac) dqw_sml_meth(i,j) = 1
+        !-----------------
+        ! First SL jump
+        !-----------------
+        ! Only reduce 2 level jump by at most half
+        dsl_dsc(i,j) = sl(i,j,k+2) - sl(i,j,k)
+        dsl_dsc(i,j) = dsl_dsc(i,j) -                                        &
+              min( one_half*dsl_dsc(i,j), sl_lapse*dz_disc )
+        !-----------------
+        ! Next QW jump
+        !-----------------
+        if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                 &
+              qw(i,j,k+1) < qw(i,j,k) ) then
+          ! QW monotonically decreasing across inversion
+          ! Only allow for QW lapse rate if both it and the
+          ! 2 grid-level jump are negative (expected sign)
+          dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
+          if (l_wtrac) dqw_dsc_meth(i,j) = 1
 
-          if ( dqw_sml(i,j) < zero ) then
-            if (l_wtrac) then           ! Store method
-              if (one_half*dqw_sml(i,j) > qw_lapse*dz_disc) then
-                dqw_sml_meth(i,j) = 2
+          if ( dqw_dsc(i,j) < zero ) then
+            if (l_wtrac) then       ! Store method
+              if ( one_half*dqw_dsc(i,j) > qw_lapse*dz_disc ) then
+                dqw_dsc_meth(i,j) = 2
               else
-                dqw_sml_meth(i,j) = 3
+                dqw_dsc_meth(i,j) = 3
               end if
             end if
-            dqw_sml(i,j) = dqw_sml(i,j) -                                      &
-              max( one_half*dqw_sml(i,j), qw_lapse*dz_disc )
+            dqw_dsc(i,j) = dqw_dsc(i,j) -                                    &
+              max( one_half*dqw_dsc(i,j), qw_lapse*dz_disc )
           end if
-        else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                              &
+        else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                            &
                   qw(i,j,k+1) > qw(i,j,k) ) then
-            ! QW monotonically increasing across inversion
-            ! Suggests something unusual is going so not clear how
-            ! to proceed, so currently leaving DQW as 2 level jump
-          dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
-          if (l_wtrac) dqw_sml_meth(i,j) = 1
+          ! QW monotonically increasing across inversion
+          ! Suggests something unusual is going so not clear how
+          ! to proceed, so currently leaving DQW as 2 level jump
+          dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
+          if (l_wtrac) dqw_dsc_meth(i,j) = 1
         end if
 
-      end if  ! Monotonic inversion
-    end if ! not cumulus and not at top of bl_levels
-
-    !-------------------------------------------------------------------
-    !..Second interpolate to find ZHSC
-    !-------------------------------------------------------------------
-    if (l_wtrac) then
-      dqw_dsc_meth(i,j) = 0
-      qw_lapse_zero_dsc(i,j) = .false.
-    end if
-
-    if ( dsc(i,j) ) then
-      k = ntdsc(i,j)
-      !..by default, keep ZHSC at the half-level where it was diagnosed
-      !..initially and use grid-level jumps
-      dsl_dsc(i,j) = sl(i,j,k+1) - sl(i,j,k)
-      dqw_dsc(i,j) = qw(i,j,k+1) - qw(i,j,k)
-
-      if ( k  <=  bl_levels-2 ) then
-
-        !  Require SVL and SL to be monotonically increasing
-        !  and QW to be simply monotonic
-        monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                    &
-                          svl(i,j,k+1) > svl(i,j,k) )                          &
-                  .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                      &
-                          sl(i,j,k+1) > sl(i,j,k) )                            &
-                  .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                    &
-                            qw(i,j,k+1) > qw(i,j,k) )                          &
-                      .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                   &
-                            qw(i,j,k+1) < qw(i,j,k) ) )
-
-        if ( monotonic_inv ) then
-
-          if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
-               sc_diag_opt == sc_diag_all_rh_max ) then
-            ! The initial zhsc can be between model-levels rather than exactly
-            ! on a rho-level.
-            ! Store height of base of DSC layer
-            z_cbase = zhsc(i,j) - dscdepth(i,j)
-          end if
-
-          if ( k  <=  bl_levels-3 ) then
-            ! need to test for K+1 to K+2 gradient in case profile is
-            ! concave (would mess up the inversion diagnosis so best
-            ! just to ignore)
-            svl_lapse = max(zero,                                              &
-                  ( svl(i,j,k+3) - svl(i,j,k+2) )*rdz(i,j,k+3) )
-            if ( svl_lapse  >                                                  &
-                  ( svl(i,j,k+2) - svl(i,j,k+1) )*rdz(i,j,k+2) )               &
-                  svl_lapse = zero
-          else
-            svl_lapse = zero
-          end if
-          if ( k  >=  nbdsc(i,j)+2 ) then
-              ! Use mean mixed layer gradient (if resolved) to allow
-              ! for stablisation by gradient-adjustment
-              ! Ignore level K in case inversion is dropping
-            svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,nbdsc(i,j)) )/             &
-                          (z_tq(i,j,k-1)-z_tq(i,j,nbdsc(i,j)))
-            svl_lapse_base = max( zero, svl_lapse_base )
-          else
-            svl_lapse_base = zero
-          end if
-
-          quad_a  = one_half*( svl_lapse - svl_lapse_base )
-          quad_bm = svl(i,j,k+2) - svl(i,j,k)                                  &
-               - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                   &
-               - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                &
-                                                      dzl(i,j,k+1) )
-          quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                 &
-               svl_lapse_base * (                                              &
-                z_uv(i,j,k+1)-z_tq(i,j,k) + one_half*dzl(i,j,k+1) ) )
-
-          if ( quad_bm  >   zero ) then
-            if ( quad_c  <=  zero) then
-                ! SVL extrapolated from K to K+1 is greater than
-                ! the level K+1 value - inversion needs to rise
-              dz_disc = dz_disc_min
-            else if ( quad_bm*quad_bm  >=  4.0_r_bl*quad_a*quad_c ) then
-                ! solve equation for DZ_DISC...
-              if ( abs(quad_a) >= rbl_eps ) then
-                  !   ...quadratic if QUAD_A ne 0
-                dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                    &
-                                         - 4.0_r_bl*quad_a*quad_c )            &
-                                ) / (2.0_r_bl*quad_a)
-              else
-                  !   ...linear if QUAD_A = 0
-                dz_disc = quad_c / quad_bm
-              end if
-            else
-              dz_disc = 99999.9_r_bl  ! large dummy value
-            end if
-
-            if ( dz_disc  >   0.9_r_bl * dzl(i,j,k+1) ) then
-              if ( ntdsc(i,j) == 2 ) then
-                dz_disc = dzl(i,j,k+1)
-              else
-                ! ZHSC diagnosed very close to or below Z_UV(K+1):
-                if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
-                  ! top of ML stably stratified so lower NTDSC but
-                  ! set ZHSC only fractionally (DZ_DISC_MIN)
-                  ! below the top of the inversion level.
-                  ntdsc(i,j) = ntdsc(i,j) - 1
-                  k=ntdsc(i,j)
-                  dz_disc = dz_disc_min
-                  dscdepth(i,j) = dscdepth(i,j) - dzl(i,j,k+1)
-                  ! Note that all but DZ_DISC_MIN of this layer will
-                  ! be added back on to DSCDEPTH a few lines below
-                else
-                  ! top of ML well-mixed so don't lower the inversion
-                  ! level but set ZHSC just (DZ_DISC_MIN) above the
-                  ! half-level to allow the inversion to subside if
-                  ! necessary.
-                  dz_disc = dzl(i,j,k+1) - dz_disc_min
-                end if
-              end if
-            end if
-
-          else  ! QUAD_BM le 0
-            !.. ignoring lapse rates
-            dsvl_top = svl(i,j,k+2) - svl(i,j,k)
-            dz_disc = dzl(i,j,k+1) *                                           &
-                            (svl(i,j,k+1)-svl(i,j,k)) / dsvl_top
-          end if
-
-          zhsc(i,j) = z_uv(i,j,k+2) - dz_disc
-
-          if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
-               sc_diag_opt == sc_diag_all_rh_max ) then
-            ! The initial zhsc can be between model-levels rather than exactly
-            ! on a rho-level.  Assuming height of base of DSC layer stays the
-            ! same, set new depth based on updated DSC top height:
-            dscdepth(i,j) = zhsc(i,j) - z_cbase
-          else
-            ! The initial zhsc is always at rho-level ntdsc+1;
-            ! increment the DSC depth consistent with this:
-            dscdepth(i,j) = dscdepth(i,j) + zhsc(i,j) - z_uv(i,j,k+1)
-          end if
-
-          dsc_disc_inv(i,j) = 1  ! set flag to indicate disc inv found
-
-          !-----------------------------------------------------------
-          !..Calculate DSC inversion discontinuous jumps of SL and QW
-          !-----------------------------------------------------------
-                      ! Allow for lapse rate above inversion, if known
-          dz_disc = z_tq(i,j,k+2) - zhsc(i,j)
-          sl_lapse = zero
-          qw_lapse = zero
-          if ( k  <=  bl_levels-3 ) then
-            sl_lapse = max( zero,                                              &
-               ( sl(i,j,k+3) - sl(i,j,k+2) )*rdz(i,j,k+3) )
-            qw_lapse = min( zero,                                              &
-               ( qw(i,j,k+3) - qw(i,j,k+2) )*rdz(i,j,k+3) )
-
-            if (l_wtrac) then      ! Store method
-              if (qw_lapse >= 0.0) then
-                qw_lapse_zero_dsc(i,j) = .true.
-              end if
-            end if
-
-          end if
-
-          !-----------------
-          ! First SL jump
-          !-----------------
-          ! Only reduce 2 level jump by at most half
-          dsl_dsc(i,j) = sl(i,j,k+2) - sl(i,j,k)
-          dsl_dsc(i,j) = dsl_dsc(i,j) -                                        &
-               min( one_half*dsl_dsc(i,j), sl_lapse*dz_disc )
-          !-----------------
-          ! Next QW jump
-          !-----------------
-          if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                 &
-               qw(i,j,k+1) < qw(i,j,k) ) then
-            ! QW monotonically decreasing across inversion
-            ! Only allow for QW lapse rate if both it and the
-            ! 2 grid-level jump are negative (expected sign)
-            dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
-            if (l_wtrac) dqw_dsc_meth(i,j) = 1
-
-            if ( dqw_dsc(i,j) < zero ) then
-              if (l_wtrac) then       ! Store method
-                if ( one_half*dqw_dsc(i,j) > qw_lapse*dz_disc ) then
-                  dqw_dsc_meth(i,j) = 2
-                else
-                  dqw_dsc_meth(i,j) = 3
-                end if
-              end if
-              dqw_dsc(i,j) = dqw_dsc(i,j) -                                    &
-                max( one_half*dqw_dsc(i,j), qw_lapse*dz_disc )
-            end if
-          else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                            &
-                    qw(i,j,k+1) > qw(i,j,k) ) then
-            ! QW monotonically increasing across inversion
-            ! Suggests something unusual is going so not clear how
-            ! to proceed, so currently leaving DQW as 2 level jump
-            dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
-            if (l_wtrac) dqw_dsc_meth(i,j) = 1
-          end if
-
-        end if  ! monotonic inversion
-      end if ! test on K lt BL_LEVELS-2
-    end if ! test on DSC
-  end do
+      end if  ! monotonic inversion
+    end if ! test on K lt BL_LEVELS-2
+  end if ! test on DSC
 end do
 !$OMP end do
+!end do
 
 !$OMP end PARALLEL
 
