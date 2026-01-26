@@ -1,8 +1,8 @@
-##############################################################################
-# Copyright (c) 2025,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
-##############################################################################
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
 '''
 Bespoke Opt script for bl_diags_mod to add OpenMP to loops present in
 the file. - To be replaced by a global in #900

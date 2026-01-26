@@ -645,7 +645,7 @@ def loop_replacement_of(routine_itr,
             except AttributeError as err:
                 parent_table = False
 
-            # if the loop parent table is a vaild reference
+            # if the loop parent table is a valid reference
             if parent_table:
                 parent_table.merge(loop.loop_body.symbol_table)
                 # Move the body of the loop after the loop

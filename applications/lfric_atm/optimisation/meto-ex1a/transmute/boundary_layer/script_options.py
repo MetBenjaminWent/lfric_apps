@@ -4,7 +4,7 @@
 # under which the code may be used.
 # -----------------------------------------------------------------------------
 '''
-Lift options list and similar from each induvidial script up into this file.
+Lift options list and similar from each individual script up into this file.
 Aim is to allow the creation of a simple global.py which adds OMP over all
 loops. The option which matches the file being worked on can be pulled in
 and referenced. This helps reduce the number of files needed.

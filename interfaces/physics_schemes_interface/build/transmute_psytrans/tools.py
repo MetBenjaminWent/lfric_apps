@@ -15,7 +15,7 @@ def find_node_index(routine_children, find_lhs, find_rhs):
     A tool to assist developers finding the index of a node to
     use when spanning a parallel section. 
     You can use the variable name of the LHS and either the variable
-    name of the RHS (if it exisists), or the name of the function used
+    name of the RHS (if it exists), or the name of the function used
     on the RHS.
     This is called with a list of routine_children inside a walk of the
     routines in the PSyIR object.
