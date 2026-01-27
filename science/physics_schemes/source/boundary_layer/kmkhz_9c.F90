@@ -969,8 +969,9 @@ integer            :: ii         ! Block index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)              :: kmkhz_9c_tik, call_calc_wtrac, call_excf_nl_9c, &
-                             repeat_calc_wtrac
+integer(tik) :: kmkhz_9c_tik, call_calc_wtrac, call_excf_nl_9c, &
+                repeat_calc_wtrac, dynamic_blocked_1,           & 
+                dynamic_not_blocked_1
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 call start_timing( kmkhz_9c_tik, '__kmkhz_9c__ ')
@@ -1019,13 +1020,14 @@ j = 1
 !Start OpenMP parallel region
 
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
-!$OMP  private (i, ii, k, kp, kl, km, i_wt, w_curv_nm, w_del_nm, w_curv,    &
+!$OMP  private (i, ii, k, kp, kl, km, i_wt, w_curv_nm, w_del_nm, w_curv,       &
 !$OMP  r_d_eta, rho_dz, z_surf, sl_plume, qw_plume,  q_liq_parc, q_liq_env,    &
 !$OMP  t_parc, q_vap_parc, t_dens_parc, t_dens_env, dpar_bydz,  denv_bydz,     &
 !$OMP  z_rad_lim,  k_rad_lim, dflw_inv, dfsw_inv, dfsw_top, svl_plume,         &
 !$OMP  svl_diff, monotonic_inv, svl_lapse, svl_lapse_base,                     &
 !$OMP  quad_a,  quad_bm, quad_c, dz_disc, dsvl_top, sl_lapse,  qw_lapse,       &
-!$OMP  kp2, rht_k, rht_kp1, rht_kp2, interp, z_cbase )
+!$OMP  kp2, rht_k, rht_kp1, rht_kp2, interp, z_cbase, dynamic_blocked_1,       &
+!$OMP  dynamic_not_blocked_1 )
 !-----------------------------------------------------------------------
 ! Index to subroutine KMKHZ9C
 
@@ -1162,6 +1164,7 @@ end do ! k
 
 !$OMP BARRIER
 
+call start_timing( dynamic_blocked_1, '__dynamic_blocked_1__ ')
 !$OMP do SCHEDULE(DYNAMIC)
 do ii = pdims%i_start, pdims%i_end, bl_segment_size
   do k = 2, bl_levels-1
@@ -1200,6 +1203,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
   end do
 end do !ii
 !$OMP end do
+call stop_timing( dynamic_blocked_1 )
 ! do j = pdims%j_start, pdims%j_end
 ! Repeat for necessary parts of last 2 loops for water tracers
 if (l_wtrac) then
@@ -2158,274 +2162,96 @@ end if
        ! inversion to fall more readily.
 
 !do j = pdims%j_start, pdims%j_end
+call start_timing( dynamic_not_blocked_1, '__dynamic_not_blocked_1__ ')
 !$OMP do SCHEDULE(DYNAMIC)
-do i = pdims%i_start, pdims%i_end
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
 
-  if (l_wtrac) then
-    dqw_sml_meth(i,j) = 0
-    qw_lapse_zero_sml(i,j) = .false.
-  end if
+    if (l_wtrac) then
+      dqw_sml_meth(i,j) = 0
+      qw_lapse_zero_sml(i,j) = .false.
+    end if
 
-  sml_disc_inv(i,j) = 0  ! initialise flags to indicate whether a
-  dsc_disc_inv(i,j) = 0  ! discontinuous inversion is diagnosed
-  res_inv(i,j)      = 0  ! Flag for whether inversion is resolved
-  if ( bl_res_inv /= off .and. .not. cumulus(i,j) .and.                      &
-        dzh(i,j) > one .and. ntml(i,j)+2 <= bl_levels ) then
-    if (zh(i,j)+dzh(i,j) > z_uv(i,j,ntml(i,j)+2) ) res_inv(i,j) = 1
-  end if
+    sml_disc_inv(i,j) = 0  ! initialise flags to indicate whether a
+    dsc_disc_inv(i,j) = 0  ! discontinuous inversion is diagnosed
+    res_inv(i,j)      = 0  ! Flag for whether inversion is resolved
+    if ( bl_res_inv /= off .and. .not. cumulus(i,j) .and.                      &
+          dzh(i,j) > one .and. ntml(i,j)+2 <= bl_levels ) then
+      if (zh(i,j)+dzh(i,j) > z_uv(i,j,ntml(i,j)+2) ) res_inv(i,j) = 1
+    end if
 
-  !..First interpolate to find ZH
+    !..First interpolate to find ZH
 
-  k = ntml(i,j)
-  !..by default, keep ZH at the half-level where it was diagnosed
-  !..initially and use grid-level jumps
-
-  dsl_sml(i,j) = sl(i,j,k+1) - sl(i,j,k)
-  dqw_sml(i,j) = qw(i,j,k+1) - qw(i,j,k)
-
-  if ( .not. cumulus(i,j) .and. .not. coupled(i,j) .and.                     &
-        res_inv(i,j) == 0 .and. k > 1 .and. k <= bl_levels-2 ) then
-
-      !  Require SVL and SL to be monotonically increasing
-      !  and QW to be simply monotonic
-    monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                      &
-                      svl(i,j,k+1) > svl(i,j,k) )                            &
-              .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                        &
-                      sl(i,j,k+1) > sl(i,j,k) )                              &
-              .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                      &
-                        qw(i,j,k+1) > qw(i,j,k) )                            &
-                  .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                     &
-                        qw(i,j,k+1) < qw(i,j,k) ) )
-
-    if ( monotonic_inv ) then
-
-      if ( k  <=  bl_levels-3 ) then
-        ! need to test for K+1 to K+2 gradient in case profile is
-        ! concave (would mess up the inversion diagnosis so best
-        ! just to ignore lapse)
-        svl_lapse = max(zero,                                                &
-              ( svl(i,j,k+3) - svl(i,j,k+2) ) * rdz(i,j,k+3)  )
-        if ( svl_lapse  >                                                    &
-              ( svl(i,j,k+2) - svl(i,j,k+1) ) * rdz(i,j,k+2) )               &
-              svl_lapse = zero
-      else
-        svl_lapse = zero
-      end if
-      if ( k  >=  k_plume(i,j)+2 ) then
-            ! Use mean mixed layer gradient (if resolved) to allow
-            ! for stablisation by gradient-adjustment
-            ! Ignore level K in case inversion is dropping
-        svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,k_plume(i,j)) )/             &
-                      (z_tq(i,j,k-1)-z_tq(i,j,k_plume(i,j)))
-        svl_lapse_base = max( zero, svl_lapse_base )
-      else
-        svl_lapse_base = zero
-      end if
-
-      quad_a  = one_half*( svl_lapse - svl_lapse_base )
-      quad_bm = svl(i,j,k+2) - svl(i,j,k)                                    &
-          - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                      &
-          - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                   &
-                                                  dzl(i,j,k+1) )
-      quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                   &
-          svl_lapse_base * (                                                 &
-            z_uv(i,j,k+1)-z_tq(i,j,k) + one_half*dzl(i,j,k+1) ) )
-
-      if ( quad_bm  >   zero ) then
-        if ( quad_c  <=  zero) then
-              ! SVL extrapolated from K to K+1 is greater than
-              ! the level K+1 value - inversion needs to rise so
-              ! place it as high as possible
-          dz_disc = dz_disc_min
-        else if ( quad_bm*quad_bm  >=  4.0_r_bl*quad_a*quad_c ) then
-              ! solve equation for DZ_DISC...
-          if ( abs(quad_a)  >=  rbl_eps ) then
-                !   ...quadratic if QUAD_A /= 0
-            dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                      &
-                                      - 4.0_r_bl*quad_a*quad_c )              &
-                            ) / (2.0_r_bl*quad_a)
-          else
-                !   ...linear if QUAD_A == 0
-            dz_disc = quad_c / quad_bm
-          end if
-        else
-          dz_disc = 99999.9_r_bl  ! large dummy value
-        end if
-
-        if ( dz_disc  >   0.9_r_bl * dzl(i,j,k+1) ) then
-            ! ZH diagnosed very close to or below Z_UV(K+1):
-          if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
-                ! top of ML stably stratified so lower NTML but
-                ! set ZH only fractionally (DZ_DISC_MIN)
-                ! below the top of the inversion level.
-            ntml(i,j) = ntml(i,j) - 1
-            k=ntml(i,j)
-            dz_disc = dz_disc_min
-          else
-                ! top of ML well-mixed so don't lower the inversion
-                ! level but set ZH just (DZ_DISC_MIN) above the
-                ! half-level to allow the inversion to subside if
-                ! necessary.
-            dz_disc = dzl(i,j,k+1) - dz_disc_min
-          end if
-        end if
-
-      else
-        !.. ignoring lapse rates
-        dsvl_top = svl(i,j,k+2) - svl(i,j,k)
-        dz_disc = dzl(i,j,k+1) *                                             &
-                        (svl(i,j,k+1)-svl(i,j,k)) / dsvl_top
-      end if
-
-      zh(i,j) = z_uv(i,j,k+2) - dz_disc
-      sml_disc_inv(i,j) = 1 ! set flag to indicate disc inv found
-
-      !-----------------------------------------------------------
-      !..Calculate SML inversion discontinuous jumps of SL and QW
-      !-----------------------------------------------------------
-                  ! Allow for lapse rate above inversion, if known
-      dz_disc = z_tq(i,j,k+2) - zh(i,j)
-      sl_lapse = zero
-      qw_lapse = zero
-      if ( k  <=  bl_levels-3 ) then
-        sl_lapse = max( zero,                                                &
-            ( sl(i,j,k+3) - sl(i,j,k+2) )*rdz(i,j,k+3) )
-        qw_lapse = min( zero,                                                &
-            ( qw(i,j,k+3) - qw(i,j,k+2) )*rdz(i,j,k+3) )
-
-        if (l_wtrac) then      ! Store method
-          if (qw_lapse >= 0.0) then
-            qw_lapse_zero_sml(i,j) = .true.
-          end if
-        end if
-
-      end if
-
-        !-----------------
-        ! First SL jump
-        !-----------------
-        ! Only reduce 2 level jump by at most half
-      dsl_sml(i,j) = sl(i,j,k+2) - sl(i,j,k)
-      dsl_sml(i,j) = dsl_sml(i,j) -                                          &
-              min( one_half*dsl_sml(i,j), sl_lapse*dz_disc )
-        !-----------------
-        ! Next QW jump
-        !-----------------
-      if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                   &
-            qw(i,j,k+1) < qw(i,j,k) ) then
-          ! QW monotonically decreasing across inversion
-          ! Only allow for QW lapse rate if both it and the
-          ! 2 grid-level jump are negative (expected sign)
-        dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
-        if (l_wtrac) dqw_sml_meth(i,j) = 1
-
-        if ( dqw_sml(i,j) < zero ) then
-          if (l_wtrac) then           ! Store method
-            if (one_half*dqw_sml(i,j) > qw_lapse*dz_disc) then
-              dqw_sml_meth(i,j) = 2
-            else
-              dqw_sml_meth(i,j) = 3
-            end if
-          end if
-          dqw_sml(i,j) = dqw_sml(i,j) -                                      &
-            max( one_half*dqw_sml(i,j), qw_lapse*dz_disc )
-        end if
-      else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                              &
-                qw(i,j,k+1) > qw(i,j,k) ) then
-          ! QW monotonically increasing across inversion
-          ! Suggests something unusual is going so not clear how
-          ! to proceed, so currently leaving DQW as 2 level jump
-        dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
-        if (l_wtrac) dqw_sml_meth(i,j) = 1
-      end if
-
-    end if  ! Monotonic inversion
-  end if ! not cumulus and not at top of bl_levels
-
-  !-------------------------------------------------------------------
-  !..Second interpolate to find ZHSC
-  !-------------------------------------------------------------------
-  if (l_wtrac) then
-    dqw_dsc_meth(i,j) = 0
-    qw_lapse_zero_dsc(i,j) = .false.
-  end if
-
-  if ( dsc(i,j) ) then
-    k = ntdsc(i,j)
-    !..by default, keep ZHSC at the half-level where it was diagnosed
+    k = ntml(i,j)
+    !..by default, keep ZH at the half-level where it was diagnosed
     !..initially and use grid-level jumps
-    dsl_dsc(i,j) = sl(i,j,k+1) - sl(i,j,k)
-    dqw_dsc(i,j) = qw(i,j,k+1) - qw(i,j,k)
 
-    if ( k  <=  bl_levels-2 ) then
+    dsl_sml(i,j) = sl(i,j,k+1) - sl(i,j,k)
+    dqw_sml(i,j) = qw(i,j,k+1) - qw(i,j,k)
 
-      !  Require SVL and SL to be monotonically increasing
-      !  and QW to be simply monotonic
-      monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                    &
-                        svl(i,j,k+1) > svl(i,j,k) )                          &
-                .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                      &
-                        sl(i,j,k+1) > sl(i,j,k) )                            &
-                .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                    &
-                          qw(i,j,k+1) > qw(i,j,k) )                          &
-                    .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                   &
+    if ( .not. cumulus(i,j) .and. .not. coupled(i,j) .and.                     &
+          res_inv(i,j) == 0 .and. k > 1 .and. k <= bl_levels-2 ) then
+
+        !  Require SVL and SL to be monotonically increasing
+        !  and QW to be simply monotonic
+      monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                      &
+                        svl(i,j,k+1) > svl(i,j,k) )                            &
+                .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                        &
+                        sl(i,j,k+1) > sl(i,j,k) )                              &
+                .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                      &
+                          qw(i,j,k+1) > qw(i,j,k) )                            &
+                    .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                     &
                           qw(i,j,k+1) < qw(i,j,k) ) )
 
       if ( monotonic_inv ) then
 
-        if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
-              sc_diag_opt == sc_diag_all_rh_max ) then
-          ! The initial zhsc can be between model-levels rather than exactly
-          ! on a rho-level.
-          ! Store height of base of DSC layer
-          z_cbase = zhsc(i,j) - dscdepth(i,j)
-        end if
-
         if ( k  <=  bl_levels-3 ) then
           ! need to test for K+1 to K+2 gradient in case profile is
           ! concave (would mess up the inversion diagnosis so best
-          ! just to ignore)
-          svl_lapse = max(zero,                                              &
-                ( svl(i,j,k+3) - svl(i,j,k+2) )*rdz(i,j,k+3) )
-          if ( svl_lapse  >                                                  &
-                ( svl(i,j,k+2) - svl(i,j,k+1) )*rdz(i,j,k+2) )               &
+          ! just to ignore lapse)
+          svl_lapse = max(zero,                                                &
+                ( svl(i,j,k+3) - svl(i,j,k+2) ) * rdz(i,j,k+3)  )
+          if ( svl_lapse  >                                                    &
+                ( svl(i,j,k+2) - svl(i,j,k+1) ) * rdz(i,j,k+2) )               &
                 svl_lapse = zero
         else
           svl_lapse = zero
         end if
-        if ( k  >=  nbdsc(i,j)+2 ) then
-            ! Use mean mixed layer gradient (if resolved) to allow
-            ! for stablisation by gradient-adjustment
-            ! Ignore level K in case inversion is dropping
-          svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,nbdsc(i,j)) )/             &
-                        (z_tq(i,j,k-1)-z_tq(i,j,nbdsc(i,j)))
+        if ( k  >=  k_plume(i,j)+2 ) then
+              ! Use mean mixed layer gradient (if resolved) to allow
+              ! for stablisation by gradient-adjustment
+              ! Ignore level K in case inversion is dropping
+          svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,k_plume(i,j)) )/             &
+                        (z_tq(i,j,k-1)-z_tq(i,j,k_plume(i,j)))
           svl_lapse_base = max( zero, svl_lapse_base )
         else
           svl_lapse_base = zero
         end if
 
         quad_a  = one_half*( svl_lapse - svl_lapse_base )
-        quad_bm = svl(i,j,k+2) - svl(i,j,k)                                  &
-              - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                   &
-              - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                &
+        quad_bm = svl(i,j,k+2) - svl(i,j,k)                                    &
+            - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                      &
+            - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                   &
                                                     dzl(i,j,k+1) )
-        quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                 &
-              svl_lapse_base * (                                              &
+        quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                   &
+            svl_lapse_base * (                                                 &
               z_uv(i,j,k+1)-z_tq(i,j,k) + one_half*dzl(i,j,k+1) ) )
 
         if ( quad_bm  >   zero ) then
           if ( quad_c  <=  zero) then
-              ! SVL extrapolated from K to K+1 is greater than
-              ! the level K+1 value - inversion needs to rise
+                ! SVL extrapolated from K to K+1 is greater than
+                ! the level K+1 value - inversion needs to rise so
+                ! place it as high as possible
             dz_disc = dz_disc_min
           else if ( quad_bm*quad_bm  >=  4.0_r_bl*quad_a*quad_c ) then
-              ! solve equation for DZ_DISC...
-            if ( abs(quad_a) >= rbl_eps ) then
-                !   ...quadratic if QUAD_A ne 0
-              dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                    &
-                                        - 4.0_r_bl*quad_a*quad_c )            &
+                ! solve equation for DZ_DISC...
+            if ( abs(quad_a)  >=  rbl_eps ) then
+                  !   ...quadratic if QUAD_A /= 0
+              dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                      &
+                                        - 4.0_r_bl*quad_a*quad_c )              &
                               ) / (2.0_r_bl*quad_a)
             else
-                !   ...linear if QUAD_A = 0
+                  !   ...linear if QUAD_A == 0
               dz_disc = quad_c / quad_bm
             end if
           else
@@ -2433,117 +2259,299 @@ do i = pdims%i_start, pdims%i_end
           end if
 
           if ( dz_disc  >   0.9_r_bl * dzl(i,j,k+1) ) then
-            if ( ntdsc(i,j) == 2 ) then
-              dz_disc = dzl(i,j,k+1)
+              ! ZH diagnosed very close to or below Z_UV(K+1):
+            if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
+                  ! top of ML stably stratified so lower NTML but
+                  ! set ZH only fractionally (DZ_DISC_MIN)
+                  ! below the top of the inversion level.
+              ntml(i,j) = ntml(i,j) - 1
+              k=ntml(i,j)
+              dz_disc = dz_disc_min
             else
-              ! ZHSC diagnosed very close to or below Z_UV(K+1):
-              if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
-                ! top of ML stably stratified so lower NTDSC but
-                ! set ZHSC only fractionally (DZ_DISC_MIN)
-                ! below the top of the inversion level.
-                ntdsc(i,j) = ntdsc(i,j) - 1
-                k=ntdsc(i,j)
-                dz_disc = dz_disc_min
-                dscdepth(i,j) = dscdepth(i,j) - dzl(i,j,k+1)
-                ! Note that all but DZ_DISC_MIN of this layer will
-                ! be added back on to DSCDEPTH a few lines below
-              else
-                ! top of ML well-mixed so don't lower the inversion
-                ! level but set ZHSC just (DZ_DISC_MIN) above the
-                ! half-level to allow the inversion to subside if
-                ! necessary.
-                dz_disc = dzl(i,j,k+1) - dz_disc_min
-              end if
+                  ! top of ML well-mixed so don't lower the inversion
+                  ! level but set ZH just (DZ_DISC_MIN) above the
+                  ! half-level to allow the inversion to subside if
+                  ! necessary.
+              dz_disc = dzl(i,j,k+1) - dz_disc_min
             end if
           end if
 
-        else  ! QUAD_BM le 0
+        else
           !.. ignoring lapse rates
           dsvl_top = svl(i,j,k+2) - svl(i,j,k)
-          dz_disc = dzl(i,j,k+1) *                                           &
+          dz_disc = dzl(i,j,k+1) *                                             &
                           (svl(i,j,k+1)-svl(i,j,k)) / dsvl_top
         end if
 
-        zhsc(i,j) = z_uv(i,j,k+2) - dz_disc
-
-        if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
-              sc_diag_opt == sc_diag_all_rh_max ) then
-          ! The initial zhsc can be between model-levels rather than exactly
-          ! on a rho-level.  Assuming height of base of DSC layer stays the
-          ! same, set new depth based on updated DSC top height:
-          dscdepth(i,j) = zhsc(i,j) - z_cbase
-        else
-          ! The initial zhsc is always at rho-level ntdsc+1;
-          ! increment the DSC depth consistent with this:
-          dscdepth(i,j) = dscdepth(i,j) + zhsc(i,j) - z_uv(i,j,k+1)
-        end if
-
-        dsc_disc_inv(i,j) = 1  ! set flag to indicate disc inv found
+        zh(i,j) = z_uv(i,j,k+2) - dz_disc
+        sml_disc_inv(i,j) = 1 ! set flag to indicate disc inv found
 
         !-----------------------------------------------------------
-        !..Calculate DSC inversion discontinuous jumps of SL and QW
+        !..Calculate SML inversion discontinuous jumps of SL and QW
         !-----------------------------------------------------------
                     ! Allow for lapse rate above inversion, if known
-        dz_disc = z_tq(i,j,k+2) - zhsc(i,j)
+        dz_disc = z_tq(i,j,k+2) - zh(i,j)
         sl_lapse = zero
         qw_lapse = zero
         if ( k  <=  bl_levels-3 ) then
-          sl_lapse = max( zero,                                              &
+          sl_lapse = max( zero,                                                &
               ( sl(i,j,k+3) - sl(i,j,k+2) )*rdz(i,j,k+3) )
-          qw_lapse = min( zero,                                              &
+          qw_lapse = min( zero,                                                &
               ( qw(i,j,k+3) - qw(i,j,k+2) )*rdz(i,j,k+3) )
 
           if (l_wtrac) then      ! Store method
             if (qw_lapse >= 0.0) then
-              qw_lapse_zero_dsc(i,j) = .true.
+              qw_lapse_zero_sml(i,j) = .true.
             end if
           end if
 
         end if
 
-        !-----------------
-        ! First SL jump
-        !-----------------
-        ! Only reduce 2 level jump by at most half
-        dsl_dsc(i,j) = sl(i,j,k+2) - sl(i,j,k)
-        dsl_dsc(i,j) = dsl_dsc(i,j) -                                        &
-              min( one_half*dsl_dsc(i,j), sl_lapse*dz_disc )
-        !-----------------
-        ! Next QW jump
-        !-----------------
-        if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                 &
+          !-----------------
+          ! First SL jump
+          !-----------------
+          ! Only reduce 2 level jump by at most half
+        dsl_sml(i,j) = sl(i,j,k+2) - sl(i,j,k)
+        dsl_sml(i,j) = dsl_sml(i,j) -                                          &
+                min( one_half*dsl_sml(i,j), sl_lapse*dz_disc )
+          !-----------------
+          ! Next QW jump
+          !-----------------
+        if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                   &
               qw(i,j,k+1) < qw(i,j,k) ) then
-          ! QW monotonically decreasing across inversion
-          ! Only allow for QW lapse rate if both it and the
-          ! 2 grid-level jump are negative (expected sign)
-          dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
-          if (l_wtrac) dqw_dsc_meth(i,j) = 1
+            ! QW monotonically decreasing across inversion
+            ! Only allow for QW lapse rate if both it and the
+            ! 2 grid-level jump are negative (expected sign)
+          dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
+          if (l_wtrac) dqw_sml_meth(i,j) = 1
 
-          if ( dqw_dsc(i,j) < zero ) then
-            if (l_wtrac) then       ! Store method
-              if ( one_half*dqw_dsc(i,j) > qw_lapse*dz_disc ) then
-                dqw_dsc_meth(i,j) = 2
+          if ( dqw_sml(i,j) < zero ) then
+            if (l_wtrac) then           ! Store method
+              if (one_half*dqw_sml(i,j) > qw_lapse*dz_disc) then
+                dqw_sml_meth(i,j) = 2
               else
-                dqw_dsc_meth(i,j) = 3
+                dqw_sml_meth(i,j) = 3
               end if
             end if
-            dqw_dsc(i,j) = dqw_dsc(i,j) -                                    &
-              max( one_half*dqw_dsc(i,j), qw_lapse*dz_disc )
+            dqw_sml(i,j) = dqw_sml(i,j) -                                      &
+              max( one_half*dqw_sml(i,j), qw_lapse*dz_disc )
           end if
-        else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                            &
+        else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                              &
                   qw(i,j,k+1) > qw(i,j,k) ) then
-          ! QW monotonically increasing across inversion
-          ! Suggests something unusual is going so not clear how
-          ! to proceed, so currently leaving DQW as 2 level jump
-          dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
-          if (l_wtrac) dqw_dsc_meth(i,j) = 1
+            ! QW monotonically increasing across inversion
+            ! Suggests something unusual is going so not clear how
+            ! to proceed, so currently leaving DQW as 2 level jump
+          dqw_sml(i,j) = qw(i,j,k+2) - qw(i,j,k)
+          if (l_wtrac) dqw_sml_meth(i,j) = 1
         end if
 
-      end if  ! monotonic inversion
-    end if ! test on K lt BL_LEVELS-2
-  end if ! test on DSC
-end do
+      end if  ! Monotonic inversion
+    end if ! not cumulus and not at top of bl_levels
+
+    !-------------------------------------------------------------------
+    !..Second interpolate to find ZHSC
+    !-------------------------------------------------------------------
+    if (l_wtrac) then
+      dqw_dsc_meth(i,j) = 0
+      qw_lapse_zero_dsc(i,j) = .false.
+    end if
+
+    if ( dsc(i,j) ) then
+      k = ntdsc(i,j)
+      !..by default, keep ZHSC at the half-level where it was diagnosed
+      !..initially and use grid-level jumps
+      dsl_dsc(i,j) = sl(i,j,k+1) - sl(i,j,k)
+      dqw_dsc(i,j) = qw(i,j,k+1) - qw(i,j,k)
+
+      if ( k  <=  bl_levels-2 ) then
+
+        !  Require SVL and SL to be monotonically increasing
+        !  and QW to be simply monotonic
+        monotonic_inv = ( svl(i,j,k+2) > svl(i,j,k+1) .and.                    &
+                          svl(i,j,k+1) > svl(i,j,k) )                          &
+                  .and. ( sl(i,j,k+2) > sl(i,j,k+1) .and.                      &
+                          sl(i,j,k+1) > sl(i,j,k) )                            &
+                  .and. ( ( qw(i,j,k+2) > qw(i,j,k+1) .and.                    &
+                            qw(i,j,k+1) > qw(i,j,k) )                          &
+                      .or. ( qw(i,j,k+2) < qw(i,j,k+1) .and.                   &
+                            qw(i,j,k+1) < qw(i,j,k) ) )
+
+        if ( monotonic_inv ) then
+
+          if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
+                sc_diag_opt == sc_diag_all_rh_max ) then
+            ! The initial zhsc can be between model-levels rather than exactly
+            ! on a rho-level.
+            ! Store height of base of DSC layer
+            z_cbase = zhsc(i,j) - dscdepth(i,j)
+          end if
+
+          if ( k  <=  bl_levels-3 ) then
+            ! need to test for K+1 to K+2 gradient in case profile is
+            ! concave (would mess up the inversion diagnosis so best
+            ! just to ignore)
+            svl_lapse = max(zero,                                              &
+                  ( svl(i,j,k+3) - svl(i,j,k+2) )*rdz(i,j,k+3) )
+            if ( svl_lapse  >                                                  &
+                  ( svl(i,j,k+2) - svl(i,j,k+1) )*rdz(i,j,k+2) )               &
+                  svl_lapse = zero
+          else
+            svl_lapse = zero
+          end if
+          if ( k  >=  nbdsc(i,j)+2 ) then
+              ! Use mean mixed layer gradient (if resolved) to allow
+              ! for stablisation by gradient-adjustment
+              ! Ignore level K in case inversion is dropping
+            svl_lapse_base = ( svl(i,j,k-1)-svl(i,j,nbdsc(i,j)) )/             &
+                          (z_tq(i,j,k-1)-z_tq(i,j,nbdsc(i,j)))
+            svl_lapse_base = max( zero, svl_lapse_base )
+          else
+            svl_lapse_base = zero
+          end if
+
+          quad_a  = one_half*( svl_lapse - svl_lapse_base )
+          quad_bm = svl(i,j,k+2) - svl(i,j,k)                                  &
+                - svl_lapse * ( z_tq(i,j,k+2)-z_uv(i,j,k+2) )                   &
+                - svl_lapse_base * ( z_uv(i,j,k+1)-z_tq(i,j,k) +                &
+                                                      dzl(i,j,k+1) )
+          quad_c  = dzl(i,j,k+1)*( svl(i,j,k+1) - svl(i,j,k) -                 &
+                svl_lapse_base * (                                              &
+                z_uv(i,j,k+1)-z_tq(i,j,k) + one_half*dzl(i,j,k+1) ) )
+
+          if ( quad_bm  >   zero ) then
+            if ( quad_c  <=  zero) then
+                ! SVL extrapolated from K to K+1 is greater than
+                ! the level K+1 value - inversion needs to rise
+              dz_disc = dz_disc_min
+            else if ( quad_bm*quad_bm  >=  4.0_r_bl*quad_a*quad_c ) then
+                ! solve equation for DZ_DISC...
+              if ( abs(quad_a) >= rbl_eps ) then
+                  !   ...quadratic if QUAD_A ne 0
+                dz_disc = ( quad_bm - sqrt( quad_bm*quad_bm                    &
+                                          - 4.0_r_bl*quad_a*quad_c )            &
+                                ) / (2.0_r_bl*quad_a)
+              else
+                  !   ...linear if QUAD_A = 0
+                dz_disc = quad_c / quad_bm
+              end if
+            else
+              dz_disc = 99999.9_r_bl  ! large dummy value
+            end if
+
+            if ( dz_disc  >   0.9_r_bl * dzl(i,j,k+1) ) then
+              if ( ntdsc(i,j) == 2 ) then
+                dz_disc = dzl(i,j,k+1)
+              else
+                ! ZHSC diagnosed very close to or below Z_UV(K+1):
+                if ( svl(i,j,k)-svl(i,j,k-1)  >   zero) then
+                  ! top of ML stably stratified so lower NTDSC but
+                  ! set ZHSC only fractionally (DZ_DISC_MIN)
+                  ! below the top of the inversion level.
+                  ntdsc(i,j) = ntdsc(i,j) - 1
+                  k=ntdsc(i,j)
+                  dz_disc = dz_disc_min
+                  dscdepth(i,j) = dscdepth(i,j) - dzl(i,j,k+1)
+                  ! Note that all but DZ_DISC_MIN of this layer will
+                  ! be added back on to DSCDEPTH a few lines below
+                else
+                  ! top of ML well-mixed so don't lower the inversion
+                  ! level but set ZHSC just (DZ_DISC_MIN) above the
+                  ! half-level to allow the inversion to subside if
+                  ! necessary.
+                  dz_disc = dzl(i,j,k+1) - dz_disc_min
+                end if
+              end if
+            end if
+
+          else  ! QUAD_BM le 0
+            !.. ignoring lapse rates
+            dsvl_top = svl(i,j,k+2) - svl(i,j,k)
+            dz_disc = dzl(i,j,k+1) *                                           &
+                            (svl(i,j,k+1)-svl(i,j,k)) / dsvl_top
+          end if
+
+          zhsc(i,j) = z_uv(i,j,k+2) - dz_disc
+
+          if ( sc_diag_opt == sc_diag_cu_rh_max .or.                           &
+                sc_diag_opt == sc_diag_all_rh_max ) then
+            ! The initial zhsc can be between model-levels rather than exactly
+            ! on a rho-level.  Assuming height of base of DSC layer stays the
+            ! same, set new depth based on updated DSC top height:
+            dscdepth(i,j) = zhsc(i,j) - z_cbase
+          else
+            ! The initial zhsc is always at rho-level ntdsc+1;
+            ! increment the DSC depth consistent with this:
+            dscdepth(i,j) = dscdepth(i,j) + zhsc(i,j) - z_uv(i,j,k+1)
+          end if
+
+          dsc_disc_inv(i,j) = 1  ! set flag to indicate disc inv found
+
+          !-----------------------------------------------------------
+          !..Calculate DSC inversion discontinuous jumps of SL and QW
+          !-----------------------------------------------------------
+                      ! Allow for lapse rate above inversion, if known
+          dz_disc = z_tq(i,j,k+2) - zhsc(i,j)
+          sl_lapse = zero
+          qw_lapse = zero
+          if ( k  <=  bl_levels-3 ) then
+            sl_lapse = max( zero,                                              &
+                ( sl(i,j,k+3) - sl(i,j,k+2) )*rdz(i,j,k+3) )
+            qw_lapse = min( zero,                                              &
+                ( qw(i,j,k+3) - qw(i,j,k+2) )*rdz(i,j,k+3) )
+
+            if (l_wtrac) then      ! Store method
+              if (qw_lapse >= 0.0) then
+                qw_lapse_zero_dsc(i,j) = .true.
+              end if
+            end if
+
+          end if
+
+          !-----------------
+          ! First SL jump
+          !-----------------
+          ! Only reduce 2 level jump by at most half
+          dsl_dsc(i,j) = sl(i,j,k+2) - sl(i,j,k)
+          dsl_dsc(i,j) = dsl_dsc(i,j) -                                        &
+                min( one_half*dsl_dsc(i,j), sl_lapse*dz_disc )
+          !-----------------
+          ! Next QW jump
+          !-----------------
+          if ( qw(i,j,k+2) < qw(i,j,k+1) .and.                                 &
+                qw(i,j,k+1) < qw(i,j,k) ) then
+            ! QW monotonically decreasing across inversion
+            ! Only allow for QW lapse rate if both it and the
+            ! 2 grid-level jump are negative (expected sign)
+            dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
+            if (l_wtrac) dqw_dsc_meth(i,j) = 1
+
+            if ( dqw_dsc(i,j) < zero ) then
+              if (l_wtrac) then       ! Store method
+                if ( one_half*dqw_dsc(i,j) > qw_lapse*dz_disc ) then
+                  dqw_dsc_meth(i,j) = 2
+                else
+                  dqw_dsc_meth(i,j) = 3
+                end if
+              end if
+              dqw_dsc(i,j) = dqw_dsc(i,j) -                                    &
+                max( one_half*dqw_dsc(i,j), qw_lapse*dz_disc )
+            end if
+          else if ( qw(i,j,k+2) > qw(i,j,k+1) .and.                            &
+                    qw(i,j,k+1) > qw(i,j,k) ) then
+            ! QW monotonically increasing across inversion
+            ! Suggests something unusual is going so not clear how
+            ! to proceed, so currently leaving DQW as 2 level jump
+            dqw_dsc(i,j) = qw(i,j,k+2) - qw(i,j,k)
+            if (l_wtrac) dqw_dsc_meth(i,j) = 1
+          end if
+
+        end if  ! monotonic inversion
+      end if ! test on K lt BL_LEVELS-2
+    end if ! test on DSC
+  end do
+end do ! ii
 !$OMP end do
+call stop_timing( dynamic_not_blocked_1 )
 !end do
 
 !$OMP end PARALLEL
@@ -2595,11 +2603,11 @@ end if
 
 !do j = pdims%j_start, pdims%j_end
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
-!$OMP  private (i, ii, i_wt, k, kl, km, kp, kp2, kmax, wstar3, c_ws, w_m,   &
+!$OMP  private (i, ii, i_wt, k, kl, km, kp, kp2, kmax, wstar3, c_ws, w_m,      &
 !$OMP  pr_neut, w_h, k_cff, virt_factor, z_cbase , zdsc_cbase, dsl_ga,         &
 !$OMP  dqw_ga, cfl_ml, cff_ml, dqw, dsl, dqcl, dqcf, db_disc, cu_depth_fac,    &
 !$OMP  k_rad_lim, z_rad_lim ,dfsw_inv, dflw_inv, dfsw_top, dsldz, cf_for_wb,   &
-!$OMP  grad_t_adj_inv_rdz, grad_q_adj_inv_rdz)
+!$OMP  grad_t_adj_inv_rdz, grad_q_adj_inv_rdz, denom)
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
 
