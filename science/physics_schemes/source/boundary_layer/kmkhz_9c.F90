@@ -971,7 +971,8 @@ integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 integer(tik) :: kmkhz_9c_tik, call_calc_wtrac, call_excf_nl_9c, &
                 repeat_calc_wtrac, dynamic_blocked_1,           & 
-                dynamic_not_blocked_1
+                dynamic_not_blocked_1, dynamic_blocked_2,       &
+                dynamic_blocked_3
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 call start_timing( kmkhz_9c_tik, '__kmkhz_9c__ ')
@@ -1027,7 +1028,7 @@ j = 1
 !$OMP  svl_diff, monotonic_inv, svl_lapse, svl_lapse_base,                     &
 !$OMP  quad_a,  quad_bm, quad_c, dz_disc, dsvl_top, sl_lapse,  qw_lapse,       &
 !$OMP  kp2, rht_k, rht_kp1, rht_kp2, interp, z_cbase, dynamic_blocked_1,       &
-!$OMP  dynamic_not_blocked_1 )
+!$OMP  dynamic_not_blocked_1, dynamic_blocked_2 )
 !-----------------------------------------------------------------------
 ! Index to subroutine KMKHZ9C
 
@@ -1218,7 +1219,7 @@ if (l_wtrac) then
 !$OMP end do
  !end do ! j
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(DYNAMIC)
   do ii = pdims%i_start, pdims%i_end, bl_segment_size
     do k = 2, bl_levels-1
       do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
@@ -1250,7 +1251,7 @@ if (l_wtrac) then
         end if
         !end do
       end do
-    end do
+    end do !i
   end do !ii
 !$OMP end do
 end if   ! l_wtrac
@@ -1773,6 +1774,7 @@ end do
 !$OMP end do
 !end do
 
+call start_timing( dynamic_blocked_2, '__dynamic_blocked_2__ ')
 if (l_new_kcloudtop) then
   !---------------------------------------------------------------------
   ! improved method of finding the k_cloud_dsct, the top of the mixed
@@ -1780,42 +1782,44 @@ if (l_new_kcloudtop) then
   !---------------------------------------------------------------------
 !do j = pdims%j_start, pdims%j_end
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-      !-------------------------------------------------------------
-      ! Find k_cloud_dsct as the equivalent to ntdsc (the top level
-      ! of the DSC) seen by radiation, which we take as the level two
-      ! levels below the lowest level with free tropospheric radiative
-      ! cooling.  This is done by finding the level with maximum LW
-      ! cooling, below z_rad_lim and above the SML and 0.5*ZHSC
-      ! (ie, restrict search to `close' to ZHSC)
-      ! Necessary as radiation is not usually called every timestep.
-      !-------------------------------------------------------------
-    if ( dsc(i,j) .and. ntdsc(i,j)+2 <= bl_levels ) then
-      z_rad_lim = max( z_tq(i,j,ntdsc(i,j)+2)+0.1_r_bl, 1.2_r_bl*zhsc(i,j) )
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+        !-------------------------------------------------------------
+        ! Find k_cloud_dsct as the equivalent to ntdsc (the top level
+        ! of the DSC) seen by radiation, which we take as the level two
+        ! levels below the lowest level with free tropospheric radiative
+        ! cooling.  This is done by finding the level with maximum LW
+        ! cooling, below z_rad_lim and above the SML and 0.5*ZHSC
+        ! (ie, restrict search to `close' to ZHSC)
+        ! Necessary as radiation is not usually called every timestep.
+        !-------------------------------------------------------------
+      if ( dsc(i,j) .and. ntdsc(i,j)+2 <= bl_levels ) then
+        z_rad_lim = max( z_tq(i,j,ntdsc(i,j)+2)+0.1_r_bl, 1.2_r_bl*zhsc(i,j) )
 
-      k = ntml(i,j)+2
-      do while (z_tq(i,j,k) < z_rad_lim .and. k < bl_levels)
-        if ( z_tq(i,j,k) > one_half*zhsc(i,j)                                &
-            .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
-          k_cloud_dsct(i,j) = k
-          df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
+        k = ntml(i,j)+2
+        do while (z_tq(i,j,k) < z_rad_lim .and. k < bl_levels)
+          if ( z_tq(i,j,k) > one_half*zhsc(i,j)                                &
+              .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
+            k_cloud_dsct(i,j) = k
+            df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
+          end if
+          k = k+1
+        end do ! k
+        ! Set K_CLOUD_DSCT to the level below if DF in the level
+        ! above is less than 1.5 times the level above that
+        ! (implies K_CLOUD_DSCT+1 is typical of free trop so
+        !  K_CLOUD_DSCT must be inversion level, instead of ntdsc).
+        ! DF in level K_CLOUD_DSCT+1 is then included as DF_INV_DSC
+        ! (see below).
+        k = k_cloud_dsct(i,j)
+        if ( k >  1 .and. k < bl_levels -1 ) then
+          if (dflw_over_cp(i,j,k+1) < 1.5_r_bl*dflw_over_cp(i,j,k+2))          &
+              k_cloud_dsct(i,j) = k-1
         end if
-        k = k+1
-      end do ! k
-      ! Set K_CLOUD_DSCT to the level below if DF in the level
-      ! above is less than 1.5 times the level above that
-      ! (implies K_CLOUD_DSCT+1 is typical of free trop so
-      !  K_CLOUD_DSCT must be inversion level, instead of ntdsc).
-      ! DF in level K_CLOUD_DSCT+1 is then included as DF_INV_DSC
-      ! (see below).
-      k = k_cloud_dsct(i,j)
-      if ( k >  1 .and. k < bl_levels -1 ) then
-        if (dflw_over_cp(i,j,k+1) < 1.5_r_bl*dflw_over_cp(i,j,k+2))          &
-            k_cloud_dsct(i,j) = k-1
-      end if
-    end if  ! DSC test separated out
+      end if  ! DSC test separated out
 
-  end do ! i
+    end do ! i
+  end do ! ii
   !$OMP end do
   !-----------------------------------------------------------------
   !  Find bottom grid-level (K_LEVEL) for cloud-top radiative flux
@@ -1824,21 +1828,23 @@ if (l_new_kcloudtop) then
   !  in order to generate turbulence.
   !-----------------------------------------------------------------
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-    k_level(i,j) = k_cloud_dsct(i,j)
-    if ( k_cloud_dsct(i,j)  >   1 ) then
-      k_rad_lim = ntml(i,j)+1
-      k=k_cloud_dsct(i,j)-1
-      kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
-      do while ( k  >   k_rad_lim                                            &
-              .and. dflw_over_cp(i,j,kl)  >   zero                           &
-              .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
-        k_level(i,j) = k
-        k = k-1
-        kl=max(1,k)
-      end do ! k
-    end if
-  end do ! i
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      k_level(i,j) = k_cloud_dsct(i,j)
+      if ( k_cloud_dsct(i,j)  >   1 ) then
+        k_rad_lim = ntml(i,j)+1
+        k=k_cloud_dsct(i,j)-1
+        kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
+        do while ( k  >   k_rad_lim                                            &
+                .and. dflw_over_cp(i,j,kl)  >   zero                           &
+                .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
+          k_level(i,j) = k
+          k = k-1
+          kl=max(1,k)
+        end do ! k
+      end if
+    end do ! i
+  end do ! ii
   !$OMP end do
   !end do ! j
   !#####
@@ -1850,31 +1856,33 @@ else
 
   !do j = pdims%j_start, pdims%j_end
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-    !-------------------------------------------------------------
-    ! Find the layer with the greatest LW radiative flux jump in
-    ! the upper half of the boundary layer and assume that this
-    ! marks the top of the DSC layer.
-    ! Necessary as radiation is not usually called every timestep.
-    !-------------------------------------------------------------
-    ! Limit the search to above the SML.
-    k_rad_lim = ntml(i,j)+2
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      !-------------------------------------------------------------
+      ! Find the layer with the greatest LW radiative flux jump in
+      ! the upper half of the boundary layer and assume that this
+      ! marks the top of the DSC layer.
+      ! Necessary as radiation is not usually called every timestep.
+      !-------------------------------------------------------------
+      ! Limit the search to above the SML.
+      k_rad_lim = ntml(i,j)+2
 
-    do k = max(1,k_rad_lim), min(bl_levels,ntdsc(i,j)+2)
+      do k = max(1,k_rad_lim), min(bl_levels,ntdsc(i,j)+2)
 
-      if ( dsc(i,j) .and. z_tq(i,j,k) > one_half*zhsc(i,j)                   &
-            .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
-        k_cloud_dsct(i,j) = k
-          ! Set K_CLOUD_DSCT to the level below if its DF is greater
-          ! than half the maximum.  DF in level K_CLOUD_DSCT+1 is then
-          ! included as DF_INV_DSC below.
-        if (dflw_over_cp(i,j,k-1)  >   one_half*dflw_over_cp(i,j,k))         &
-            k_cloud_dsct(i,j) = k-1
-        df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
-      end if
+        if ( dsc(i,j) .and. z_tq(i,j,k) > one_half*zhsc(i,j)                   &
+              .and. dflw_over_cp(i,j,k) > df_dsct_over_cp(i,j) ) then
+          k_cloud_dsct(i,j) = k
+            ! Set K_CLOUD_DSCT to the level below if its DF is greater
+            ! than half the maximum.  DF in level K_CLOUD_DSCT+1 is then
+            ! included as DF_INV_DSC below.
+          if (dflw_over_cp(i,j,k-1)  >   one_half*dflw_over_cp(i,j,k))         &
+              k_cloud_dsct(i,j) = k-1
+          df_dsct_over_cp(i,j) = dflw_over_cp(i,j,k)
+        end if
 
-    end do ! k
-  end do ! i
+      end do ! k
+    end do ! i
+  end do ! ii
   !$OMP end do
     !-----------------------------------------------------------------
     !  Find bottom grid-level (K_LEVEL) for cloud-top radiative flux
@@ -1883,21 +1891,23 @@ else
     !  in order to generate turbulence.
     !-----------------------------------------------------------------
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-    k_level(i,j) = k_cloud_dsct(i,j)
-    if ( k_cloud_dsct(i,j)  >   1 ) then
-      k_rad_lim = ntml(i,j)+1
-      k=k_cloud_dsct(i,j)-1
-      kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
-      do while ( k  >   k_rad_lim                                            &
-                .and. dflw_over_cp(i,j,kl)  >   zero                         &
-                .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
-        k_level(i,j) = k
-        k = k-1
-        kl=max(1,k)
-      end do ! k
-    end if
-  end do ! i
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      k_level(i,j) = k_cloud_dsct(i,j)
+      if ( k_cloud_dsct(i,j)  >   1 ) then
+        k_rad_lim = ntml(i,j)+1
+        k=k_cloud_dsct(i,j)-1
+        kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
+        do while ( k  >   k_rad_lim                                            &
+                  .and. dflw_over_cp(i,j,kl)  >   zero                         &
+                  .and. z_tq(i,j,kl)  >   one_half*zhsc(i,j) )
+          k_level(i,j) = k
+          k = k-1
+          kl=max(1,k)
+        end do ! k
+      end if
+    end do ! i
+  end do ! ii
   !$OMP end do
   !end do ! j
 
@@ -1913,51 +1923,53 @@ end if  ! test on l_new_kcloudtop
       !-----------------------------------------------------------------
 !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
-do i = pdims%i_start, pdims%i_end
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
 
-  if ( k_cloud_dsct(i,j)  >   0 ) then
-    dflw_inv = zero
-    dfsw_inv = zero
-    if ( k_cloud_dsct(i,j) <  bl_levels ) then
-      k = k_cloud_dsct(i,j)+1
-      if ( k  <   bl_levels ) then
-        dflw_inv = dflw_over_cp(i,j,k)                                       &
-                    - dflw_over_cp(i,j,k+1)                                   &
-                          * dzl(i,j,k)/dzl(i,j,k+1)
-        dfsw_inv = dfsw_over_cp(i,j,k)                                       &
-                    - dfsw_over_cp(i,j,k+1)                                   &
-                          * dzl(i,j,k)/dzl(i,j,k+1)
-      else
-        dflw_inv = dflw_over_cp(i,j,k)
-        dfsw_inv = dfsw_over_cp(i,j,k)
+    if ( k_cloud_dsct(i,j)  >   0 ) then
+      dflw_inv = zero
+      dfsw_inv = zero
+      if ( k_cloud_dsct(i,j) <  bl_levels ) then
+        k = k_cloud_dsct(i,j)+1
+        if ( k  <   bl_levels ) then
+          dflw_inv = dflw_over_cp(i,j,k)                                       &
+                      - dflw_over_cp(i,j,k+1)                                   &
+                            * dzl(i,j,k)/dzl(i,j,k+1)
+          dfsw_inv = dfsw_over_cp(i,j,k)                                       &
+                      - dfsw_over_cp(i,j,k+1)                                   &
+                            * dzl(i,j,k)/dzl(i,j,k+1)
+        else
+          dflw_inv = dflw_over_cp(i,j,k)
+          dfsw_inv = dfsw_over_cp(i,j,k)
+        end if
+        dflw_inv = max( dflw_inv, zero )
+        dfsw_inv = min( dfsw_inv, zero )
       end if
-      dflw_inv = max( dflw_inv, zero )
-      dfsw_inv = min( dfsw_inv, zero )
+      df_inv_dsc(i,j) = dflw_inv + dfsw_inv
+
+      df_dsct_over_cp(i,j) = frad_lw(i,j,k_cloud_dsct(i,j)+1)                  &
+                            - frad_lw(i,j,k_level(i,j))                         &
+                            + dflw_inv
+
+      dfsw_top = frad_sw(i,j,k_cloud_dsct(i,j)+1)                              &
+                - frad_sw(i,j,k_level(i,j))                                     &
+                + dfsw_inv
+
+        !-----------------------------------------------------------
+        ! Combine SW and LW cloud-top divergences into a net
+        ! divergence by estimating SW flux divergence at a given
+        ! LW divergence = DF_SW * (1-exp{-A*kappa_sw/kappa_lw})
+        ! Empirically (from LEM data) a reasonable fit is found
+        ! with A small and (1-exp{-A*kappa_sw/kappa_lw}) = dfsw_frac
+        !-----------------------------------------------------------
+      df_dsct_over_cp(i,j) = max( zero,                                        &
+                    df_dsct_over_cp(i,j) + dfsw_frac * dfsw_top )
     end if
-    df_inv_dsc(i,j) = dflw_inv + dfsw_inv
-
-    df_dsct_over_cp(i,j) = frad_lw(i,j,k_cloud_dsct(i,j)+1)                  &
-                          - frad_lw(i,j,k_level(i,j))                         &
-                          + dflw_inv
-
-    dfsw_top = frad_sw(i,j,k_cloud_dsct(i,j)+1)                              &
-              - frad_sw(i,j,k_level(i,j))                                     &
-              + dfsw_inv
-
-      !-----------------------------------------------------------
-      ! Combine SW and LW cloud-top divergences into a net
-      ! divergence by estimating SW flux divergence at a given
-      ! LW divergence = DF_SW * (1-exp{-A*kappa_sw/kappa_lw})
-      ! Empirically (from LEM data) a reasonable fit is found
-      ! with A small and (1-exp{-A*kappa_sw/kappa_lw}) = dfsw_frac
-      !-----------------------------------------------------------
-    df_dsct_over_cp(i,j) = max( zero,                                        &
-                  df_dsct_over_cp(i,j) + dfsw_frac * dfsw_top )
-  end if
-end do
+  end do !i
+end do !ii
 !$OMP end do
 !end do
-
+call stop_timing( dynamic_blocked_2 )
 !-----------------------------------------------------------------------
 ! 2.4 Set NBDSC, the bottom level of the DSC layer.
 !     Note that this will only be used to give an estimate of the layer
@@ -1999,8 +2011,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         nbdsc(i,j) = k+1     ! marks lowest level within ML
       end if
     end do ! k
-    !end do ! i
-  end do ! j
+    !end do ! j
+  end do ! i
 end do !ii
 !$OMP end do
 !----------------------------------------------------------------------
@@ -2548,8 +2560,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         end if  ! monotonic inversion
       end if ! test on K lt BL_LEVELS-2
     end if ! test on DSC
-  end do
-end do ! ii
+  end do !i
+end do !ii
 !$OMP end do
 call stop_timing( dynamic_not_blocked_1 )
 !end do
@@ -2607,7 +2619,7 @@ end if
 !$OMP  pr_neut, w_h, k_cff, virt_factor, z_cbase , zdsc_cbase, dsl_ga,         &
 !$OMP  dqw_ga, cfl_ml, cff_ml, dqw, dsl, dqcl, dqcf, db_disc, cu_depth_fac,    &
 !$OMP  k_rad_lim, z_rad_lim ,dfsw_inv, dflw_inv, dfsw_top, dsldz, cf_for_wb,   &
-!$OMP  grad_t_adj_inv_rdz, grad_q_adj_inv_rdz, denom)
+!$OMP  grad_t_adj_inv_rdz, grad_q_adj_inv_rdz, denom, dynamic_blocked_3)
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
 
@@ -3170,6 +3182,7 @@ do i = pdims%i_start, pdims%i_end
 
 end do
 !$OMP end do NOWAIT
+! No wait removal due to dimension change?
 !end do
 
 
@@ -3226,94 +3239,96 @@ end do ! ii
 !..assuming a discontinuous subgrid inversion structure.
 !----------------------------------------------------------------------
 
-
+call start_timing( dynamic_blocked_3, '__dynamic_blocked_3__ ')
 !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
-do i = pdims%i_start, pdims%i_end
-    !--------------------------
-    ! First the SML
-    !--------------------------
-  qcl_ic_top(i,j) = zero
-  qcf_ic_top(i,j) = zero
-  cfl_ml = zero
-  cff_ml = zero
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      !--------------------------
+      ! First the SML
+      !--------------------------
+    qcl_ic_top(i,j) = zero
+    qcf_ic_top(i,j) = zero
+    cfl_ml = zero
+    cff_ml = zero
 
-  km = ntml(i,j)
-  if ( sml_disc_inv(i,j) == 1 ) then
-      !-----------------------------------------------------
-      ! Extrapolate water contents from level with max CF,
-      ! out of NTML and NTML-1 (ie near top of SML),
-      ! to the top of the mixed layer
-      !-----------------------------------------------------
-    if (cf_sml(i,j)  >   zero) then
-      kmax = km
-      if (cf(i,j,km-1) > cf(i,j,km)) kmax = km-1
-      if ( l_check_ntp1 .and. cf(i,j,km+1) > cf(i,j,kmax) ) kmax = km+1
+    km = ntml(i,j)
+    if ( sml_disc_inv(i,j) == 1 ) then
+        !-----------------------------------------------------
+        ! Extrapolate water contents from level with max CF,
+        ! out of NTML and NTML-1 (ie near top of SML),
+        ! to the top of the mixed layer
+        !-----------------------------------------------------
+      if (cf_sml(i,j)  >   zero) then
+        kmax = km
+        if (cf(i,j,km-1) > cf(i,j,km)) kmax = km-1
+        if ( l_check_ntp1 .and. cf(i,j,km+1) > cf(i,j,kmax) ) kmax = km+1
 
-      cfl_ml = cf_sml(i,j)*cfl(i,j,kmax)                                     &
-                              /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
-      cff_ml = cf_sml(i,j)*cff(i,j,kmax)                                     &
-                              /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
+        cfl_ml = cf_sml(i,j)*cfl(i,j,kmax)                                     &
+                                /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
+        cff_ml = cf_sml(i,j)*cff(i,j,kmax)                                     &
+                                /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
 
-      if (cfl_ml > 0.01_r_bl) qcl_ic_top(i,j) = qcl(i,j,kmax)/cfl_ml         &
-                        + ( zh(i,j)-z_tq(i,j,km) )*dqcldz(i,j,km)
-      if (cff_ml > 0.01_r_bl) qcf_ic_top(i,j) = qcf(i,j,kmax)/cff_ml         &
-                        + ( zh(i,j)-z_tq(i,j,km) )*dqcfdz(i,j,km)
+        if (cfl_ml > 0.01_r_bl) qcl_ic_top(i,j) = qcl(i,j,kmax)/cfl_ml         &
+                          + ( zh(i,j)-z_tq(i,j,km) )*dqcldz(i,j,km)
+        if (cff_ml > 0.01_r_bl) qcf_ic_top(i,j) = qcf(i,j,kmax)/cff_ml         &
+                          + ( zh(i,j)-z_tq(i,j,km) )*dqcfdz(i,j,km)
+      end if
+
+      dqw = dqw_sml(i,j)
+      dsl = dsl_sml(i,j)
+        ! ignore any cloud above the inversion
+      dqcl = - cfl_ml*qcl_ic_top(i,j)
+      dqcf = - cff_ml*qcf_ic_top(i,j)
+
+      db_disc = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +                      &
+                (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +                 &
+                (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf   )
+
+      if ( db_disc > 0.03_r_bl  ) then
+          ! Diagnosed inversion statically stable and at least ~1K
+        db_top(i,j) = db_disc
+      else
+          ! Diagnosed inversion statically UNstable
+          ! Reset flag to use entrainment K (rather than fluxes)
+        sml_disc_inv(i,j) = 0
+        zh(i,j) = z_uv(i,j,ntml(i,j)+1)
+      end if
+    end if  ! disc inversion diagnosed
+
+    if ( sml_disc_inv(i,j) == 0 ) then
+          ! Calculate using simple grid-level differences
+      kp = km+1
+      dqw = qw(i,j,kp) - qw(i,j,km)
+      dsl = sl(i,j,kp) - sl(i,j,km)
+      qcl_ic_top(i,j) = qcl(i,j,km)
+      qcf_ic_top(i,j) = qcf(i,j,km)
+      dqcl = qcl(i,j,kp) - qcl_ic_top(i,j)
+      dqcf = qcf(i,j,kp) - qcf_ic_top(i,j)
+      db_top(i,j) = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +                  &
+                (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +                &
+                (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf )
+    end if  ! no disc inversion diagnosed
+
+    db_top_cld(i,j) = g * ( btm_cld(i,j,km)*dsl                                &
+                          + bqm_cld(i,j,km)*dqw )
+    denom = a_qsm(i,j,km)*dqw - a_dqsdtm(i,j,km)*dsl
+    if (abs(denom) > rbl_eps) then
+      chi_s_top(i,j) = -qcl_ic_top(i,j) / denom
+      chi_s_top(i,j) = max( zero, min( chi_s_top(i,j), one) )
     end if
 
-    dqw = dqw_sml(i,j)
-    dsl = dsl_sml(i,j)
-      ! ignore any cloud above the inversion
-    dqcl = - cfl_ml*qcl_ic_top(i,j)
-    dqcf = - cff_ml*qcf_ic_top(i,j)
-
-    db_disc = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +                      &
-              (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +                 &
-              (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf   )
-
-    if ( db_disc > 0.03_r_bl  ) then
-        ! Diagnosed inversion statically stable and at least ~1K
-      db_top(i,j) = db_disc
-    else
-        ! Diagnosed inversion statically UNstable
-        ! Reset flag to use entrainment K (rather than fluxes)
-      sml_disc_inv(i,j) = 0
-      zh(i,j) = z_uv(i,j,ntml(i,j)+1)
+    if ( db_top(i,j)  <   0.003_r_bl ) then
+        ! Diagnosed inversion statically unstable:
+        ! ensure DB>0 so that entrainment is non-zero and
+        ! instability can be removed.
+      db_top(i,j) = 0.003_r_bl
+      db_top_cld(i,j) = zero  ! set buoyancy reversal
+      chi_s_top(i,j) = zero   ! term to zero
     end if
-  end if  ! disc inversion diagnosed
 
-  if ( sml_disc_inv(i,j) == 0 ) then
-        ! Calculate using simple grid-level differences
-    kp = km+1
-    dqw = qw(i,j,kp) - qw(i,j,km)
-    dsl = sl(i,j,kp) - sl(i,j,km)
-    qcl_ic_top(i,j) = qcl(i,j,km)
-    qcf_ic_top(i,j) = qcf(i,j,km)
-    dqcl = qcl(i,j,kp) - qcl_ic_top(i,j)
-    dqcf = qcf(i,j,kp) - qcf_ic_top(i,j)
-    db_top(i,j) = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +                  &
-              (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +                &
-              (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf )
-  end if  ! no disc inversion diagnosed
-
-  db_top_cld(i,j) = g * ( btm_cld(i,j,km)*dsl                                &
-                        + bqm_cld(i,j,km)*dqw )
-  denom = a_qsm(i,j,km)*dqw - a_dqsdtm(i,j,km)*dsl
-  if (abs(denom) > rbl_eps) then
-    chi_s_top(i,j) = -qcl_ic_top(i,j) / denom
-    chi_s_top(i,j) = max( zero, min( chi_s_top(i,j), one) )
-  end if
-
-  if ( db_top(i,j)  <   0.003_r_bl ) then
-      ! Diagnosed inversion statically unstable:
-      ! ensure DB>0 so that entrainment is non-zero and
-      ! instability can be removed.
-    db_top(i,j) = 0.003_r_bl
-    db_top_cld(i,j) = zero  ! set buoyancy reversal
-    chi_s_top(i,j) = zero   ! term to zero
-  end if
-
-end do
+  end do !i
+end do !ii
 !$OMP end do
 !end do
 
@@ -3325,115 +3340,118 @@ end do
 
 !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
-do i = pdims%i_start, pdims%i_end
-  if ( dsc(i,j) ) then
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+  ! do i = pdims%i_start, pdims%i_end
+    if ( dsc(i,j) ) then
 
-    qcl_ic_top(i,j) = zero
-    qcf_ic_top(i,j) = zero
-    cfl_ml = zero
-    cff_ml = zero
+      qcl_ic_top(i,j) = zero
+      qcf_ic_top(i,j) = zero
+      cfl_ml = zero
+      cff_ml = zero
 
-    km = ntdsc(i,j)
-    if ( dsc_disc_inv(i,j) == 1 ) then
-        !-----------------------------------------------------
-        ! Extrapolate water contents from level with max CF,
-        ! out of NTDSC and NTDSC-1 (ie near top of DSC),
-        ! to the top of the mixed layer
-        !-----------------------------------------------------
-      if (cf_dsc(i,j) > zero) then
-        kmax = km
-        if (cf(i,j,km-1) > cf(i,j,km)) kmax = km-1
-        if ( l_check_ntp1 .and. cf(i,j,km+1) > cf(i,j,kmax) ) kmax = km+1
+      km = ntdsc(i,j)
+      if ( dsc_disc_inv(i,j) == 1 ) then
+          !-----------------------------------------------------
+          ! Extrapolate water contents from level with max CF,
+          ! out of NTDSC and NTDSC-1 (ie near top of DSC),
+          ! to the top of the mixed layer
+          !-----------------------------------------------------
+        if (cf_dsc(i,j) > zero) then
+          kmax = km
+          if (cf(i,j,km-1) > cf(i,j,km)) kmax = km-1
+          if ( l_check_ntp1 .and. cf(i,j,km+1) > cf(i,j,kmax) ) kmax = km+1
 
-        cfl_ml = cf_dsc(i,j)*cfl(i,j,kmax)                                   &
-                              /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
-        cff_ml = cf_dsc(i,j)*cff(i,j,kmax)                                   &
-                              /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
-        if (cfl_ml > 0.01_r_bl) qcl_ic_top(i,j) = qcl(i,j,kmax)/cfl_ml       &
-                      + ( zhsc(i,j)-z_tq(i,j,km) )*dqcldz(i,j,km)
-        if (cff_ml > 0.01_r_bl) qcf_ic_top(i,j) = qcf(i,j,kmax)/cff_ml       &
-                      + ( zhsc(i,j)-z_tq(i,j,km) )*dqcfdz(i,j,km)
+          cfl_ml = cf_dsc(i,j)*cfl(i,j,kmax)                                   &
+                                /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
+          cff_ml = cf_dsc(i,j)*cff(i,j,kmax)                                   &
+                                /(cfl(i,j,kmax)+cff(i,j,kmax)+rbl_eps)
+          if (cfl_ml > 0.01_r_bl) qcl_ic_top(i,j) = qcl(i,j,kmax)/cfl_ml       &
+                        + ( zhsc(i,j)-z_tq(i,j,km) )*dqcldz(i,j,km)
+          if (cff_ml > 0.01_r_bl) qcf_ic_top(i,j) = qcf(i,j,kmax)/cff_ml       &
+                        + ( zhsc(i,j)-z_tq(i,j,km) )*dqcfdz(i,j,km)
 
+        end if
+
+        dqw = dqw_dsc(i,j)
+        dsl = dsl_dsc(i,j)
+          ! ignore any cloud above the inversion
+        dqcl = - cfl_ml*qcl_ic_top(i,j)
+        dqcf = - cff_ml*qcf_ic_top(i,j)
+
+        db_disc = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +                    &
+                (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +                &
+                (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf   )
+
+        if ( db_disc > 0.03_r_bl  ) then
+            ! Diagnosed inversion statically stable
+          db_dsct(i,j) = db_disc
+        else
+            ! Diagnosed inversion statically UNstable
+            ! Reset flag to use entrainment K (rather than fluxes)
+          dsc_disc_inv(i,j) = 0
+          zhsc(i,j) = z_uv(i,j,ntdsc(i,j)+1)
+        end if
+      end if  ! disc inversion diagnosed
+
+      if ( dsc_disc_inv(i,j) == 0 ) then
+          ! Calculate using simple grid-level differences
+        kp = km+1
+        dqw = qw(i,j,kp) - qw(i,j,km)
+        dsl = sl(i,j,kp) - sl(i,j,km)
+        qcl_ic_top(i,j) = qcl(i,j,km)
+        qcf_ic_top(i,j) = qcf(i,j,km)
+        dqcl = qcl(i,j,kp) - qcl_ic_top(i,j)
+        dqcf = qcf(i,j,kp) - qcf_ic_top(i,j)
+        db_dsct(i,j) = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +               &
+                  (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +              &
+                  (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf )
+      end if  ! no disc inversion diagnosed
+
+      db_dsct_cld(i,j) = g * ( btm_cld(i,j,km)*dsl                             &
+                              + bqm_cld(i,j,km)*dqw )
+      denom = a_qsm(i,j,km)*dqw - a_dqsdtm(i,j,km)*dsl
+      if (abs(denom) > rbl_eps) then
+        chi_s_dsct(i,j) = -qcl_ic_top(i,j) / denom
+        chi_s_dsct(i,j) = max( zero, min( chi_s_dsct(i,j), one) )
       end if
 
-      dqw = dqw_dsc(i,j)
-      dsl = dsl_dsc(i,j)
-        ! ignore any cloud above the inversion
-      dqcl = - cfl_ml*qcl_ic_top(i,j)
-      dqcf = - cff_ml*qcf_ic_top(i,j)
-
-      db_disc = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +                    &
-              (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +                &
-              (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf   )
-
-      if ( db_disc > 0.03_r_bl  ) then
-          ! Diagnosed inversion statically stable
-        db_dsct(i,j) = db_disc
-      else
-          ! Diagnosed inversion statically UNstable
-          ! Reset flag to use entrainment K (rather than fluxes)
-        dsc_disc_inv(i,j) = 0
-        zhsc(i,j) = z_uv(i,j,ntdsc(i,j)+1)
+      if ( db_dsct(i,j) < 0.003_r_bl ) then
+          ! Diagnosed inversion statically unstable:
+          ! ensure DB>0 so that entrainment is non-zero and
+          ! instability can be removed.
+        db_dsct(i,j) = 0.003_r_bl
+        db_dsct_cld(i,j) = zero  ! set buoyancy reversal
+        chi_s_dsct(i,j) = zero   ! term to zero
       end if
-    end if  ! disc inversion diagnosed
+    end if  ! test on DSC
 
-    if ( dsc_disc_inv(i,j) == 0 ) then
-        ! Calculate using simple grid-level differences
-      kp = km+1
-      dqw = qw(i,j,kp) - qw(i,j,km)
-      dsl = sl(i,j,kp) - sl(i,j,km)
-      qcl_ic_top(i,j) = qcl(i,j,km)
-      qcf_ic_top(i,j) = qcf(i,j,km)
-      dqcl = qcl(i,j,kp) - qcl_ic_top(i,j)
-      dqcf = qcf(i,j,kp) - qcf_ic_top(i,j)
-      db_dsct(i,j) = g * ( btm(i,j,km)*dsl + bqm(i,j,km)*dqw +               &
-                (lcrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcl +              &
-                (lsrcp*btm(i,j,km) - etar*bqm(i,j,km)) * dqcf )
-    end if  ! no disc inversion diagnosed
+    !-----------------------------------------------------------------------
+    ! 7.3 Calculation of other SML and DSC inputs to entr param.
+    !     If COUPLED then SML are not used as no "entrainment" is then
+    !     applied at ZH.
+    !-----------------------------------------------------------------------
 
-    db_dsct_cld(i,j) = g * ( btm_cld(i,j,km)*dsl                             &
-                            + bqm_cld(i,j,km)*dqw )
-    denom = a_qsm(i,j,km)*dqw - a_dqsdtm(i,j,km)*dsl
-    if (abs(denom) > rbl_eps) then
-      chi_s_dsct(i,j) = -qcl_ic_top(i,j) / denom
-      chi_s_dsct(i,j) = max( zero, min( chi_s_dsct(i,j), one) )
+            !------------------------------------------------------
+            ! Calculation of SML inputs.
+            !------------------------------------------------------
+    k = ntml(i,j)
+    kp2=min(k+1+sml_disc_inv(i,j),bl_levels)
+    cld_factor(i,j) = max( zero , cf_sml(i,j)-cf(i,j,kp2) )
+    bt_top(i,j)  = g * btm(i,j,k)
+    btt_top(i,j) = g * btm_cld(i,j,k)
+    btc_top(i,j) = btt_top(i,j)
+        !---------------------------------------------------
+        ! Calculation of DSC inputs
+        !---------------------------------------------------
+    if (dsc(i,j)) then
+      k = ntdsc(i,j)
+      kp2=min(k+1+dsc_disc_inv(i,j),bl_levels)
+      cld_factor_dsc(i,j) = max( zero , cf_dsc(i,j)-cf(i,j,kp2) )
+      bt_dsct(i,j)  = g * btm(i,j,k)
+      btt_dsct(i,j) = g * btm_cld(i,j,k)
     end if
-
-    if ( db_dsct(i,j) < 0.003_r_bl ) then
-        ! Diagnosed inversion statically unstable:
-        ! ensure DB>0 so that entrainment is non-zero and
-        ! instability can be removed.
-      db_dsct(i,j) = 0.003_r_bl
-      db_dsct_cld(i,j) = zero  ! set buoyancy reversal
-      chi_s_dsct(i,j) = zero   ! term to zero
-    end if
-  end if  ! test on DSC
-
-  !-----------------------------------------------------------------------
-  ! 7.3 Calculation of other SML and DSC inputs to entr param.
-  !     If COUPLED then SML are not used as no "entrainment" is then
-  !     applied at ZH.
-  !-----------------------------------------------------------------------
-
-          !------------------------------------------------------
-          ! Calculation of SML inputs.
-          !------------------------------------------------------
-  k = ntml(i,j)
-  kp2=min(k+1+sml_disc_inv(i,j),bl_levels)
-  cld_factor(i,j) = max( zero , cf_sml(i,j)-cf(i,j,kp2) )
-  bt_top(i,j)  = g * btm(i,j,k)
-  btt_top(i,j) = g * btm_cld(i,j,k)
-  btc_top(i,j) = btt_top(i,j)
-      !---------------------------------------------------
-      ! Calculation of DSC inputs
-      !---------------------------------------------------
-  if (dsc(i,j)) then
-    k = ntdsc(i,j)
-    kp2=min(k+1+dsc_disc_inv(i,j),bl_levels)
-    cld_factor_dsc(i,j) = max( zero , cf_dsc(i,j)-cf(i,j,kp2) )
-    bt_dsct(i,j)  = g * btm(i,j,k)
-    btt_dsct(i,j) = g * btm_cld(i,j,k)
-  end if
+  end do
 end do
 !$OMP end do
 !end do
@@ -3446,88 +3464,90 @@ end do
 
 !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
-do i = pdims%i_start, pdims%i_end
-  z_cld(i,j) = min( z_cld(i,j), zh(i,j) )
-  z_cld_dsc(i,j) = min( z_cld_dsc(i,j), zhsc(i,j) )
-    !---------------------------------------------------------------
-    ! First the surface mixed layer.
-    !---------------------------------------------------------------
-  if ( coupled(i,j) ) then
-    zeta_s(i,j) = one - z_cld_dsc(i,j) / zhsc(i,j)
-    zeta_r(i,j) = one - zc_dsc(i,j) / zhsc(i,j)
-  else
-    zeta_s(i,j) = one - z_cld(i,j) / zh(i,j)
-    zeta_r(i,j) = one - zc(i,j) / zh(i,j)
-  end if
-
-  if (db_top_cld(i,j)  >=  zero) then
-      !--------------------------------------------------
-      ! i.e. no buoyancy reversal (or default if COUPLED)
-      !--------------------------------------------------
-    db_top_cld(i,j) = zero
-    d_siems(i,j) = zero
-    br_fback(i,j)= zero
-  else
-      !----------------------------
-      ! if (DB_TOP_CLD(I,j)  <   0.0)
-      ! i.e. buoyancy reversal
-      !----------------------------
-    db_top_cld(i,j) = -db_top_cld(i,j) * cld_factor(i,j)
-    d_siems(i,j) = max( zero,                                                &
-          chi_s_top(i,j) * db_top_cld(i,j) / (db_top(i,j)+rbl_eps) )
-      ! Linear feedback dependence for D<0.1
-    br_fback(i,j)= min( one, 10.0_r_bl*d_siems(i,j) )
-    zeta_r(i,j)  = zeta_r(i,j) + (one-zeta_r(i,j))*br_fback(i,j)
-  end if
-    !---------------------------------------------------------------
-    ! Now the decoupled Sc layer (DSC).
-    !---------------------------------------------------------------
-  if (dsc(i,j)) then
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+    z_cld(i,j) = min( z_cld(i,j), zh(i,j) )
+    z_cld_dsc(i,j) = min( z_cld_dsc(i,j), zhsc(i,j) )
+      !---------------------------------------------------------------
+      ! First the surface mixed layer.
+      !---------------------------------------------------------------
     if ( coupled(i,j) ) then
-      zeta_r_dsc(i,j) = one - zc_dsc(i,j) / zhsc(i,j)
+      zeta_s(i,j) = one - z_cld_dsc(i,j) / zhsc(i,j)
+      zeta_r(i,j) = one - zc_dsc(i,j) / zhsc(i,j)
     else
-      zeta_r_dsc(i,j) = one - zc_dsc(i,j) / dscdepth(i,j)
+      zeta_s(i,j) = one - z_cld(i,j) / zh(i,j)
+      zeta_r(i,j) = one - zc(i,j) / zh(i,j)
     end if
 
-    if (db_dsct_cld(i,j)  >=  zero) then
-        !----------------------------
-        ! i.e. no buoyancy reversal
-        !----------------------------
-      db_dsct_cld(i,j) = zero
-      d_siems_dsc(i,j) = zero
-      br_fback_dsc(i,j)= zero
+    if (db_top_cld(i,j)  >=  zero) then
+        !--------------------------------------------------
+        ! i.e. no buoyancy reversal (or default if COUPLED)
+        !--------------------------------------------------
+      db_top_cld(i,j) = zero
+      d_siems(i,j) = zero
+      br_fback(i,j)= zero
     else
         !----------------------------
-        ! if (DB_DSCT_CLD(I,j)  <   0.0)
+        ! if (DB_TOP_CLD(I,j)  <   0.0)
         ! i.e. buoyancy reversal
         !----------------------------
-      db_dsct_cld(i,j) = -db_dsct_cld(i,j) * cld_factor_dsc(i,j)
-      d_siems_dsc(i,j) = max( zero, chi_s_dsct(i,j)                          &
-                      * db_dsct_cld(i,j) / (db_dsct(i,j)+rbl_eps) )
+      db_top_cld(i,j) = -db_top_cld(i,j) * cld_factor(i,j)
+      d_siems(i,j) = max( zero,                                                &
+            chi_s_top(i,j) * db_top_cld(i,j) / (db_top(i,j)+rbl_eps) )
         ! Linear feedback dependence for D<0.1
-      br_fback_dsc(i,j) = min( one, 10.0_r_bl*d_siems_dsc(i,j) )
-
-      if ( entr_enhance_by_cu == Buoyrev_feedback                            &
-            .and. cumulus(i,j)                                                &
-            .and. d_siems_dsc(i,j) < 0.1_r_bl                                 &
-            .and. d_siems_dsc(i,j) > rbl_eps ) then
-          ! Assume mixing from cumulus can enhance the
-          ! buoyancy reversal feedback in regime 0<D<0.1.
-          ! Make enhancement dependent on Cu depth:
-          !       Cu_depth_fac->0 below 400m, 1 above 1000m
-        cu_depth_fac = one_half*( one+                                       &
-                  tanh( ((zhpar(i,j)-zh(i,j))-700.0_r_bl)/100.0_r_bl) )
-          ! BR_FBACK = unchanged for Cu<400m, ->1 for Cu>1000.
-        br_fback_dsc(i,j) = cu_depth_fac +                                   &
-                            (one-cu_depth_fac)*br_fback_dsc(i,j)
+      br_fback(i,j)= min( one, 10.0_r_bl*d_siems(i,j) )
+      zeta_r(i,j)  = zeta_r(i,j) + (one-zeta_r(i,j))*br_fback(i,j)
+    end if
+      !---------------------------------------------------------------
+      ! Now the decoupled Sc layer (DSC).
+      !---------------------------------------------------------------
+    if (dsc(i,j)) then
+      if ( coupled(i,j) ) then
+        zeta_r_dsc(i,j) = one - zc_dsc(i,j) / zhsc(i,j)
+      else
+        zeta_r_dsc(i,j) = one - zc_dsc(i,j) / dscdepth(i,j)
       end if
 
-      zeta_r_dsc(i,j) = zeta_r_dsc(i,j) +                                    &
-                        (one-zeta_r_dsc(i,j))*br_fback_dsc(i,j)
+      if (db_dsct_cld(i,j)  >=  zero) then
+          !----------------------------
+          ! i.e. no buoyancy reversal
+          !----------------------------
+        db_dsct_cld(i,j) = zero
+        d_siems_dsc(i,j) = zero
+        br_fback_dsc(i,j)= zero
+      else
+          !----------------------------
+          ! if (DB_DSCT_CLD(I,j)  <   0.0)
+          ! i.e. buoyancy reversal
+          !----------------------------
+        db_dsct_cld(i,j) = -db_dsct_cld(i,j) * cld_factor_dsc(i,j)
+        d_siems_dsc(i,j) = max( zero, chi_s_dsct(i,j)                          &
+                        * db_dsct_cld(i,j) / (db_dsct(i,j)+rbl_eps) )
+          ! Linear feedback dependence for D<0.1
+        br_fback_dsc(i,j) = min( one, 10.0_r_bl*d_siems_dsc(i,j) )
 
+        if ( entr_enhance_by_cu == Buoyrev_feedback                            &
+              .and. cumulus(i,j)                                                &
+              .and. d_siems_dsc(i,j) < 0.1_r_bl                                 &
+              .and. d_siems_dsc(i,j) > rbl_eps ) then
+            ! Assume mixing from cumulus can enhance the
+            ! buoyancy reversal feedback in regime 0<D<0.1.
+            ! Make enhancement dependent on Cu depth:
+            !       Cu_depth_fac->0 below 400m, 1 above 1000m
+          cu_depth_fac = one_half*( one+                                       &
+                    tanh( ((zhpar(i,j)-zh(i,j))-700.0_r_bl)/100.0_r_bl) )
+            ! BR_FBACK = unchanged for Cu<400m, ->1 for Cu>1000.
+          br_fback_dsc(i,j) = cu_depth_fac +                                   &
+                              (one-cu_depth_fac)*br_fback_dsc(i,j)
+        end if
+
+        zeta_r_dsc(i,j) = zeta_r_dsc(i,j) +                                    &
+                          (one-zeta_r_dsc(i,j))*br_fback_dsc(i,j)
+
+      end if
     end if
-  end if
-end do
+  end do !i
+end do !ii
 !$OMP end do
 ! end do
 
@@ -3567,32 +3587,34 @@ if (l_new_kcloudtop) then
 
   ! do j = pdims%j_start, pdims%j_end
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-    k_rad_lim = ntml(i,j)+1
-    z_rad_lim = max( z_tq(i,j,k_rad_lim)+0.1_r_bl, 1.2_r_bl*zh(i,j) )
-    k = 1
-    do while (z_tq(i,j,k) <  z_rad_lim .and. k < bl_levels)
-      if (dflw_over_cp(i,j,k) > df_top_over_cp(i,j)                          &
-          .and. z_tq(i,j,k) >  one_half*zh(i,j) ) then
-        k_cloud_top(i,j) = k
-        df_top_over_cp(i,j) = dflw_over_cp(i,j,k)
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      k_rad_lim = ntml(i,j)+1
+      z_rad_lim = max( z_tq(i,j,k_rad_lim)+0.1_r_bl, 1.2_r_bl*zh(i,j) )
+      k = 1
+      do while (z_tq(i,j,k) <  z_rad_lim .and. k < bl_levels)
+        if (dflw_over_cp(i,j,k) > df_top_over_cp(i,j)                          &
+            .and. z_tq(i,j,k) >  one_half*zh(i,j) ) then
+          k_cloud_top(i,j) = k
+          df_top_over_cp(i,j) = dflw_over_cp(i,j,k)
+        end if
+        k = k + 1
+      end do ! k
+      !-----------------------------------------------------------------
+      ! If DF(K_CLOUD_TOP+1) is less than double DF(K_CLOUD_TOP+2) we
+      ! assume DF(K_CLOUD_TOP+1) is actually typical of the free-trop and
+      ! that the current K_CLOUD_TOP must be the inversion grid-level.
+      ! Hence we lower K_CLOUD_TOP by one (it should mark the top of the
+      ! mixed layer and cloud-top radiative cooling within the invesion
+      ! grid-level will be included as DF_INV_SML below)
+      !-----------------------------------------------------------------
+      k = k_cloud_top(i,j)
+      if ( k > 1 .and. k < bl_levels -1 ) then
+        if (dflw_over_cp(i,j,k+1) < 1.5_r_bl*dflw_over_cp(i,j,k+2))            &
+          k_cloud_top(i,j) = k-1
       end if
-      k = k + 1
-    end do ! k
-    !-----------------------------------------------------------------
-    ! If DF(K_CLOUD_TOP+1) is less than double DF(K_CLOUD_TOP+2) we
-    ! assume DF(K_CLOUD_TOP+1) is actually typical of the free-trop and
-    ! that the current K_CLOUD_TOP must be the inversion grid-level.
-    ! Hence we lower K_CLOUD_TOP by one (it should mark the top of the
-    ! mixed layer and cloud-top radiative cooling within the invesion
-    ! grid-level will be included as DF_INV_SML below)
-    !-----------------------------------------------------------------
-    k = k_cloud_top(i,j)
-    if ( k > 1 .and. k < bl_levels -1 ) then
-      if (dflw_over_cp(i,j,k+1) < 1.5_r_bl*dflw_over_cp(i,j,k+2))            &
-        k_cloud_top(i,j) = k-1
-    end if
-  end do ! i
+    end do ! i
+  end do ! ii
   !$OMP end do
   !-----------------------------------------------------------------
   !  Find bottom grid-level (K_LEVEL) for cloud-top radiative fux
@@ -3600,22 +3622,24 @@ if (l_new_kcloudtop) then
   !  0.5*ZH, since cooling must be in upper part of layer
   !-----------------------------------------------------------------
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-    k_level(i,j) = k_cloud_top(i,j)
-    if ( k_cloud_top(i,j)  >   1 ) then
-      k_rad_lim = 1
-      k=k_cloud_top(i,j)-1
-      kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
-      do while ( k  >   k_rad_lim                                            &
-                .and. dflw_over_cp(i,j,kl)  >   zero                         &
-                .and. z_tq(i,j,kl)  >   one_half*zh(i,j) )
-        k_level(i,j) = k
-        k = k-1
-        kl=max(1,k)
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      k_level(i,j) = k_cloud_top(i,j)
+      if ( k_cloud_top(i,j)  >   1 ) then
+        k_rad_lim = 1
+        k=k_cloud_top(i,j)-1
+        kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
+        do while ( k  >   k_rad_lim                                            &
+                  .and. dflw_over_cp(i,j,kl)  >   zero                         &
+                  .and. z_tq(i,j,kl)  >   one_half*zh(i,j) )
+          k_level(i,j) = k
+          k = k-1
+          kl=max(1,k)
 
-      end do ! k
-    end if
-  end do ! i
+        end do ! k
+      end if
+    end do ! i
+  end do ! ii
   !$OMP end do
   !end do ! j
 
@@ -3628,30 +3652,32 @@ else
 
   !do j = pdims%j_start, pdims%j_end
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-    ! restrict search to `close' to ZH
-    k_rad_lim = ntml(i,j)+1
-    do k = 1, min(bl_levels,k_rad_lim)
-        !-------------------------------------------------------------
-        ! Find the layer below K_RAD_LIM with the greatest LW
-        ! radiative flux jump in the upper half of the BL
-        ! and assume that this is the top of the SML.
-        !-------------------------------------------------------------
-      if (dflw_over_cp(i,j,k)  >   df_top_over_cp(i,j)                       &
-                  .and. z_tq(i,j,k)  >   one_half*zh(i,j) ) then
-        k_cloud_top(i,j) = k
-        if ( k >  1 ) then
-            ! Set K_CLOUD_TOP to the level below if its DF is
-            ! greater than half the maximum.  DF in level
-            ! K_CLOUD_TOP+1 is then included as DF_INV_SML below.
-          if (dflw_over_cp(i,j,k-1)  >   one_half*dflw_over_cp(i,j,k))       &
-            k_cloud_top(i,j) = k-1
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      ! restrict search to `close' to ZH
+      k_rad_lim = ntml(i,j)+1
+      do k = 1, min(bl_levels,k_rad_lim)
+          !-------------------------------------------------------------
+          ! Find the layer below K_RAD_LIM with the greatest LW
+          ! radiative flux jump in the upper half of the BL
+          ! and assume that this is the top of the SML.
+          !-------------------------------------------------------------
+        if (dflw_over_cp(i,j,k)  >   df_top_over_cp(i,j)                       &
+                    .and. z_tq(i,j,k)  >   one_half*zh(i,j) ) then
+          k_cloud_top(i,j) = k
+          if ( k >  1 ) then
+              ! Set K_CLOUD_TOP to the level below if its DF is
+              ! greater than half the maximum.  DF in level
+              ! K_CLOUD_TOP+1 is then included as DF_INV_SML below.
+            if (dflw_over_cp(i,j,k-1)  >   one_half*dflw_over_cp(i,j,k))       &
+              k_cloud_top(i,j) = k-1
+          end if
+          df_top_over_cp(i,j) = dflw_over_cp(i,j,k)
         end if
-        df_top_over_cp(i,j) = dflw_over_cp(i,j,k)
-      end if
 
-    end do ! k
-  end do ! i
+      end do ! k
+    end do ! i
+  end do ! ii
   !$OMP end do
 
       !-----------------------------------------------------------------
@@ -3660,22 +3686,24 @@ else
       !  0.5*ZH, since cooling must be in upper part of layer
       !-----------------------------------------------------------------
   !$OMP do SCHEDULE(DYNAMIC)
-  do i = pdims%i_start, pdims%i_end
-    k_level(i,j) = k_cloud_top(i,j)
-    if ( k_cloud_top(i,j)  >   1 ) then
-      k_rad_lim = 1
-      k=k_cloud_top(i,j)-1
-      kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
-      do while ( k  >   k_rad_lim                                            &
-                .and. dflw_over_cp(i,j,kl)  >   zero                         &
-                .and. z_tq(i,j,kl)  >   one_half*zh(i,j) )
-        k_level(i,j) = k
-        k = k-1
-        kl=max(1,k)
+  do ii = pdims%i_start, pdims%i_end, bl_segment_size
+    do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+      k_level(i,j) = k_cloud_top(i,j)
+      if ( k_cloud_top(i,j)  >   1 ) then
+        k_rad_lim = 1
+        k=k_cloud_top(i,j)-1
+        kl=max(1,k)  ! only to avoid out-of-bounds compiler warning
+        do while ( k  >   k_rad_lim                                            &
+                  .and. dflw_over_cp(i,j,kl)  >   zero                         &
+                  .and. z_tq(i,j,kl)  >   one_half*zh(i,j) )
+          k_level(i,j) = k
+          k = k-1
+          kl=max(1,k)
 
-      end do
-    end if
-  end do ! i
+        end do
+      end if
+    end do ! i
+  end do ! ii
   !$OMP end do
 !end do ! j
   
@@ -3694,50 +3722,54 @@ end if  ! test on l_new_kcloudtop
 
 !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
-do i = pdims%i_start, pdims%i_end
+do ii = pdims%i_start, pdims%i_end, bl_segment_size
+  do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
+! do i = pdims%i_start, pdims%i_end
 
-  if ( k_cloud_top(i,j)  >   0 ) then
-    dflw_inv = zero
-    dfsw_inv = zero
-    if ( k_cloud_top(i,j) <  bl_levels ) then
-      k = k_cloud_top(i,j)+1
-      if ( k  <   bl_levels ) then
-        dflw_inv = dflw_over_cp(i,j,k)                                       &
-                    - dflw_over_cp(i,j,k+1)                                   &
-                          * dzl(i,j,k)/dzl(i,j,k+1)
-        dfsw_inv = dfsw_over_cp(i,j,k)                                       &
-                    - dfsw_over_cp(i,j,k+1)                                   &
-                          * dzl(i,j,k)/dzl(i,j,k+1)
-      else
-        dflw_inv = dflw_over_cp(i,j,k)
-        dfsw_inv = dfsw_over_cp(i,j,k)
+    if ( k_cloud_top(i,j)  >   0 ) then
+      dflw_inv = zero
+      dfsw_inv = zero
+      if ( k_cloud_top(i,j) <  bl_levels ) then
+        k = k_cloud_top(i,j)+1
+        if ( k  <   bl_levels ) then
+          dflw_inv = dflw_over_cp(i,j,k)                                       &
+                      - dflw_over_cp(i,j,k+1)                                   &
+                            * dzl(i,j,k)/dzl(i,j,k+1)
+          dfsw_inv = dfsw_over_cp(i,j,k)                                       &
+                      - dfsw_over_cp(i,j,k+1)                                   &
+                            * dzl(i,j,k)/dzl(i,j,k+1)
+        else
+          dflw_inv = dflw_over_cp(i,j,k)
+          dfsw_inv = dfsw_over_cp(i,j,k)
+        end if
+        dflw_inv = max( dflw_inv, zero )
+        dfsw_inv = min( dfsw_inv, zero )
       end if
-      dflw_inv = max( dflw_inv, zero )
-      dfsw_inv = min( dfsw_inv, zero )
+      df_inv_sml(i,j) = dflw_inv + dfsw_inv
+
+      df_top_over_cp(i,j) = frad_lw(i,j,k_cloud_top(i,j)+1)                    &
+                            - frad_lw(i,j,k_level(i,j))                         &
+                            + dflw_inv
+
+      dfsw_top = frad_sw(i,j,k_cloud_top(i,j)+1)                               &
+                - frad_sw(i,j,k_level(i,j))                                     &
+                + dfsw_inv
+
+        !-----------------------------------------------------------
+        ! Combine SW and LW cloud-top divergences into a net
+        ! divergence by estimating SW flux divergence at a given
+        ! LW divergence = DF_SW * (1-exp{-A*kappa_sw/kappa_lw})
+        ! Empirically (from LEM data) a reasonable fit is found
+        ! with A small and (1-exp{-A*kappa_sw/kappa_lw}) = dfsw_frac
+        !-----------------------------------------------------------
+      df_top_over_cp(i,j) = max( zero,                                         &
+                    df_top_over_cp(i,j) + dfsw_frac * dfsw_top )
     end if
-    df_inv_sml(i,j) = dflw_inv + dfsw_inv
-
-    df_top_over_cp(i,j) = frad_lw(i,j,k_cloud_top(i,j)+1)                    &
-                          - frad_lw(i,j,k_level(i,j))                         &
-                          + dflw_inv
-
-    dfsw_top = frad_sw(i,j,k_cloud_top(i,j)+1)                               &
-              - frad_sw(i,j,k_level(i,j))                                     &
-              + dfsw_inv
-
-      !-----------------------------------------------------------
-      ! Combine SW and LW cloud-top divergences into a net
-      ! divergence by estimating SW flux divergence at a given
-      ! LW divergence = DF_SW * (1-exp{-A*kappa_sw/kappa_lw})
-      ! Empirically (from LEM data) a reasonable fit is found
-      ! with A small and (1-exp{-A*kappa_sw/kappa_lw}) = dfsw_frac
-      !-----------------------------------------------------------
-    df_top_over_cp(i,j) = max( zero,                                         &
-                  df_top_over_cp(i,j) + dfsw_frac * dfsw_top )
-  end if
-end do
+  end do !i
+end do !ii
 !$OMP end do
 !end do
+call stop_timing( dynamic_blocked_3 )
 
 
 ! ------------------------------------------------------------------
@@ -4655,6 +4687,7 @@ if (l_wtrac) then
   !  call to calc_fqw_inv_wtrac
   allocate(z_uv_ntmlp1(pdims%i_start:pdims%i_end,pdims%j_start:pdims%j_end))
 
+
   !do j = pdims%j_start, pdims%j_end
   !$OMP  PARALLEL  do SCHEDULE(STATIC) DEFAULT(SHARED) private(i,k)
   do i = pdims%i_start, pdims%i_end
@@ -4663,6 +4696,7 @@ if (l_wtrac) then
   end do
   !$OMP end PARALLEL do
   !end do
+
 
   call calc_fqw_inv_wtrac(bl_levels, ntml, totqf_efl_meth1,                    &
                           totqf_efl_meth2, t_frac, zh, zh_frac,                &
