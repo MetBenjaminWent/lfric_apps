@@ -32,6 +32,7 @@ gamma_rhokh_rdz, gamma_rhok_dep,f_field,surf_dep_flux,field                    &
 use atm_fields_bounds_mod, only:  pdims, array_dims
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
 !$ use omp_lib, only: omp_get_num_threads
 implicit none
 
@@ -117,10 +118,12 @@ integer ::                                                                     &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: imp_mix_tik
 
 character(len=*), parameter :: RoutineName='IMP_MIX'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( imp_mix_tik, '__imp_mix__ ')
 
 blm1 = bl_levels-1
 
@@ -301,7 +304,7 @@ do k = 1, bl_levels
 end do
 !$OMP end do
 !$OMP end PARALLEL
-
+call stop_timing( imp_mix_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine imp_mix

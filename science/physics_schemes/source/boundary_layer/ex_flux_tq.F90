@@ -47,6 +47,9 @@ use wtrac_bl_mod,            only: bl_wtrac_type
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 
+use timing_mod,             only: start_timing, stop_timing, tik
+
+
 implicit none
 
 ! ARGUMENTS WITH intent in. IE: INPUT VARIABLES.
@@ -218,9 +221,11 @@ real(kind=r_bl) ::                                                             &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: ex_flux_tq_tik
 !-----------------------------------------------------------------------
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( ex_flux_tq_tik, '__ex_flux_tq__ ')
 
 ! Are the SCM Boundary Layer diagnostics required?
 scm_bl_diags = l_scmdiags(scmdiag_bl) .and. model_type == mt_single_column
@@ -439,7 +444,7 @@ end if   ! FLUX_GRAD
 !-----------------------------------------------------------------------
 !     SCM Boundary Layer Diagnostics Package
 !-----------------------------------------------------------------------
-
+call stop_timing( ex_flux_tq_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine ex_flux_tq

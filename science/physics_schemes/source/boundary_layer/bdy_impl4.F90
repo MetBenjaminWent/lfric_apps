@@ -46,6 +46,8 @@ use model_domain_mod, only: model_type, mt_single_column
 use planet_constants_mod, only: cp => cp_bl
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
 
 implicit none
 
@@ -202,10 +204,12 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
+integer(tik)              :: bdy_imp4
+
 character(len=*), parameter :: RoutineName='BDY_IMPL4'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-
+call start_timing( bdy_imp4, '__bdy_imp4__ ')
 j_block = 4
 
 !$OMP  PARALLEL DEFAULT(SHARED) private(i,j,k,jj,at,rbt,gamma1_uv,             &
@@ -381,7 +385,7 @@ if ( l_correct ) then
 end if ! L_CORRECT
 
 !$OMP end PARALLEL
-
+call stop_timing( bdy_imp4 )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bdy_impl4

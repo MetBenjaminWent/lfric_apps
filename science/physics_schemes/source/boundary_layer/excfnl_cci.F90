@@ -32,6 +32,9 @@ subroutine excfnl_cci (                                                        &
 use atm_fields_bounds_mod, only: pdims
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
+
 implicit none
 
 integer, intent(in out) :: c_len
@@ -44,10 +47,12 @@ integer                      :: n,m
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: excfnl_cci_tik
 
 character(len=*), parameter :: RoutineName='EXCFNL_CCI'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( excfnl_cci_tik, '__excfnl_cci__ ')
 m = 0
 !          Compress index for main loops
 !CDIR Nodep
@@ -59,7 +64,7 @@ do n = 1, c_len
   end if
 end do
 c_len = m
-
+call stop_timing( excfnl_cci_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 

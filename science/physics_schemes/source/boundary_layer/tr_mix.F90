@@ -36,6 +36,8 @@ use atm_fields_bounds_mod, only: pdims, array_dims
 use imp_mix_mod, only: imp_mix
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
 implicit none
 
 ! arguments passed in
@@ -146,6 +148,7 @@ integer ::                                                                     &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: tr_mix_tik
 
 character(len=*), parameter :: RoutineName='TR_MIX'
 
@@ -154,7 +157,7 @@ character(len=*), parameter :: RoutineName='TR_MIX'
 !       See comments to routine SF_EXCH for details.
 !-----------------------------------------------------------------------
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-
+call start_timing( tr_mix_tik, '__tr_mix__ ')
 
 !$OMP PARALLEL DEFAULT(SHARED) private(km1,k,j,i,dzlkp1,dz_disc,               &
 !$OMP                          f_field_ent, dfield_inv, ient)
@@ -359,6 +362,7 @@ call imp_mix (                                                                 &
  gamma_rhokh_rdz,rhok_dep,f_field,surf_dep_flux,field                          &
  )
 
+call stop_timing( tr_mix_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine tr_mix
