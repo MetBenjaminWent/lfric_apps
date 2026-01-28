@@ -73,6 +73,8 @@ use free_tracers_inputs_mod, only: l_wtrac, n_wtrac
 
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
 
 
 implicit none
@@ -705,8 +707,10 @@ integer            :: jj          !Cache blocking - loop index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: excf_nl_9c_tik, nsweep_master_1, nsweep_master_2
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( excf_nl_9c_tik, '__excf_nl_9c__ ')
 
 ! Set up water tracer field
 if (l_wtrac) then
@@ -776,7 +780,7 @@ end if
 !$OMP  j1, i1, ic,  w_m_hb_3, zk_uv, zk_tq, Prandtl, w_h_uv, w_h_tq,           &
 !$OMP  w_m_uv, w_m_tq, w_s_cubed_tq, w_s_cubed_uv, gamma_wbs, c_tke,           &
 !$OMP  n_sweep, ns, lcl_fac, ng_stress_calculate, l_apply_surf_ent, interp,    &
-!$OMP  k_inv)
+!$OMP  k_inv, nsweep_master_1, nsweep_master_2)
 
 !cdir collapse
 !$OMP do SCHEDULE(DYNAMIC)
@@ -1976,6 +1980,8 @@ do j = pdims%j_start, pdims%j_end
 end do
 !$OMP end do
 
+call start_timing( nsweep_master_1, '__nsweep_master_1__ ')
+
 !$OMP MASTER
 c_len=pdims%i_len*pdims%j_len
 !$OMP end MASTER
@@ -2178,6 +2184,7 @@ do n_sweep = 1, num_sweeps_bflux
 !$OMP end do
 
 end do ! n_sweep
+call stop_timing( nsweep_master_1 )
 
 !$OMP do SCHEDULE(DYNAMIC)
 do jj = pdims%j_start, pdims%j_end,bl_segment_size
@@ -2401,6 +2408,7 @@ do j = pdims%j_start, pdims%j_end
 end do
 !$OMP end do
 
+call start_timing( nsweep_master_2, '__nsweep_master_2__ ')
 !$OMP MASTER
 c_len=pdims%i_len*pdims%j_len
 !$OMP end MASTER
@@ -2673,6 +2681,7 @@ do n_sweep = 1, num_sweeps_bflux
 !$OMP end do
 
 end do  ! loop over sweeps
+call stop_timing( nsweep_master_2 )
 
 ! Convert integrated WB to profiles of WB itself for diagnostics
 if (model_type == mt_single_column) then
@@ -3441,7 +3450,7 @@ if (l_wtrac) deallocate(iset_wtrac)
 !     SCM Boundary Layer Diagnostics Package
 !-----------------------------------------------------------------------
 !------------------------------------------------------
-
+call stop_timing( excf_nl_9c_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine excf_nl_9c

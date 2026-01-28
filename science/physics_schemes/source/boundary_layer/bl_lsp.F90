@@ -27,6 +27,8 @@ use atm_fields_bounds_mod, only: tdims
 use planet_constants_mod, only: lsrcp
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik
+
 implicit none
 
 integer, intent(in) ::                                                         &
@@ -59,9 +61,12 @@ integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
 character(len=*), parameter :: RoutineName='BL_LSP'
+integer(tik)              :: bl_lsp_tik
 
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( bl_lsp_tik, '__bl_lsp__ ')
+
 !$OMP PARALLEL do DEFAULT(none) SCHEDULE(STATIC)                               &
 !$OMP          private(i,j,k,newqcf)                                           &
 !$OMP          SHARED(bl_levels,tdims,q,qcf,t,lsrcp)
@@ -85,6 +90,7 @@ do k = 1, bl_levels
 end do
 !$OMP end PARALLEL do
 ! End the subroutine
+call stop_timing( bl_lsp_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bl_lsp
