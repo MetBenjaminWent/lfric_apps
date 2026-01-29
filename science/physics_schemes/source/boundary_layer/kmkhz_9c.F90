@@ -969,10 +969,7 @@ integer            :: ii         ! Block index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik) :: kmkhz_9c_tik, call_calc_wtrac, call_excf_nl_9c, &
-                repeat_calc_wtrac, dynamic_blocked_1,           & 
-                dynamic_not_blocked_1, dynamic_blocked_2,       &
-                dynamic_blocked_3
+integer(tik) :: kmkhz_9c_tik
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 call start_timing( kmkhz_9c_tik, '__kmkhz_9c__ ')
@@ -1027,8 +1024,7 @@ j = 1
 !$OMP  z_rad_lim,  k_rad_lim, dflw_inv, dfsw_inv, dfsw_top, svl_plume,         &
 !$OMP  svl_diff, monotonic_inv, svl_lapse, svl_lapse_base,                     &
 !$OMP  quad_a,  quad_bm, quad_c, dz_disc, dsvl_top, sl_lapse,  qw_lapse,       &
-!$OMP  kp2, rht_k, rht_kp1, rht_kp2, interp, z_cbase, dynamic_blocked_1,       &
-!$OMP  dynamic_not_blocked_1, dynamic_blocked_2 )
+!$OMP  kp2, rht_k, rht_kp1, rht_kp2, interp, z_cbase)
 !-----------------------------------------------------------------------
 ! Index to subroutine KMKHZ9C
 
@@ -1165,7 +1161,6 @@ end do ! k
 
 !$OMP BARRIER
 
-call start_timing( dynamic_blocked_1, '__dynamic_blocked_1__ ')
 !$OMP do SCHEDULE(DYNAMIC)
 do ii = pdims%i_start, pdims%i_end, bl_segment_size
   do k = 2, bl_levels-1
@@ -1204,7 +1199,6 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
   end do
 end do !ii
 !$OMP end do
-call stop_timing( dynamic_blocked_1 )
 ! do j = pdims%j_start, pdims%j_end
 ! Repeat for necessary parts of last 2 loops for water tracers
 if (l_wtrac) then
@@ -1774,7 +1768,6 @@ end do
 !$OMP end do
 !end do
 
-call start_timing( dynamic_blocked_2, '__dynamic_blocked_2__ ')
 if (l_new_kcloudtop) then
   !---------------------------------------------------------------------
   ! improved method of finding the k_cloud_dsct, the top of the mixed
@@ -1969,7 +1962,6 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 end do !ii
 !$OMP end do
 !end do
-call stop_timing( dynamic_blocked_2 )
 !-----------------------------------------------------------------------
 ! 2.4 Set NBDSC, the bottom level of the DSC layer.
 !     Note that this will only be used to give an estimate of the layer
@@ -2174,7 +2166,6 @@ end if
        ! inversion to fall more readily.
 
 !do j = pdims%j_start, pdims%j_end
-call start_timing( dynamic_not_blocked_1, '__dynamic_not_blocked_1__ ')
 !$OMP do SCHEDULE(DYNAMIC)
 do ii = pdims%i_start, pdims%i_end, bl_segment_size
   do i = ii, min((ii+bl_segment_size)-1,pdims%i_end)
@@ -2563,14 +2554,12 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
   end do !i
 end do !ii
 !$OMP end do
-call stop_timing( dynamic_not_blocked_1 )
 !end do
 
 !$OMP end PARALLEL
 
 ! Repeat necessary parts of last loop for water tracers
 if (l_wtrac) then
-  call start_timing( call_calc_wtrac, '__call_calc_wtrac__ ')
   ! SML
   ! Create dummy field to provide SML equivalent of 'dsc' array which
   ! is needed in calc_dqw_inv_wtrac
@@ -2586,7 +2575,6 @@ if (l_wtrac) then
   call calc_dqw_inv_wtrac(bl_levels, ntdsc_start, ntdsc, dqw_dsc_meth,         &
                           dsc_disc_inv, rdz, z_tq, zhsc, dsc,                  &
                           qw_lapse_zero_dsc, wtrac_bl, dqw_dsc_wtrac)
-  call stop_timing( call_calc_wtrac )
 end if  ! l_wtrac
 
 ! Set flags used in the code to find max cloud-fraction at mixed-layer top...
@@ -2619,7 +2607,7 @@ end if
 !$OMP  pr_neut, w_h, k_cff, virt_factor, z_cbase , zdsc_cbase, dsl_ga,         &
 !$OMP  dqw_ga, cfl_ml, cff_ml, dqw, dsl, dqcl, dqcf, db_disc, cu_depth_fac,    &
 !$OMP  k_rad_lim, z_rad_lim ,dfsw_inv, dflw_inv, dfsw_top, dsldz, cf_for_wb,   &
-!$OMP  grad_t_adj_inv_rdz, grad_q_adj_inv_rdz, denom, dynamic_blocked_3)
+!$OMP  grad_t_adj_inv_rdz, grad_q_adj_inv_rdz, denom)
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
 
@@ -3239,7 +3227,6 @@ end do ! ii
 !..assuming a discontinuous subgrid inversion structure.
 !----------------------------------------------------------------------
 
-call start_timing( dynamic_blocked_3, '__dynamic_blocked_3__ ')
 !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(DYNAMIC)
 do ii = pdims%i_start, pdims%i_end, bl_segment_size
@@ -3769,7 +3756,6 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 end do !ii
 !$OMP end do
 !end do
-call stop_timing( dynamic_blocked_3 )
 
 
 ! ------------------------------------------------------------------
@@ -3859,7 +3845,6 @@ end do
 
 !$OMP end PARALLEL
 
-call start_timing( call_excf_nl_9c, '__call_excf_nl_9c__ ')
 call excf_nl_9c (                                                              &
 ! in levels/switches
    bl_levels,BL_diag,nSCMDpkgs,L_SCMDiags,                                     &
@@ -3882,7 +3867,6 @@ call excf_nl_9c (                                                              &
    rhokh_top_ent, rhokh_dsct_ent, rhokh_surf_ent,                              &
    rhof2,rhofsc,f_ngstress,tke_nl,zdsc_base,nbdsc                              &
   )
-call stop_timing( call_excf_nl_9c )
 
 !do j = pdims%j_start, pdims%j_end
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
@@ -4682,7 +4666,6 @@ end do
 
 ! Repeat the last block of code for water tracers
 if (l_wtrac) then
-  call start_timing( repeat_calc_wtrac, '__repeat_calc_wtrac__ ')
   ! Set up temporary field for z_uv(:,:,ntml(i,j)+1) which is required in
   !  call to calc_fqw_inv_wtrac
   allocate(z_uv_ntmlp1(pdims%i_start:pdims%i_end,pdims%j_start:pdims%j_end))
@@ -4706,7 +4689,6 @@ if (l_wtrac) then
                           'SML', wtrac_bl)
   deallocate(z_uv_ntmlp1)
 
-  call stop_timing( repeat_calc_wtrac )
 end if   !l_wtrac
 
 !-----------------------------------------------------------------------
