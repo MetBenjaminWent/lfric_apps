@@ -824,10 +824,7 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
-integer(tik)              :: bdy_expl2_tik, handle_loop1, handle_loop2,        &
-                             handle_loop3, handle_loop4, handle_loop5,         &
-                             qsat_first_four, handle_loop6,handle_loop7,       &
-                             handle_loop8, handle_loop9, handle_loop10
+integer(tik)              :: bdy_expl2_tik, handle_loop1
 
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
@@ -844,8 +841,7 @@ call start_timing( bdy_expl2_tik, '__bdy_expl2__ ')
 !$OMP  PARALLEL DEFAULT(none)                                                  &
 !$OMP  SHARED( pdims, dynamic_bl_diag, ntml_save, ntml, bl_levels,             &
 !$OMP          weight_1dbl, weight_1dbl_rho, BL_diag, u_s, fb_surf )           &
-!$OMP  private( i, j, k, handle_loop1, handle_loop2, handle_loop3,             &
-!$OMP           handle_loop4, handle_loop5 )
+!$OMP  private( i, j, k, handle_loop1 )
 call start_timing( handle_loop1, '__bdy_expl2_loop1__ ')
 !$OMP  do SCHEDULE(STATIC)
 do j = pdims%j_start, pdims%j_end
@@ -861,7 +857,6 @@ call stop_timing( handle_loop1 )
 !  Initialize weighting applied to 1d BL scheme
 !  (used to blend with 3D Smagorinsky scheme)
 !------------------------------------------------------------------
-call start_timing( handle_loop2, '__bdy_expl2_loop2_ ')
 !$OMP do SCHEDULE(STATIC)
 do k = 1, bl_levels
   do j = pdims%j_start, pdims%j_end
@@ -872,14 +867,12 @@ do k = 1, bl_levels
   end do
 end do
 !$OMP end do NOWAIT
-call stop_timing( handle_loop2 )
 
 !-----------------------------------------------------------------------
 ! Set surface scaling diagnostics
 !-----------------------------------------------------------------------
  ! Obukhov length
 if (BL_diag%l_oblen) then
-  call start_timing( handle_loop3, '__bdy_expl2_loop3_ ')
 !$OMP do SCHEDULE(STATIC)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
@@ -895,12 +888,10 @@ if (BL_diag%l_oblen) then
     end do
   end do
 !$OMP end do NOWAIT
-  call stop_timing( handle_loop3 )
 end if
 
 ! Ustar
 if (BL_diag%l_ustar) then
-  call start_timing( handle_loop4, '__bdy_expl2_loop4_ ')
 !$OMP do SCHEDULE(STATIC)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
@@ -908,12 +899,10 @@ if (BL_diag%l_ustar) then
     end do
   end do
 !$OMP end do NOWAIT
-  call stop_timing( handle_loop4 )
 end if
 
 ! Surface buoyancy flux
 if (BL_diag%l_wbsurf) then
-  call start_timing( handle_loop5, '__bdy_expl2_loop5_ ')
 !$OMP do SCHEDULE(STATIC)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
@@ -921,7 +910,6 @@ if (BL_diag%l_wbsurf) then
     end do
   end do
 !$OMP end do
-  call stop_timing( handle_loop5 )
 end if
 !$OMP end PARALLEL
 !-----------------------------------------------------------------------
@@ -943,8 +931,7 @@ call btq_int (                                                                 &
 !-----------------------------------------------------------------------
 !$OMP  PARALLEL DEFAULT(SHARED) private(i, j, k, weight1,  weight2,            &
 !$OMP  weight3, zpr, dzv, dzu, l, slope, dsldzm_ga,                            &
-!$OMP  qs_tl, frac_sat, frac_dry, frac_edg, frac_lev, qc_tot, bt_rh, bq_rh,    &
-!$OMP  qsat_first_four, handle_loop6, handle_loop7, handle_loop8, handle_loop9 )
+!$OMP  qs_tl, frac_sat, frac_dry, frac_edg, frac_lev, qc_tot, bt_rh, bq_rh )
 !$OMP do SCHEDULE(STATIC)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
@@ -994,7 +981,6 @@ if ( .not. l_use_surf_in_ri .and. (var_diags_opt > original_vars .or.          &
 !$OMP end do
 
 else ! l_use_surf_in_ri = true
-  call start_timing( qsat_first_four, '__qsat_first_four_ ')
 !$OMP do SCHEDULE(STATIC)
   do j = pdims%j_start, pdims%j_end
     if (l_noice_in_turb) then
@@ -1015,9 +1001,7 @@ else ! l_use_surf_in_ri = true
     end if ! l_noice_in_turb
   end do ! j
 !$OMP end do NOWAIT
-  call stop_timing( qsat_first_four )
   k=1
-  call start_timing( handle_loop6, '__bdy_expl2_loop6_ ')
 !$OMP do SCHEDULE(STATIC)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
@@ -1033,7 +1017,6 @@ else ! l_use_surf_in_ri = true
     end do
   end do
 !$OMP end do
-  call stop_timing( handle_loop6 )
 
 end if
 
@@ -1080,7 +1063,6 @@ case (i_interp_local_gradients)
   ! (ie instead of using centred value that uses surface parameters)
   if ( .not. l_use_surf_in_ri ) then
     k = 2
-    call start_timing( handle_loop7, '__bdy_expl2_loop7_ ')
 !$OMP do SCHEDULE(STATIC)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
@@ -1091,7 +1073,6 @@ case (i_interp_local_gradients)
       end do
     end do
 !$OMP end do
-    call stop_timing( handle_loop7 )
   end if
 
 case (i_interp_local_cf_dbdz)
@@ -1203,7 +1184,6 @@ case (i_interp_local_cf_dbdz)
   end do
 !$OMP end do NOWAIT
   k = 1
-  call start_timing( handle_loop8, '__bdy_expl2_loop8_ ')
 !$OMP do SCHEDULE(STATIC)
   do j = tdims%j_start, tdims%j_end
     do i = tdims%i_start, tdims%i_end
@@ -1215,7 +1195,6 @@ case (i_interp_local_cf_dbdz)
     end do
   end do
 !$OMP end do
-  call stop_timing( handle_loop8 )
 
 !$OMP do SCHEDULE(STATIC)
   do k = 2, bl_levels
@@ -1375,7 +1354,6 @@ end if
 !-----------------------------------------------------------------------
 !  Set-up 2D array for standard deviation of subgrid orography.
 !-----------------------------------------------------------------------
-call start_timing( handle_loop9, '__bdy_expl2_loop9_ ')
 !$OMP do SCHEDULE(STATIC)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
@@ -1383,7 +1361,6 @@ do j = pdims%j_start, pdims%j_end
   end do
 end do
 !$OMP end do
-call stop_timing( handle_loop9 )
 
 !$OMP do SCHEDULE(STATIC)
 do l = 1, land_pts
@@ -1545,9 +1522,7 @@ end if
 omp_block = pdims%j_end
 !$ omp_block = ceiling(real(pdims%j_end)/omp_get_max_threads())
 
-!$OMP PARALLEL DEFAULT(SHARED) private(i, j, k, jj, ntop, z_scale, &
-!$OMP   handle_loop10)
-call start_timing( handle_loop10, '__bdy_expl2_loop10_ ')
+!$OMP PARALLEL DEFAULT(SHARED) private(i, j, k, jj, ntop, z_scale)
 !$OMP do SCHEDULE(STATIC)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
@@ -1563,8 +1538,6 @@ do j = pdims%j_start, pdims%j_end
   end do
 end do
 !$OMP end do
-call stop_timing( handle_loop10 )
-
 
 if (idyndiag == DynDiag_ZL) then
 
@@ -3265,6 +3238,7 @@ end if ! i_cld_vn == i_cld_bimodal
 !If autotuning is active, decide what to do with the
 !trial segment size and report the current status.
 
+call stop_timing( bdy_expl2_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bdy_expl2
