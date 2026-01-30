@@ -28,7 +28,8 @@ export PSYCLONE_PHYSICS_FILES = \
                                 sw_rad_tile_kernel_mod \
 				jules_imp_kernel_mod \
 				jules_exp_kernel_mod \
-				jules_extra_kernel_mod
+				jules_extra_kernel_mod \
+				conv_gr_kernel_mod
 
 # List to use PSyclone explicitly without any opt script
 # This will remove hand written (OMP) directives in the source
