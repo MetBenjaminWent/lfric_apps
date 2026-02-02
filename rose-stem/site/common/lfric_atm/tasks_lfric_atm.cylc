@@ -177,6 +177,7 @@
         "tsteps": 120,
         "mpi_parts": 384,
         "threads": 1,
+        "wallclock": 35,
     }) %}
 
 {% elif task_ns.conf_name == "nwp_gal9_3n_2T-C192_MG" %}
@@ -189,6 +190,7 @@
         "mpi_parts": 192,
         "task_ranks_per_node": 64,
         "threads": 2,
+        "wallclock": 35,
     }) %}
 
 {% elif task_ns.conf_name == "nwp_gal9_3n_4T-C192_MG" %}
@@ -201,6 +203,7 @@
         "mpi_parts": 96,
         "task_ranks_per_node": 32,
         "threads": 4,
+        "wallclock": 35,
     }) %}
 
 {% elif task_ns.conf_name == "nwp_gal9-C224_MG" %}
