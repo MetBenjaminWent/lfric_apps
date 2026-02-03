@@ -634,7 +634,7 @@ real(kind=r_bl) ::                                                             &
                                 ! (qw - qsat(Tl))/(1 + Lc/cp dqsat/dT)
                                 ! gradient of this is used for estimating
                                 ! saturated fraction on rho-levels
-   qs_tl(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end,1:bl_levels)
+   qs_tl(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end)
                                 ! qsat(Tl) on current level
                                 ! Vectorised over levels (k) for open-mp ease
 
@@ -782,7 +782,7 @@ real(kind=r_bl) ::                                                             &
 real(kind=r_bl) ::                                                             &
  b2, sh, exner, root6, delta_x, var_fac, sl_var, qw_var, sl_qw,                &
  sgm(tdims%i_start:tdims%i_end),                                               &
- qsw_arr(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end,1:bl_levels-1),   &
+ qsw_arr(tdims%i_start:tdims%i_end),                                           &
  max_rhcpt(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end),               &
  min_rhcpt(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end)
 
@@ -865,6 +865,7 @@ call stop_timing( handle_loop1 )
 !  Initialize weighting applied to 1d BL scheme
 !  (used to blend with 3D Smagorinsky scheme)
 !------------------------------------------------------------------
+    !do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
 do k = 1, bl_levels
   do i = pdims%i_start, pdims%i_end
@@ -1033,7 +1034,11 @@ else ! l_use_surf_in_ri = true
     end if ! l_noice_in_turb
   end do ! ii
   !$OMP end do NOWAIT
+  !end do ! j
+!! $OMP end do NOWAIT
   k=1
+
+  ! do j = pdims%j_start, pdims%j_end
   !$OMP do SCHEDULE(STATIC)
   do i = pdims%i_start, pdims%i_end
     dsldz(i,j,k)    = ( tl(i,j,k) - tstar(i,j) )                             &
@@ -1093,6 +1098,7 @@ case (i_interp_local_gradients)
   ! (ie instead of using centred value that uses surface parameters)
   if ( .not. l_use_surf_in_ri ) then
     k = 2
+    ! do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
     do i = pdims%i_start, pdims%i_end
       dbdz(i,j,k) = g*( bt_gb(i,j,k-1)*dsldz(i,j,k) +                        &
@@ -1127,13 +1133,13 @@ case (i_interp_local_cf_dbdz)
 
       ! Calculate qsat(Tl)...
       if ( l_mr_physics ) then
-        call qsat_mix(qs_tl(seg_slice_start:seg_slice_end,:,k),                &
+        call qsat_mix(qs_tl(seg_slice_start:seg_slice_end,:),                  &
                       tl(seg_slice_start:seg_slice_end,:,k),                   &
                       p_theta_levels(seg_slice_start:seg_slice_end,:,k),       &
                       bl_segment_range,                                        &
                       tdims%j_len )
       else
-        call qsat(qs_tl(seg_slice_start:seg_slice_end,:,k),                    &
+        call qsat(qs_tl(seg_slice_start:seg_slice_end,:),                      &
                   tl(seg_slice_start:seg_slice_end,:,k),                       &
                   p_theta_levels(seg_slice_start:seg_slice_end,:,k),           &
                   bl_segment_range,                                            &
@@ -1145,7 +1151,7 @@ case (i_interp_local_cf_dbdz)
     !    in order to compare with values of qcl+qcf.
     !do j = tdims%j_start, tdims%j_end
     do i = tdims%i_start, tdims%i_end
-      supersat(i,j,k) = a_qs(i,j,k) * ( qw(i,j,k) - qs_tl(i,j,k) )
+      supersat(i,j,k) = a_qs(i,j,k) * ( qw(i,j,k) - qs_tl(i,j) )
     end do !i
     !end do !j
   end do !k
@@ -1225,6 +1231,8 @@ case (i_interp_local_cf_dbdz)
   end do
 !$OMP end do NOWAIT
   k = 1
+
+  !do j = tdims%j_start, tdims%j_end
   !$OMP do SCHEDULE(STATIC)
   do i = tdims%i_start, tdims%i_end
     ! At surface, just use buoyancy coefficients from the first theta-level
@@ -1393,6 +1401,7 @@ end if
 !-----------------------------------------------------------------------
 !  Set-up 2D array for standard deviation of subgrid orography.
 !-----------------------------------------------------------------------
+!do j = pdims%j_start, pdims%j_end
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
   sigma_h(i,j) = zero
@@ -1558,6 +1567,7 @@ end if
 !       where the land fraction is below 0.5.
 !do j = pdims%j_start, pdims%j_end
 !$OMP PARALLEL DEFAULT(SHARED) private(i, k, ii, ntop, z_scale)
+
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
   ! First override the provisional cumulus diagnosis if the
@@ -2979,7 +2989,7 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
   ! level 2 needs special treatment because of the surface
   !do j = tdims%j_start, tdims%j_end
   !$OMP PARALLEL DEFAULT(SHARED)                                                 &
-  !$OMP private(k,i,ii,km,kp,sh,exner,sgm,qsw_arr,weight1,weight2,weight3,       &
+  !$OMP private(k,i,ii,km,kp,sh,exner,sgm,weight1,weight2,weight3,               &
   !$OMP         var_fac,sl_var,qw_var,sl_qw,delta_x,                             &
   !$OMP         seg_slice_start, seg_slice_end, bl_segment_range)
   k = 2
@@ -2991,12 +3001,12 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
     bl_segment_range = (seg_slice_end - seg_slice_start) + 1
 
     if ( l_mr_physics ) then
-      call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),       &
+      call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end),               &
                         tl(seg_slice_start:seg_slice_end,j,k-1),              &
                         p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),  &
                         bl_segment_range )
     else
-      call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),            &
+      call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end),                    &
                     tl(seg_slice_start:seg_slice_end,j,k-1),                   &
                     p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),       &
                     bl_segment_range )
@@ -3102,7 +3112,7 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
                                 log( 0.001_r_bl * delta_x ) )
       ! full expression
       rhcpt(i,j,k-1) = min( max_rhcpt(i,j), max( min_rhcpt(i,j),             &
-                    one - root6 * sgm(i) / (a_qs(i,j,k-1) * qsw_arr(i,j,k-1))))
+                    one - root6 * sgm(i) / (a_qs(i,j,k-1) * qsw_arr(i))))
     end do !i
     !$OMP end do
   end if
@@ -3122,13 +3132,13 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
 
       if ( l_mr_physics ) then
         !dir$ safe_address
-        call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),      &
+        call qsat_wat_mix(qsw_arr(seg_slice_start:seg_slice_end),      &
                           tl(seg_slice_start:seg_slice_end,j,k-1),             &
                           p_theta_levels(seg_slice_start:seg_slice_end,j,k-1), &
                           bl_segment_range)
       else
         !dir$ safe_address
-        call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end, j, k-1),          &
+        call qsat_wat(qsw_arr(seg_slice_start:seg_slice_end),          &
                       tl(seg_slice_start:seg_slice_end,j,k-1),                 &
                       p_theta_levels(seg_slice_start:seg_slice_end,j,k-1),     &
                       bl_segment_range)
@@ -3180,7 +3190,7 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
           sgm(i) = sqrt ( max( sgm(i), zero ) )
           ! calculate rhcrit, with appropriate limits
           rhcpt(i,j,k-1) = min( max_rhcpt(i,j), max( min_rhcpt(i,j),         &
-                    one - root6 * sgm(i) / (a_qs(i,j,k-1) * qsw_arr(i,j,k-1))))
+                    one - root6 * sgm(i) / (a_qs(i,j,k-1) * qsw_arr(i))))
         end do !i
         !$OMP end do NOWAIT
       end if
@@ -3241,7 +3251,7 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
           sgm(i) = sqrt ( max( sgm(i), zero ) )
           ! calculate rhcrit, with appropriate limits
           rhcpt(i,j,k-1) = min( max_rhcpt(i,j), max( min_rhcpt(i,j),         &
-                    one - root6 * sgm(i) / (a_qs(i,j,k-1) * qsw_arr(i,j,k-1))))
+                    one - root6 * sgm(i) / (a_qs(i,j,k-1) * qsw_arr(i))))
         end do !i
         !$OMP end do NOWAIT
       end if
