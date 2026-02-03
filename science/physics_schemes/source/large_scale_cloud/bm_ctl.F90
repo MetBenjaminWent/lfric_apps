@@ -51,7 +51,7 @@ use bm_cld_mod,            only: bm_cld
 use bm_ql_mean_mod,        only: bm_ql_mean
 use bm_ez_diagnosis_mod,   only: bm_ez_diagnosis
 use bm_entrain_parcel_mod, only: bm_entrain_parcel
-
+use timing_mod,    only: start_timing, stop_timing, tik
 
 implicit none
 
@@ -367,6 +367,8 @@ character(len=*), parameter :: RoutineName='BM_CTL'
 
 character(len=errormessagelength) :: comments
 
+integer(tik)   :: bm_ctl_tik
+
 !- End of Header
 
 ! ----------------------------------------------------------------------
@@ -382,7 +384,7 @@ alphl=repsilon*lc/r
 ! ----------------------------------------------------------------------
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-
+call start_timing( bm_ctl_tik, '__bm_ctl__')
 ! ----------------------------------------------------------------------------
 ! --  Section 1 - initialisations                                           --
 ! --  Copy the initial q and t arrays to q_in and t_in arrays               --
@@ -903,7 +905,7 @@ do k = levels, 1, -1  ! this loop needs to work downwards for the calculation
 end do !k loop
 !$OMP end PARALLEL
 
-
+call stop_timing( bm_ctl_tik, '__bm_ctl__')
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bm_ctl

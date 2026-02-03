@@ -45,6 +45,8 @@ use qsat_mod, only: qsat_wat, qsat_wat_mix
 
 use ls_acf_brooks_mod, only: ls_acf_brooks
 
+use timing_mod,    only: start_timing, stop_timing, tik
+
 implicit none
 
 ! Purpose:
@@ -231,6 +233,7 @@ logical ::                                                                     &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)   :: ls_arcld_tik
 
 character(len=*), parameter :: RoutineName='LS_ARCLD'
 
@@ -238,7 +241,7 @@ character(len=*), parameter :: RoutineName='LS_ARCLD'
 !- End of Header
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-
+call start_timing( ls_arcld_tik, '__ls_arcld__')
 ! ----------------------------------------------------------------------
 !  Check input arguments for potential over-writing problems.
 ! ----------------------------------------------------------------------
@@ -628,7 +631,7 @@ else if (i_cld_area == acf_brooks) then
            area_cloud_fraction )
 
 end if
-
+call stop_timing( ls_arcld_tik, '__ls_arcld__')
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine ls_arcld
