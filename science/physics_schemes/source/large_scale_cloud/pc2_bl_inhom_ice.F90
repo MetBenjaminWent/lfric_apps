@@ -30,6 +30,7 @@ use pc2_constants_mod,   only: cloud_rounding_tol, ls_bl0, max_in_cloud_qcf
 use science_fixes_mod,   only: l_fix_incloud_qcf
 use yomhook,             only: lhook, dr_hook
 use parkind1,            only: jprb, jpim
+use timing_mod,    only: start_timing, stop_timing, tik
 
 implicit none
 
@@ -67,9 +68,12 @@ character(len=*), parameter :: RoutineName='PC2_BL_INHOM_ICE'
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+
+integer(tik)   :: pc2_bl_inhom_ice_tik
 !----------------------------------------------------------------------
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 !----------------------------------------------------------------------
+call start_timing( pc2_bl_inhom_ice_tik, '__pc2_bl_inhom_ice__')
 
 if ( l_fix_incloud_qcf ) then
   ! Max allowed value of qcf/cff used in denominator should be equal
@@ -161,6 +165,7 @@ end do
 !$OMP end do
 !$OMP end PARALLEL
 
+call stop_timing( pc2_bl_inhom_ice_tik, '__pc2_bl_inhom_ice__' )
 !----------------------------------------------------------------------
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 !----------------------------------------------------------------------
