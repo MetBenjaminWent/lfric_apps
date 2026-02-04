@@ -52,7 +52,7 @@ use model_domain_mod, only: model_type, mt_single_column
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 
-!$ use omp_lib, only: omp_get_num_threads
+!$ use omp_lib, only: omp_get_max_threads
 
 implicit none
 
@@ -318,7 +318,7 @@ integer ::                                                                     &
               ! Loop counter (horizontal field index).
  k,                                                                            &
               ! Loop counter (vertical index).
- omp_block,                                                                    &
+ tdims_omp_block,                                                              &
               ! omp block length
  ii,                                                                           &
               ! omp block loop counter
@@ -403,8 +403,6 @@ else
 
 end if  ! l_correct
 
-blm1 = bl_levels-1
-
 !-----------------------------------------------------------------------
 !  1.0 Interpolate r_theta_levels to U,V columns
 !-----------------------------------------------------------------------
@@ -443,6 +441,7 @@ end do
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
+do ii = tdims%i_start, tdims%i_end, tdims_seg_block
 do ii = tdims%i_start, tdims%i_end, tdims_seg_block
   do k = blm1, 2, -1
     l = 0
@@ -524,6 +523,7 @@ if ( .not. l_correct ) then
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
+  do ii = tdims%i_start, tdims%i_end, tdims_seg_block
   do ii = tdims%i_start, tdims%i_end, tdims_seg_block
     do k = blm1, 2, -1
       l = 0
