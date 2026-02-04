@@ -442,7 +442,6 @@ end do
 
 !$OMP do SCHEDULE(STATIC)
 do ii = tdims%i_start, tdims%i_end, tdims_seg_block
-do ii = tdims%i_start, tdims%i_end, tdims_seg_block
   do k = blm1, 2, -1
     l = 0
     do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
@@ -523,7 +522,6 @@ if ( .not. l_correct ) then
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
-  do ii = tdims%i_start, tdims%i_end, tdims_seg_block
   do ii = tdims%i_start, tdims%i_end, tdims_seg_block
     do k = blm1, 2, -1
       l = 0
