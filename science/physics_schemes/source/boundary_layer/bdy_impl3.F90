@@ -324,7 +324,7 @@ integer ::                                                                     &
               ! omp block loop counter
  l,                                                                            &
               ! vector counter
- tdims_omp_block, tdims_seg_block 
+ tdims_seg_block 
  ! omp blocking variables
 
 integer(kind=jpim), parameter :: zhook_in  = 0
@@ -336,8 +336,7 @@ character(len=*), parameter :: RoutineName='BDY_IMPL3'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
-tdims_omp_block = bl_segment_size
-tdims_seg_block = min(tdims_omp_block, tdims%i_len)
+tdims_seg_block = min(bl_segment_size, tdims%i_len)
 j = 1
 
 !$OMP  PARALLEL DEFAULT(none) SHARED(j, l_correct,bl_levels,tdims,             &
