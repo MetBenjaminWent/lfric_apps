@@ -32,7 +32,7 @@ gamma_rhokh_rdz, gamma_rhok_dep,f_field,surf_dep_flux,field                    &
 use atm_fields_bounds_mod, only:  pdims, array_dims
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
-!$ use omp_lib, only: omp_get_max_threads
+use tuning_segments_mod, only: bl_segment_size
 implicit none
 
 !  Inputs :-
@@ -111,8 +111,6 @@ integer ::                                                                     &
             ! K plus 1.
  ii,                                                                           &
             ! omp blocking counter
- pdims_omp_block,                                                              &
-            ! omp block size
  pdims_seg_block,                                                              &
             ! omp segment length
  max_threads
@@ -127,10 +125,7 @@ if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
 blm1 = bl_levels-1
 
-max_threads = 1
-!$ max_threads = omp_get_max_threads()
-pdims_omp_block = ceiling(real(pdims%i_end)/max_threads)
-pdims_seg_block = min(pdims_omp_block, pdims%i_len)
+pdims_seg_block = min(bl_segment_size, pdims%i_len)
 
 !$OMP PARALLEL DEFAULT(none) SHARED(pdims_seg_block, f_field, dtrdz, field, pdims,   &
 !$OMP  gamma_rhokh_rdz, r_rho_levels, surf_dep_flux, d_field, af,              &
