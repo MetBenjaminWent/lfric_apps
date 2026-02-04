@@ -322,8 +322,10 @@ integer ::                                                                     &
               ! omp block length
  ii,                                                                           &
               ! omp block loop counter
- l
+ l,                                                                            &
               ! vector counter
+ tdims_omp_block, tdims_seg_block 
+ ! omp blocking variables
 
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
