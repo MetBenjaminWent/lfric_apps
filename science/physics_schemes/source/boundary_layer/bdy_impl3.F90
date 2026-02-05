@@ -318,9 +318,9 @@ integer ::                                                                     &
               ! Loop counter (vertical index).
  ii,                                                                           &
               ! omp block loop counter
- l,                                                                            &
+ l
               ! vector counter
-integer ::  tdims_seg_block 
+integer :: tdims_seg_block 
  ! omp blocking variables
 
 integer(kind=jpim), parameter :: zhook_in  = 0
@@ -331,8 +331,6 @@ character(len=*), parameter :: RoutineName='BDY_IMPL3'
 
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-
-blm1 = bl_levels-1
 
 j = 1
 tdims_seg_block = min(bl_segment_size, tdims%i_len)
@@ -437,6 +435,8 @@ do i = tdims%i_start, tdims%i_end
   ct_ctq(i,j,bl_levels) = rbt * ct_ctq(i,j,bl_levels)
 end do
 !$OMP end do
+
+blm1 = bl_levels-1
 
 !$OMP do SCHEDULE(STATIC)
 do ii = tdims%i_start, tdims%i_end, tdims_seg_block
