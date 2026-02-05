@@ -35,7 +35,6 @@ use planet_constants_mod,  only: lcrcp
 use wtrac_pc2_mod,         only: wtrac_pc2
 use yomhook,               only: lhook, dr_hook
 use parkind1,              only: jprb, jpim
-use timing_mod,    only: start_timing, stop_timing, tik
 
 implicit none
 
@@ -130,11 +129,9 @@ character(len=*), parameter :: RoutineName='PC2_BL_FORCED_CU'
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
-integer(tik)   :: pc2_bl_forced_cu_tik
 !----------------------------------------------------------------------
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 !----------------------------------------------------------------------
-call start_timing( pc2_bl_forced_cu_tik, '__pc2_bl_forced_cu__')
 
 !$OMP PARALLEL do SCHEDULE(DYNAMIC) DEFAULT(none)                              &
 !$OMP SHARED( tdims, zhnl, dzh, zlcl, bl_type_3, z_theta,                      &
@@ -350,7 +347,7 @@ if ( kprof_cu >= on .and. ( forced_cu == cbl_and_cu                            &
 !$OMP end PARALLEL do
 
 end if  ! test on forced_cu eq cbl_and_cu
-call stop_timing( pc2_bl_forced_cu_tik, '__pc2_bl_forced_cu__')
+
 !----------------------------------------------------------------------
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 !----------------------------------------------------------------------

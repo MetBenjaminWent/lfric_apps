@@ -40,7 +40,6 @@ use cloud_inputs_mod,      only: l_fixbug_pc2_qcl_incr,l_fixbug_pc2_mixph,     &
                                  i_pc2_homog_g_method
 
 use qsat_mod, only: qsat_wat, qsat_wat_mix
-use timing_mod,    only: start_timing, stop_timing, tik
 
 implicit none
 
@@ -188,7 +187,6 @@ integer :: k,i,j ! Loop counters:  K - vertical level index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real   (kind=jprb)            :: zhook_handle
-integer(tik)   :: pc2_delta_hom_turb_tik
 
 character(len=*), parameter :: RoutineName='PC2_DELTA_HOM_TURB'
 
@@ -204,7 +202,6 @@ real(kind=real_umphys) ::                                                      &
 ! ==Main Block==--------------------------------------------------------
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-call start_timing( pc2_delta_hom_turb_tik, '__pc2_delta_hom_turb__')
 
 !$OMP  PARALLEL do DEFAULT(none) SCHEDULE(DYNAMIC) private(k,                  &
 !$OMP  j, i, tl, qsl_t, qsl_tl, alpha, al,                                     &
@@ -444,7 +441,7 @@ end do !k
 !$OMP end PARALLEL do
 
 ! End of the subroutine
-call stop_timing( pc2_delta_hom_turb_tik, '__pc2_delta_hom_turb__')
+
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine pc2_delta_hom_turb

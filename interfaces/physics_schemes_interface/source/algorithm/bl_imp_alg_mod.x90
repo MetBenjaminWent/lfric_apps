@@ -219,7 +219,7 @@ contains
     type( mesh_type ), pointer :: mesh => null()
     integer(i_def) :: loop, ncells
     logical(l_def) :: diag_step, flag_blpert
-    integer(tik)   :: id, jules_cost, bl_imp_diag_
+    integer(tik)   :: id
 
 
     if ( LPROF ) call start_timing( id, 'bl.implicit' )
@@ -425,7 +425,6 @@ contains
                                       bl_type_ind, rhokh, fqw, ftl, dqw, dtl,  &
                                       dqw_nt, dtl_nt, qw, tl, ct_ctq,          &
                                       dqw1, dtl1, ct_ctq1 ) )
-      if ( LPROF ) call start_timing( jules_cost, '__bl.implicit.jules_cost__' )
       call jules_imp_alg( mr, surf_heat_flux, canopy_evap, water_extraction,   &
                           lake_evap, derived_fields, radiation_fields,         &
                           turbulence_fields, cloud_fields, surface_fields,     &
@@ -434,7 +433,6 @@ contains
                           mr_ice, latent_heat, t1p5m, q1p5m, qcl1p5m,          &
                           t1p5m_ssi, q1p5m_ssi, qcl1p5m_ssi, t1p5m_land,       &
                           q1p5m_land, qcl1p5m_land)
-      if ( LPROF ) call stop_timing( jules_cost, '__bl.implicit.jules_cost__')
       call invoke(bl_imp2_kernel_type( outer, loop, wetrho_in_wth, exner,      &
                                        exner_in_wth, theta_star, height_w3,    &
                                        height_wth, ntml, cumulus, dtheta_bl,   &
@@ -468,12 +466,10 @@ contains
       call ustar_implicit%copy_field_properties(qv_star_surf)
 
       call map_physics_winds(taux, tauy, tauz, tau_w2)
-      if ( LPROF ) call start_timing( bl_imp_diag_, '__bl.implicit.bl_imp_diag_' )
       call invoke( bl_imp_diag_kernel_type(bt_bl, bq_bl, ftl, fqw, &
                                            taux, tauy, wetrho_in_w3, &
                                            theta_star_surf, qv_star_surf, &
                                            ustar_implicit, zh) )
-      if ( LPROF ) call stop_timing( bl_imp_diag_, '__bl.implicit.bl_imp_diag__')
     end if
 
     if (outer == outer_iterations) then
