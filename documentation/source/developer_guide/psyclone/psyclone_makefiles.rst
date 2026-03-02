@@ -126,6 +126,4 @@ To affect all transformations for a given site, it is recommended that the PSycl
         [[[environment]]]
             PSYCLONE_TRANSMUTE_EXTRAS = '-l all'
             
-Per file, which may be needed to preserve compiler clauses, and add optimisations in, a
-makefile will need to export privatised versions of these per file and imported into
-the application.
+To target the PSyclone arguments for a single file, such as in the case of preserving compiler directives, it is recommended to set the environment variables via a per-file system such as the GNUMake system shipped with LFRic.

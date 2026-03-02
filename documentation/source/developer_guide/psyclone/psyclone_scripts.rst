@@ -114,11 +114,13 @@ These are:
 
 
 ``PSYCLONE_PHYSICS_FILES`` is used with ``TRANSMUTE_INCLUDE_METHOD`` ``specify_include``.
-File names (without the type), which are to be affected by PSyclone, are added to this list.
+File names (without file extensions), which are to be affected by PSyclone, are
+added to this list. Any files not included in this list will not be processed by
+PSyclone.
 A PSyclone transformation script is applied to each respective file.
-The global.py script with be used as default, overwritten with alternatives as advised above.
-This is also currently the default method as we slowly transformation additional science files
-across to using PSyclone.
+The ``global.py`` script is used as the default transformation script, overridden by file- or directory-specific alternatives as detailed above.
+This is currently the default method for enabling PSyclone transformation scripts for
+source files.
 
 ``PSYCLONE_PASS_NO_SCRIPT`` has been implemented primarily for the ``TRANSMUTE_INCLUDE_METHOD``
 ``specify_include``, however can be expanded to either.
@@ -127,16 +129,17 @@ This can be useful to remove existing clauses from a file, but not add anything 
 files to be affected this way should only be added to this list, as they will be filtered out of
 ``PSYCLONE_PHYSICS_FILES`` anyway.
 
-``TRANSMUTE_INCLUDE_METHOD`` can be set to either ``specify_include`` or ``specify_exclude``.
-With ``specify_include``, ``PSYCLONE_PHYSICS_FILES`` will be used to define the list of files
-to be passed to the PSyclone Transmute command, and with ``specify_exclude``, 
-``PSYCLONE_DIRECTORIES`` and ``PSYCLONE_PHYSICS_EXCEPTION`` will be used.
+``TRANSMUTE_INCLUDE_METHOD`` can be set to either ``specify_include`` or
+``specify_exclude``.
+With ``specify_include``, ``PSYCLONE_PHYSICS_FILES`` will be used to define the list
+of files to be passed to the PSyclone Transmute command, and only these files will be
+passed. All other Fortran source files will not be passed to PSyclone.
 
-``PSYCLONE_DIRECTORIES`` is used with ``TRANSMUTE_INCLUDE_METHOD`` ``specify_exclude``.
-It provides a list of directories instead, where the build system populates the list of files to
-be passed to PSyclone with all of the files in the directory.
-``PSYCLONE_PHYSICS_EXCEPTION`` is used to filter the list of files found in each respective
-``PSYCLONE_DIRECTORIES`` and remove them. This can often be used with .h files currently.
+When using ``specify_exclude``, a list of target directories is passed via
+``PSYCLONE_DIRECTORIES``. For all directories in this list, every Fortran source file
+found in these directories will be passed to PSyclone. To omit a file from being passed
+to PSyclone, the filename (including extension) can be added to
+``PSYCLONE_PHYSICS_EXCEPTION``. This can often be used with .h files currently.
 
 
 Module/transformation script names should be added in the following style (in
