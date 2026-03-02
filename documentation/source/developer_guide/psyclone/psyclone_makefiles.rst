@@ -120,7 +120,12 @@ such as Intel or Nvidia.
 
 This has not been expanded further, however a user should be able to override them at
 a site level, and a file level.
-For just a site level, this could be set in the build option in the site cylc file.
+To affect all transformations for a given site, it is recommended that the PSyclone extras environment variables are set in the ``[[BUILD]]`` section of the corresponding ``suite_config_<SITE>.conf`` file, e.g.:
+
+[[EX1A_BUILD]]
+        [[[environment]]]
+            PSYCLONE_TRANSMUTE_EXTRAS = '-l all'
+            
 Per file, which may be needed to preserve compiler clauses, and add optimisations in, a
 makefile will need to export privatised versions of these per file and imported into
 the application.
