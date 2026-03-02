@@ -143,21 +143,28 @@ def trans(psyir):
                 start_node = index
                 break
             elif isinstance(routine_child, IfBlock):
-                found_valid_if = True
                 # Often timing handles are placed inside if blocks,
                 # check if it is not a known timing call, which should be
                 # ignored for spanning a parallel section.
                 for routine_grandchild in routine_child.walk(Reference):
                     try:
                         if str(routine_grandchild.name) in timer_routine_names:
-                            found_valid_if = False
+                            # Start node remains None.
+                            start_node = None
+                            break
+                        else:
+                            # Set the start node to the index and keep checking
+                            # grandchildren for calls that invalidate.
+                            # If all are valid, start_node still equals index.
+                            start_node = index
                     except ValueError:  # noqa: E722
                         continue
-                if found_valid_if:
-                    start_node = index
+                # Now check if we have a satisfactory start node.
+                if start_node is not None:
                     break
             else:
                 continue
+            
         # Default reference for end_node
         end_node = None
         for index in range((len(routine_children)-1), 0, -1):
@@ -166,19 +173,26 @@ def trans(psyir):
                 end_node = index + 1
                 break
             elif isinstance(routine_children[index], IfBlock):
-                found_valid_if = True
                 for routine_grandchild in \
                         routine_children[index].walk(Reference):
                     try:
                         if str(routine_grandchild.name) in timer_routine_names:
-                            found_valid_if = False
+                            # Start node remains None.
+                            end_node = None
+                            break
+                        else:
+                            # Set the start node to the index and keep checking
+                            # grandchildren for calls that invalidate.
+                            # If all are valid, start_node still equals index.
+                            end_node = index + 1
                     except ValueError:  # noqa: E722
                         continue
-                if found_valid_if:
-                    end_node = index + 1
+                # Now check if we have a satisfactory start node.
+                if end_node is not None:
                     break
             else:
                 continue
+
 
         if start_node and end_node:
             try:
@@ -186,6 +200,7 @@ def trans(psyir):
                     routine_children[start_node:end_node])
             except (TransformationError, IndexError) as err:
                 logging.warning("OMPParallelTrans failed: %s", err)
+
     # CCE first private issue with 3.1, to be removed longer term
     if get_compiler() == "cce" and first_private_list:
         for routine in psyir.walk(Routine):
