@@ -122,12 +122,13 @@ The ``global.py`` script is used as the default transformation script, overridde
 This is currently the default method for enabling PSyclone transformation scripts for
 source files.
 
-``PSYCLONE_PASS_NO_SCRIPT`` has been implemented primarily for the ``TRANSMUTE_INCLUDE_METHOD``
-``specify_include``, however can be expanded to either.
-It controls whether files are to be passed to PSyclone, but not to have a script applied to them.
-This can be useful to remove existing clauses from a file, but not add anything back.
-files to be affected this way should only be added to this list, as they will be filtered out of
-``PSYCLONE_PHYSICS_FILES`` anyway.
+``PSYCLONE_PASS_NO_SCRIPT`` has been implemented for the ``TRANSMUTE_INCLUDE_METHOD``
+``specify_include``. Use of this variable for the ``specify_exclude`` method is not mature,
+however this could be expanded to exclude in the future (see `issue319 <https://github.com/MetOffice/lfric_apps/issues/319>`_,).
+This variable specifies files to be passed to PSyclone without applying any transformations.
+This can be useful to remove existing clauses from a file without otherwise modifying the Fortran source.
+Any files included in ``PSYCLONE_PASS_NO_SCRIPT`` are filtered out of the ``PSYCLONE_PHYSICS_FILES`` list, 
+and sent to a separate make script.
 
 ``TRANSMUTE_INCLUDE_METHOD`` can be set to either ``specify_include`` or
 ``specify_exclude``.
@@ -182,5 +183,5 @@ It is recommended for developers at this time to use the following process.
   with a comment in the Apps ticket and PSyTran issue. 
 * Currently PSyTran is not integrated into the build system.
 * Link this ticket
-  `Apps906 <https://code.metoffice.gov.uk/trac/lfric_apps/ticket/906#ticket>`_,
+  `issue320 <https://github.com/MetOffice/lfric_apps/issues/320>`_,
   and update it with the functions duplicated to capture technical debt.
