@@ -335,7 +335,7 @@ character(len=*), parameter :: RoutineName='BDY_IMPL3'
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
 
-!$OMP  PARALLEL DEFAULT(none) SHARED(j, l_correct,bl_levels,tdims,             &
+!$OMP  PARALLEL DEFAULT(none) SHARED(l_correct,bl_levels,tdims,                &
 !$OMP  dqw_nt,dtl_nt,q_latest,qcl_latest, dtrdz_v,dtrdz_u,udims, rdz_v,        &
 !$OMP  gamma1,q,qcl,qcf,t_latest,t,ftl,rhokh,dtl,rdz_charney_grid,dqw,         &
 !$OMP  tau_x,rhokm_u,du,rdz_u,vdims,tau_y,dv, qcf_latest,                      &
