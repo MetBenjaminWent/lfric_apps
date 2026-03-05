@@ -322,9 +322,6 @@ integer ::                                                                     &
               ! vector counter
  integer, parameter :: j = 1 ! Array dimension, LFRic Parameter
 
-! integer :: tdims_seg_block 
-!  ! omp blocking variables
-
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
@@ -334,6 +331,7 @@ character(len=*), parameter :: RoutineName='BDY_IMPL3'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
+blm1 = bl_levels-1
 
 !$OMP  PARALLEL DEFAULT(none) SHARED(l_correct,bl_levels,tdims,                &
 !$OMP  dqw_nt,dtl_nt,q_latest,qcl_latest, dtrdz_v,dtrdz_u,udims, rdz_v,        &
@@ -345,9 +343,9 @@ if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 !$OMP  dqw1_1,dtl1_1,ctctq1_1,                                                 &
 !$OMP  ct_prod, cu_prod, cv_prod,k_blend_tq,k_blend_u,k_blend_v,               &
 !$OMP  gamma_in,cq_cm_u,cq_cm_v,du_nt,dv_nt,rhokm_v,lcrcp,lsrcp,               &
-!$OMP  bl_segment_size)                                                        &
+!$OMP  blm1, bl_segment_size)                                                  &
 !$OMP  private(k,i,r_sq,rbt,temp,temp_u,temp_v,l,temp_out,temp_u_out,          &
-!$OMP  temp_v_out,at,blm1,am,rbm,rr_sq,ii,gamma1_uv,gamma2_uv)
+!$OMP  temp_v_out,at,am,rbm,rr_sq,ii,gamma1_uv,gamma2_uv)
 
 if ( l_correct ) then
 
@@ -435,8 +433,6 @@ do i = tdims%i_start, tdims%i_end
   ct_ctq(i,j,bl_levels) = rbt * ct_ctq(i,j,bl_levels)
 end do
 !$OMP end do
-
-blm1 = bl_levels-1
 
 !$OMP do SCHEDULE(STATIC)
 do ii = tdims%i_start, tdims%i_end, bl_segment_size
