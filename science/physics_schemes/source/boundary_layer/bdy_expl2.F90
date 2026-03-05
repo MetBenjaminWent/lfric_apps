@@ -1086,9 +1086,9 @@ case (i_interp_local_cf_dbdz)
     ! Calculate qsat(Tl)...
     if ( l_mr_physics ) then
       call qsat_mix(qs_tl,                  &
-                    tl(:,:,k),                   &
-                    p_theta_levels(:,:,k),       &
-                    tdims%i_len )
+                    tl(:,j,k),                   &
+                    p_theta_levels(:,j,k),       &
+                    tdims%i_len)
     else
       call qsat(qs_tl,                      &
                 tl(:,j,k),                       &
