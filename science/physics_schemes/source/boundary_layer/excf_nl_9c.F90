@@ -1145,7 +1145,7 @@ if (model_type == mt_single_column) then
       wbmix(i,j,k) = zero  ! WB if were diag as well-mixed
       wbend(i,j,k) = zero  ! WB after dec diag
       wbend_sml(i,j,k) = zero ! WB after ksurf_iterate
-    end do ! k 
+    end do ! k
   end do ! i
 !$OMP end do
 end if ! model_type
@@ -1634,7 +1634,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
         end if ! K
 
-      end if ! test_well_mixed(i,j) 
+      end if ! test_well_mixed(i,j)
     end do ! i
   end do ! k
 end do ! ii
