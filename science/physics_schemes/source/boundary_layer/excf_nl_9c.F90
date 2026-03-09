@@ -56,7 +56,7 @@ use bl_option_mod, only:                                                       &
     flux_grad, Locketal2000, HoltBov1993, LockWhelan2006, entr_smooth_dec,     &
     entr_taper_zh, kprof_cu, klcl_entr, buoy_integ, buoy_integ_low,            &
     max_cu_depth, bl_res_inv, a_ent_shr_nml,  a_ent_2, one_third, two_thirds,  &
-    l_reset_dec_thres, var_diags_opt, original_vars, split_tke_and_inv,        &
+    l_reset_dec_thres,                                                         &
     l_use_var_fixes, dzrad_disc_opt, dzrad_ntm1, dzrad_1p5dz,                  &
     num_sweeps_bflux, l_converge_ga, l_use_sml_dsc_fixes, zero, one, one_half
 use model_domain_mod, only: model_type, mt_single_column
@@ -1099,8 +1099,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         if (.not. l_use_var_fixes) rhokm_top(i,j,k) = rhokm_dsct_ent(i,j)
       end if   ! test on DB_DSCT gt 0
     end if
-  end do ! I
-end do ! II
+  end do ! i
+end do ! ii
 !$OMP end do
 
 !  If there is no turbulence generation in DSC layer, ignore it.
@@ -1203,7 +1203,7 @@ do i = pdims%i_start, pdims%i_end
   if ( ntdsc(i,j)  >   2 ) then
     ktop_iterate(i,j) = .true.
   end if
-end do ! I
+end do ! i
 !$OMP end do
 
 !cdir collapse
@@ -1634,9 +1634,9 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
         end if ! K
 
-      end if ! TEST_WELL_MIXED
-    end do ! I
-  end do ! K
+      end if ! test_well_mixed(i,j) 
+    end do ! i
+end do ! k
 end do
 !$OMP end do
 
@@ -1885,7 +1885,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
     wb_ratio(i,j) = dec_thres(i,j) - one ! to be < DEC_THRES
 
-  end if ! KSURF_ITERATE
+  end if ! ksurf_iterate(i,j)
   end do
 end do
 !$OMP end do
@@ -1926,8 +1926,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       zsml_top(i,j) = z_bot_lim(i,j)
       wb_ratio(i,j) = dec_thres(i,j) - one ! to be < DEC_THRES
     end if
-  end do ! I
-end do ! II
+  end do ! i
+end do ! ii
 !$OMP end do
 
 end if  ! test in kprof_cu
@@ -2194,7 +2194,7 @@ do ii = pdims%i_start, pdims%i_end,bl_segment_size
           end if
         end if
 
-      end if  ! KSURF_ITERATE true
+      end if  ! ksurf_iterate(i,j) .and. status_ntml(i,j)
 
     end do
   end do
@@ -2720,7 +2720,7 @@ if ( entr_smooth_dec == on .or. entr_smooth_dec == entr_taper_zh ) then
     else
       zsml_base(i,j) = 0.1_r_bl*zh(i,j)
     end if
-  end do  ! loop over I
+  end do  ! loop over i
 !$OMP end do
 
 else ! entr_smooth_dec off
@@ -2851,8 +2851,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         km_dsct_factor(i,j) = one
       end if
     end if
-  end do !I
-end do !II
+  end do ! i
+end do ! ii
 !$OMP end do
 
 !-----------------------------------------------------------------------
@@ -3272,14 +3272,7 @@ else
               rhokm(i,j,k) = prandtl_top(i,j) * rhokh_lcl(i,j) *               &
                       exp(-(zk_tq-zh(i,j))/cu_depth_scale(i,j)) *              &
                       (one-(zk_tq-zh(i,j))/(zsml_top(i,j)-zh(i,j)))
-              if (BL_diag%l_tke) then
-                ! save Km/timescale for TKE diag, completed in bdy_expl2
-                tke_nl(i,j,k) = tke_nl(i,j,k) +                                &
-                                    rhokm(i,j,k)*c_tke*w_m_tq/zh(i,j)
-              end if
-            end if
           end if
-
         end if
       end do
     end do
@@ -3342,8 +3335,8 @@ if ( ng_stress  ==  BrownGrant97 .or.                                          &
               * s_m * ( a_ngs * wstar3 / w_m_hb_3 )                            &
                   * ( z_pr / zh_pr ) * ( one -  ( z_pr / zh_pr ) ) *           &
                                       ( one -  ( z_pr / zh_pr ) )
-          end if  ! ng_stress_calculate
-        end if  ! fb_surf>0 and z<zh
+          end if  ! ng_stress_calculate = .false.
+        end if  ! fb_surf>0 and zk_tq<zh(i,j)
       end do
     end do
   end do
