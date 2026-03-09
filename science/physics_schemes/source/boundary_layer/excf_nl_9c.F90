@@ -1259,8 +1259,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         ntop(i,j)   = ntml(i,j)
       end if
     end if
-  end do ! I
-end do ! II
+  end do ! i
+end do ! ii
 !$OMP end do
 
 if ( l_converge_ga ) then
@@ -1425,8 +1425,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       wb_dzrad_int(i,j) = -one  ! To identify not calculated
 
     end if
-  end do ! I
-end do ! II
+  end do ! i
+end do ! ii
 !$OMP end do
 
 ! For WB diagnostics, convert integrated WB to uniform profile
@@ -1487,8 +1487,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
     wbp_int(i,j) = wbp_int(i,j) + wb_surf_int(i,j) ! must be >0
 
-  end do ! I
-end do ! I
+  end do ! i
+end do ! ii
 !$OMP end do
 
 
@@ -2097,10 +2097,10 @@ do n_sweep = 1, num_sweeps_bflux
               wbend_sml(i1,j1,k) = wb_cld + wb_scld
             end if
 
-          end if ! K
+          end if ! k
 
         end do ! ic c_len_i
-      end do ! K
+      end do ! k
 
       do ic = jj, min(jj+bl_segment_size-1, c_len_i)
         j1=(ind_todo_i(ic)-1)/pdims%i_end+1
@@ -2240,8 +2240,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
     end if ! KTOP_ITERATE
 
-  end do
-end do
+  end do ! i
+end do ! ii
 !$OMP end do
 
 !$OMP do SCHEDULE(DYNAMIC)
@@ -2351,8 +2351,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
     end if
 
     wb_dzrad_int(i,j) = max( rbl_eps, wb_dzrad_int(i,j) )
-  end do ! I
-end do ! II
+  end do ! i
+end do ! ii
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
@@ -2735,7 +2735,7 @@ else ! entr_smooth_dec off
     else
       zsml_base(i,j) = 0.1_r_bl*zh(i,j)
     end if
-  end do  ! loop over I
+  end do  ! loop over i
 !$OMP end do
 
 end if  ! test on entr_smooth_dec
@@ -2746,7 +2746,7 @@ do i = pdims%i_start, pdims%i_end
   zsml_top(i,j) = zh(i,j)
   if (bl_res_inv /= off .and. dzh(i,j) > zero)                                 &
                               zsml_top(i,j) = zh(i,j)+dzh(i,j)
-end do  ! loop over I
+end do  ! loop over i
 !$OMP end do
 
 if ( kprof_cu == klcl_entr ) then
@@ -2770,7 +2770,7 @@ if ( kprof_cu == klcl_entr ) then
       ! Use the BL entrainment parametrization as calculated above
       rhokh_lcl(i,j) = min( rhokh_surf_ent(i,j), 5.0_r_bl)
     end if
-  end do  ! loop over I
+  end do  ! loop over i
 !$OMP end do
 end if  ! test on kprof_cu
 !-----------------------------------------------------------------------
@@ -3013,9 +3013,9 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         end if
         rhokm_top(i,j,k) = rhokm_top(i,j,k) + rhokm_dsct
       end if
-    end do
-  end do
-end do
+    end do ! i
+  end do ! k
+end do ! ii
 !$OMP end do
 
 !----------------------------------------------------
@@ -3126,9 +3126,9 @@ if (flux_grad  ==  LockWhelan2006) then
             end if
           end if
         end if
-      end do
-    end do
-  end do
+      end do ! i
+    end do ! k
+  end do ! ii
 !$OMP end do
 
 else
@@ -3280,9 +3280,9 @@ else
             end if
           end if
         end if
-      end do
-    end do
-  end do
+      end do ! i
+    end do ! k
+  end do ! ii
 !$OMP end do
 
 end if  ! Test on Flux_grad
@@ -3343,9 +3343,9 @@ if ( ng_stress  ==  BrownGrant97 .or.                                          &
                                       ( one -  ( z_pr / zh_pr ) )
           end if  ! ng_stress_calculate = .false.
         end if  ! fb_surf>0 and zk_tq<zh(i,j)
-      end do
-    end do
-  end do
+      end do ! i
+    end do ! k
+  end do ! ii
 !$OMP end do
 end if
 
