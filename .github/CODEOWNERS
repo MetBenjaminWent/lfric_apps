@@ -69,10 +69,10 @@ rose-stem/site/meto/macros/            @james-bruten-mo                    # @je
 rose-stem/apps                         # Mostly updated by macros, no codeowner
 **/versions.py                         @james-bruten-mo                    # @jennyhickson
 build/                                 @MetOffice/ssdteam @hiker
+interfaces/build                       @christophermaynard
 **/*Makefile                           @MatthewHambley @hiker
 **/*.mk                                @MatthewHambley @hiker
 **/optimisation                        @christophermaynard                 # HPC Optimisation Team
-interfaces/build/*.mk                  @MatthewHambley
 
 # Other areas
 documentation                           # @MetOffice/ssdteam
