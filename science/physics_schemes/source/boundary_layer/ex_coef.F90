@@ -400,7 +400,7 @@ do i = pdims%i_start, pdims%i_end
   ! initialise blending weight at top of BL to one
   weight_bltop(i,j)   = one
 end do
-!$OMP end do
+!$OMP end do NOWAIT
 
 !-----------------------------------------------------------------------
 ! Set critical Richardson number
@@ -411,7 +411,7 @@ if (l_rp2) then
   do i = pdims%i_start, pdims%i_end
     ricrit(i,j) = ricrit_rp(rp_idx)
   end do
-  !$OMP end do NOWAIT
+  !$OMP end do
 
 else
 
@@ -420,7 +420,7 @@ else
     ! Default critical Ri for Long_tails and Louis
     ricrit(i,j) = one
   end do
-  !$OMP end do NOWAIT
+  !$OMP end do
 
 end if
 !$OMP end PARALLEL
