@@ -797,7 +797,7 @@ integer ::                                                                     &
 integer, parameter :: j = 1 ! Array dimension, LFRic Parameter
 
 integer ::                                                                     &
- ii ! for indexing over open-mp block                             
+ ii ! for indexing over open-mp block
 
 real(kind=r_bl), parameter :: max_abs_obkhov = 1.0e6_r_bl
                  ! Maximum permitted magnitude of the Obukhov
@@ -2814,11 +2814,11 @@ if (i_rhcpt == rhcpt_tke_based .or. BL_diag%l_slvar .or. BL_diag%l_qwvar       &
   if (i_rhcpt == rhcpt_tke_based) then
     ! just use rhcpt=0.8 above bl_levels
     !$OMP do SCHEDULE(STATIC)
-    do k = bl_levels-1, tdims%k_end     
+    do k = bl_levels-1, tdims%k_end
       do i = tdims%i_start, tdims%i_end
         rhcpt(i,j,k) = 0.8_r_bl
-      end do  
-    end do
+      end do ! i
+    end do ! k
 !$OMP end do
   end if
 !$OMP end PARALLEL
