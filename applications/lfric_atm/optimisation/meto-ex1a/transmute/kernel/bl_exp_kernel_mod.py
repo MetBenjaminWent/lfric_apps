@@ -21,16 +21,22 @@ from transmute_psytrans.transmute_functions import (
     OMP_PARALLEL_LOOP_DO_TRANS_STATIC
 )
 
-def check_litterals(node):
-    litterals = node.walk(Literal)
+
+def check_literals(node):
+    '''
+    Check if the bounds, found in the literals are a value
+    or are a variable.
+    '''
+    literals = node.walk(Literal)
     # Position 2 in the array relates to the range of the loop node
     # This range, if a variable is used is 1
     # Therefore if a number is used, it will be above 1
     # Relative to this file, 3 is the only range in question
-    if int(litterals[1].value) > 1:
-        # print(litterals[1].value)
+    if int(literals[1].value) > 1:
+        # Return False if there is one
         return False
     else:
+        # Return True if there isn't one, indicating an appropriate loop
         return True
 
 
@@ -44,7 +50,6 @@ def trans(psyir):
     # Variables that appear on the left-hand side of assignments
     # for which PSyclone dependency errors can be ignored
     false_dep_vars = [
-            "land_field",
             "land_index",
             "tnuc_nlcl",
             "dw_bl",
@@ -109,24 +114,27 @@ def trans(psyir):
         # save a loop ancestor reference per loop step
         ancestor = loop.ancestor(Loop)
 
-        # There are two loop variables in this file, k or i
+        # There are three loop variables in this file, l, k or i
         if loop.variable.name == 'k':
             # check if a k loop bound is not a variable and not ideal to thread
             # over due to the low range, and there are no loop ancestors
-            if check_litterals(loop) and not ancestor:
+            if check_literals(loop) and not ancestor:
                 safe_to_transform = True
 
         elif (loop.variable.name == 'i'):
             # If there is an ancestor, we generally don't want to
             # unless that ancestor was not ideal to thread over
             if ancestor:
-                if not check_litterals(ancestor):
+                if not check_literals(ancestor):
                     safe_to_transform = True
             else:
                 safe_to_transform = True
 
+        elif (loop.variable.name == 'l'):
+            if not ancestor:
+                safe_to_transform = True
+
         if safe_to_transform:
-            
             # Check if any eligible variables appear on the LHS of
             # assignment expressions; these lead to false dependency
             # errors in the parallel loop transformation that can be
