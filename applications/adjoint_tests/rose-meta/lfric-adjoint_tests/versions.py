@@ -34,7 +34,7 @@ class vnXX_txxx(MacroUpgrade):
 
 
 class vn31_t382(MacroUpgrade):
-    """Upgrade macro for ticket #221 by Benjamin Went."""
+    """Upgrade macro for ticket #382 by Benjamin Went."""
 
     BEFORE_TAG = "vn3.1"
     AFTER_TAG = "vn3.1_t382"
