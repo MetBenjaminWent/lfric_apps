@@ -84,6 +84,7 @@ use kmkhz_9c_wtrac_mod,      only: calc_dqw_inv_wtrac, calc_fqw_inv_wtrac
 
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik, LPROF
 
 implicit none
 
@@ -967,8 +968,10 @@ integer            :: jj         ! Block index
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik) :: kmkhz_9c_tik
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( kmkhz_9c_tik, '__kmkhz_9c__ ')
 
 ! Allocate water tracer working arrays
 if (l_wtrac) then
@@ -4994,6 +4997,7 @@ if (l_wtrac) then
   deallocate(ntml_start)
 end if
 
+call stop_timing( kmkhz_9c_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine kmkhz_9c

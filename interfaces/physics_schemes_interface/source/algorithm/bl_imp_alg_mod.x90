@@ -219,7 +219,7 @@ contains
     type( mesh_type ), pointer :: mesh => null()
     integer(i_def) :: loop, ncells
     logical(l_def) :: diag_step, flag_blpert
-    integer(tik)   :: id
+    integer(tik)   :: id, bl_imp_tik, bl_imp_du_tik
 
 
     if ( LPROF ) call start_timing( id, 'bl.implicit' )
@@ -354,6 +354,8 @@ contains
     call tau_ssi_w2%copy_field_properties(pseudotau_w2)
     call u_star%copy_field_properties(u_physics_star)
 
+    ! bl_imp_du_tik
+    if ( LPROF ) call start_timing( bl_imp_du_tik, 'bl_imp_du_kernel_type' )
     call invoke(setval_c(du_bl, 0.0_r_def),                                    &
                 setval_c(dissip, 0.0_r_def),                                   &
                 setval_c(wind10m_w2, 0.0_r_def),                               &
@@ -372,7 +374,7 @@ contains
                 ! Map the wind back into dynamics quantities
                 inc_X_times_Y(du_bl, dA),                                      &
                 inc_X_times_Y(dissip, dA) )
-
+    if ( LPROF ) call stop_timing( bl_imp_du_tik, 'bl_imp_du_kernel_type' )
     call u_physics_star%field_final()
 
     if (fric_heating) then
@@ -415,6 +417,7 @@ contains
     ncells = mesh%get_last_edge_cell()
     call um_sizes_init(ncells)
 
+    if ( LPROF ) call start_timin( bl_imp_tik, 'bl_imp_kernel_type' )
     do loop = 1,2
       ! Call the implicit scheme for scalars
       call invoke(bl_imp_kernel_type( loop, theta, exner_in_wth, mr_n(imr_v),  &
@@ -450,6 +453,7 @@ contains
                                        dtl, dqw_nt, dtl_nt, qw, tl, ct_ctq,    &
                                        fqw_star, ftl_star ) )
     end do !loop
+    if ( LPROF ) call stop_timing( bl_imp_tik, 'bl_imp_kernel_type' )
 
     call um_sizes_init(1_i_def)
 

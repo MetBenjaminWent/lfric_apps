@@ -66,6 +66,8 @@ use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 
 use sblequil_mod, only: sblequil
+use timing_mod,             only: start_timing, stop_timing, tik, LPROF
+
 implicit none
 
 integer, intent(in) ::                                                         &
@@ -311,9 +313,10 @@ logical ::                                                                     &
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: ex_coef_tik
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-
+call start_timing( ex_coef_tik, '__ex_coef__ ')
 !-----------------------------------------------------------------------
 !   if stochastic physics random parameters is used set the parameter
 !   used to vary the stability function to a perturbed value, if not
@@ -1241,6 +1244,7 @@ do k = 2, bl_levels
 !$OMP end PARALLEL
 end do ! bl_levels
 
+call stop_timing( ex_coef_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine ex_coef

@@ -124,6 +124,8 @@ use free_tracers_inputs_mod, only: l_wtrac, n_wtrac
 use wtrac_bl_mod,            only: bl_wtrac_type
 use wtrac_atm_step_mod,      only: atm_step_wtrac_type
 
+use timing_mod,             only: start_timing, stop_timing, tik, LPROF
+
 implicit none
 
 !  Inputs :-
@@ -817,7 +819,11 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
+integer(tik)              :: bdy_expl2_tik
+
+
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( bdy_expl2_tik, '__bdy_expl2__ ')
 
 !Set up automatic segment tuning
 
@@ -3049,6 +3055,7 @@ end if ! i_cld_vn == i_cld_bimodal
 !If autotuning is active, decide what to do with the
 !trial segment size and report the current status.
 
+call stop_timing( bdy_expl2_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bdy_expl2
