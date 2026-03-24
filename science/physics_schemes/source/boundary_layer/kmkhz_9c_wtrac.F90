@@ -240,7 +240,7 @@ do i_wt = 1, n_wtrac
 !$OMP end PARALLEL do
 end do     ! i_wt
 
-
+call stop_timing( kmkhz_9c_alc_dqw_wtrac )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine calc_dqw_inv_wtrac
@@ -266,6 +266,8 @@ use wtrac_bl_mod,            only: bl_wtrac_type
 use bl_option_mod,           only: zero, one
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+use timing_mod,             only: start_timing, stop_timing, tik, LPROF
+
 
 implicit none
 
@@ -360,11 +362,12 @@ logical :: moisten_wt(pdims%i_start:pdims%i_end,pdims%j_start:pdims%j_end)
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
+integer(tik)              :: kmkhz_9c_calc_fqw_wtrac
 
 character(len=*), parameter ::  RoutineName = 'CALC_FQW_INV_WTRAC'
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
-
+call start_timing( kmkhz_9c_calc_fqw_wtrac, '__kmkhz_9c_calc_fqw_wtrac___ ')
 do i_wt = 1, n_wtrac
 !$OMP  PARALLEL do SCHEDULE(STATIC) DEFAULT(SHARED)                            &
 !$OMP  private (i, j, k, ml_tend, fa_tend, inv_tend, totqf_efl)

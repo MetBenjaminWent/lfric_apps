@@ -417,7 +417,7 @@ contains
     ncells = mesh%get_last_edge_cell()
     call um_sizes_init(ncells)
 
-    if ( LPROF ) call start_timin( bl_imp_tik, 'bl_imp_kernel_type' )
+    if ( LPROF ) call start_timing( bl_imp_tik, 'bl_imp_kernel_type' )
     do loop = 1,2
       ! Call the implicit scheme for scalars
       call invoke(bl_imp_kernel_type( loop, theta, exner_in_wth, mr_n(imr_v),  &

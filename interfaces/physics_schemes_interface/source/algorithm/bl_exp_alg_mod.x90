@@ -423,7 +423,7 @@ contains
       if ( LPROF ) call start_timing( id, 'bl.explicit' )
     end if
 
-    if ( LPROF ) call start_timin( bl_du_tik, 'bl_exp_kernel_type' )
+    if ( LPROF ) call start_timing( bl_du_tik, 'bl_exp_kernel_type' )
     ! Calculate explicit momentum diffusion on cell faces
     call invoke(bl_exp_du_kernel_type(4_i_def, tau_w2, tau_land_w2, tau_ssi_w2,&
                                       rhokm_w2, rdz_fd1, u_physics,            &
