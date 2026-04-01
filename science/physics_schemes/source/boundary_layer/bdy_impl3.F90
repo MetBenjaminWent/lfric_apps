@@ -52,6 +52,7 @@ use model_domain_mod, only: model_type, mt_single_column
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 use timing_mod,             only: start_timing, stop_timing, tik, LPROF
+!$ use omp_lib, only: omp_get_max_threads
 
 implicit none
 
@@ -317,10 +318,15 @@ integer ::                                                                     &
               ! Loop counter (horizontal field index).
  k,                                                                            &
               ! Loop counter (vertical index).
+ tdims_omp_block,                                                              &
+              ! omp block length
+ tdims_seg_block,                                                              &
+              ! omp segment length
  ii,                                                                           &
               ! omp block loop counter
- l
+ l,                                                                            &
               ! vector counter
+ max_threads
  integer, parameter :: j = 1 ! Array dimension, LFRic Parameter
 
 integer(kind=jpim), parameter :: zhook_in  = 0
@@ -337,17 +343,21 @@ call start_timing( bdy_imp3, '__bdy_imp3__ ')
 
 blm1 = bl_levels-1
 
-!$OMP  PARALLEL DEFAULT(none) SHARED(l_correct,bl_levels,tdims,                &
-!$OMP  dqw_nt,dtl_nt,q_latest,qcl_latest, dtrdz_v,dtrdz_u,udims, rdz_v,        &
-!$OMP  gamma1,q,qcl,qcf,t_latest,t,ftl,rhokh,dtl,rdz_charney_grid,dqw,         &
+max_threads = 1
+!$ max_threads = omp_get_max_threads()
+tdims_omp_block  = ceiling(real(tdims%i_len)/max_threads)
+tdims_seg_block = min(tdims_omp_block, tdims%i_len)
+
+!$OMP  PARALLEL DEFAULT(none) SHARED(tdims_seg_block,l_correct,bl_levels,      &
+!$OMP  blm1,tdims, dqw_nt,dtl_nt,q_latest,qcl_latest,dtrdz_v,dtrdz_u,udims,    &
+!$OMP  rdz_v,gamma1,q,qcl,qcf,t_latest,t,ftl,rhokh,dtl,rdz_charney_grid,dqw,   &
 !$OMP  tau_x,rhokm_u,du,rdz_u,vdims,tau_y,dv, qcf_latest,                      &
 !$OMP  qw,tl,r_theta_levels,r_theta_u,r_theta_v,r_rho_levels,fqw,              &
 !$OMP  dtrdz_charney_grid,gamma2,ct_ctq,dqw1,dtl1,ctctq1,model_type,           &
 !$OMP  cq_cm_u_1,cq_cm_v_1,du_1,dv_1,                                          &
 !$OMP  dqw1_1,dtl1_1,ctctq1_1,                                                 &
 !$OMP  ct_prod, cu_prod, cv_prod,k_blend_tq,k_blend_u,k_blend_v,               &
-!$OMP  gamma_in,cq_cm_u,cq_cm_v,du_nt,dv_nt,rhokm_v,lcrcp,lsrcp,               &
-!$OMP  blm1, bl_segment_size)                                                  &
+!$OMP  gamma_in,cq_cm_u,cq_cm_v,du_nt,dv_nt,rhokm_v,lcrcp,lsrcp)               &
 !$OMP  private(k,i,r_sq,rbt,temp,temp_u,temp_v,l,temp_out,temp_u_out,          &
 !$OMP  temp_v_out,at,am,rbm,rr_sq,ii,gamma1_uv,gamma2_uv)
 
@@ -439,10 +449,10 @@ end do
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
-do ii = tdims%i_start, tdims%i_end, bl_segment_size
+do ii = tdims%i_start, tdims%i_end, tdims_seg_block
   do k = blm1, 2, -1
     l = 0
-    do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+    do i = ii, min(ii+tdims_seg_block -1, tdims%i_end)
       r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
       rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
       dqw(i,j,k) = ( -dtrdz_charney_grid(i,j,k)*                               &
@@ -466,7 +476,7 @@ do ii = tdims%i_start, tdims%i_end, bl_segment_size
     call oneover_v(l, temp, temp_out)
 
     l = 0
-    do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+    do i = ii, min(ii+tdims_seg_block -1, tdims%i_end)
       l = l + 1
       dqw(i,j,k) = temp_out(l) * dqw(i,j,k)
       dtl(i,j,k) = temp_out(l) * dtl(i,j,k)
@@ -520,10 +530,10 @@ if ( .not. l_correct ) then
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
-  do ii = tdims%i_start, tdims%i_end, bl_segment_size
+  do ii = tdims%i_start, tdims%i_end, tdims_seg_block
     do k = blm1, 2, -1
       l = 0
-      do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+      do i = ii, min(ii+tdims_seg_block -1, tdims%i_end)
         r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
         rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
         dqw1(i,j,k) = -dtrdz_charney_grid(i,j,k) *                             &
@@ -544,7 +554,7 @@ if ( .not. l_correct ) then
 
       call oneover_v(l, temp, temp_out)
       l = 0
-      do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+      do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
         l = l + 1
         dqw1(i,j,k) = temp_out(l) * dqw1(i,j,k)
         dtl1(i,j,k) = temp_out(l) * dtl1(i,j,k)
