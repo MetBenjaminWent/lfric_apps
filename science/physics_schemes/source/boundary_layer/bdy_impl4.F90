@@ -47,7 +47,7 @@ use planet_constants_mod, only: cp => cp_bl
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 use timing_mod,             only: start_timing, stop_timing, tik, LPROF
-
+!$ use omp_lib, only: omp_get_max_threads
 
 implicit none
 
