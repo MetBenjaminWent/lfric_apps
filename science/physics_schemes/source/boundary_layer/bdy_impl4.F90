@@ -195,8 +195,17 @@ real(kind=r_bl) :: r_sq, rbt, at ,                                             &
 
 integer ::                                                                     &
  i,                                                                            &
-                ! LOCAL Loop counter (horizontal field index).
+            ! LOCAL Loop counter (horizontal field index).
  k          ! LOCAL Loop counter (vertical level index).
+
+integer :: 
+ ii,                                                                           &
+             ! omp blocking index
+ tdims_omp_block,                                                              &
+             ! omp block length
+ tdims_seg_block,                                                              &
+             ! omp segment length
+ max_threads ! store the no of threads
 
 integer, parameter :: j = 1 ! Array bound, LFRic Parameter
 
@@ -211,7 +220,12 @@ character(len=*), parameter :: RoutineName='BDY_IMPL4'
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 call start_timing( bdy_imp4, '__bdy_imp4__ ')
 
-!$OMP  PARALLEL DEFAULT(SHARED) private(i,k,at,rbt,gamma1_uv,                  &
+max_threads = 1
+!$ max_threads = omp_get_max_threads()
+tdims_omp_block  = ceiling(real(tdims%i_len)/max_threads)
+tdims_seg_block = min(tdims_omp_block, tdims%i_len)
+
+!$OMP  PARALLEL DEFAULT(SHARED) private(i,k,ii,at,rbt,gamma1_uv,             &
 !$OMP  gamma2_uv,r_sq)
 if ( .not. l_correct ) then
   !  1st stage: predictor
@@ -265,14 +279,16 @@ end do
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
-do k = 2, bl_levels
-  do i = tdims%i_start, tdims%i_end
-    dtl(i,j,k) = dtl(i,j,k) - ct_ctq(i,j,k)*dtl(i,j,k-1)
-    tl(i,j,k) = tl(i,j,k) + dtl(i,j,k)
-    dqw(i,j,k) = dqw(i,j,k) - ct_ctq(i,j,k)*dqw(i,j,k-1)
-    qw(i,j,k) = qw(i,j,k) + dqw(i,j,k)
-  end do
-end do !bl_levels
+do ii = tdims%j_start, tdims%i_end, tdims_seg_block
+  do k = 2, bl_levels
+    do i = ii, min(ii+tdims_seg_block-1,tdims%i_end)
+      dtl(i,j,k) = dtl(i,j,k) - ct_ctq(i,j,k)*dtl(i,j,k-1)
+      tl(i,j,k) = tl(i,j,k) + dtl(i,j,k)
+      dqw(i,j,k) = dqw(i,j,k) - ct_ctq(i,j,k)*dqw(i,j,k-1)
+      qw(i,j,k) = qw(i,j,k) + dqw(i,j,k)
+    end do
+  end do !bl_levels
+end do
 !$OMP end do
 
 ! Calculate stress and flux diagnostics using the new scheme equations.
