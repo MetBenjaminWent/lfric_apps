@@ -46,6 +46,7 @@ use model_domain_mod, only: model_type, mt_single_column
 use planet_constants_mod, only: cp => cp_bl
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+!$ use omp_lib, only: omp_get_max_threads
 
 implicit none
 
