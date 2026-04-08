@@ -42,7 +42,6 @@ subroutine bdy_impl3 (                                                         &
  dqw1_1,dtl1_1,ctctq1_1                                                        &
  )
 
-use tuning_segments_mod, only:  bl_segment_size
 use atm_fields_bounds_mod, only:                                               &
  udims, vdims, udims_s, vdims_s, pdims, tdims, tdims_l
 use bl_option_mod, only: one
@@ -51,6 +50,7 @@ use vectlib_mod, only: oneover_v => oneover_v_interface
 use model_domain_mod, only: model_type, mt_single_column
 use yomhook, only: lhook, dr_hook
 use parkind1, only: jprb, jpim
+!$ use omp_lib, only: omp_get_max_threads
 
 implicit none
 
@@ -318,8 +318,14 @@ integer ::                                                                     &
               ! Loop counter (vertical index).
  ii,                                                                           &
               ! omp block loop counter
- l
+ l,                                                                            &
               ! vector counter
+ tdims_omp_block,                                                              &
+              ! omp block length
+ tdims_seg_block,                                                              &
+              ! omp segment length
+ max_threads
+
  integer, parameter :: j = 1 ! Array dimension, LFRic Parameter
 
 integer(kind=jpim), parameter :: zhook_in  = 0
@@ -330,6 +336,11 @@ character(len=*), parameter :: RoutineName='BDY_IMPL3'
 
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+
+max_threads = 1
+!$ max_threads = omp_get_max_threads()
+tdims_omp_block  = ceiling(real(tdims%i_len)/max_threads)
+tdims_seg_block = min(tdims_omp_block, tdims%i_len)
 
 blm1 = bl_levels-1
 
@@ -343,7 +354,7 @@ blm1 = bl_levels-1
 !$OMP  dqw1_1,dtl1_1,ctctq1_1,                                                 &
 !$OMP  ct_prod, cu_prod, cv_prod,k_blend_tq,k_blend_u,k_blend_v,               &
 !$OMP  gamma_in,cq_cm_u,cq_cm_v,du_nt,dv_nt,rhokm_v,lcrcp,lsrcp,               &
-!$OMP  blm1, bl_segment_size)                                                  &
+!$OMP  blm1, tdims_seg_block)                                                  &
 !$OMP  private(k,i,r_sq,rbt,temp,temp_u,temp_v,l,temp_out,temp_u_out,          &
 !$OMP  temp_v_out,at,am,rbm,rr_sq,ii,gamma1_uv,gamma2_uv)
 
@@ -435,10 +446,10 @@ end do
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
-do ii = tdims%i_start, tdims%i_end, bl_segment_size
+do ii = tdims%i_start, tdims%i_end, tdims_seg_block
   do k = blm1, 2, -1
     l = 0
-    do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+    do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
       r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
       rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
       dqw(i,j,k) = ( -dtrdz_charney_grid(i,j,k)*                               &
@@ -462,7 +473,7 @@ do ii = tdims%i_start, tdims%i_end, bl_segment_size
     call oneover_v(l, temp, temp_out)
 
     l = 0
-    do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+    do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
       l = l + 1
       dqw(i,j,k) = temp_out(l) * dqw(i,j,k)
       dtl(i,j,k) = temp_out(l) * dtl(i,j,k)
@@ -516,10 +527,10 @@ if ( .not. l_correct ) then
 !$OMP end do
 
 !$OMP do SCHEDULE(STATIC)
-  do ii = tdims%i_start, tdims%i_end, bl_segment_size
+  do ii = tdims%i_start, tdims%i_end, tdims_seg_block
     do k = blm1, 2, -1
       l = 0
-      do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+      do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
         r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
         rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
         dqw1(i,j,k) = -dtrdz_charney_grid(i,j,k) *                             &
@@ -540,7 +551,7 @@ if ( .not. l_correct ) then
 
       call oneover_v(l, temp, temp_out)
       l = 0
-      do i = ii, min(ii+bl_segment_size-1, tdims%i_end)
+      do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
         l = l + 1
         dqw1(i,j,k) = temp_out(l) * dqw1(i,j,k)
         dtl1(i,j,k) = temp_out(l) * dtl1(i,j,k)
