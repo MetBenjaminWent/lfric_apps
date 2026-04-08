@@ -315,7 +315,7 @@ integer ::                                                                     &
               ! BL_LEVELS minus 1.
  i,                                                                            &
               ! Loop counter (horizontal field index).
- k,                                                                            &                                                          &
+ k,                                                                            &
               ! omp segment length
  ii,                                                                           &
               ! omp block loop counter
