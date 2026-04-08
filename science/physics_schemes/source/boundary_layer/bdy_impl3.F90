@@ -42,7 +42,6 @@ subroutine bdy_impl3 (                                                         &
  dqw1_1,dtl1_1,ctctq1_1                                                        &
  )
 
-use tuning_segments_mod, only:  bl_segment_size
 use atm_fields_bounds_mod, only:                                               &
  udims, vdims, udims_s, vdims_s, pdims, tdims, tdims_l
 use bl_option_mod, only: one
@@ -316,17 +315,18 @@ integer ::                                                                     &
               ! BL_LEVELS minus 1.
  i,                                                                            &
               ! Loop counter (horizontal field index).
- k,                                                                            &
-              ! Loop counter (vertical index).
- tdims_omp_block,                                                              &
-              ! omp block length
- tdims_seg_block,                                                              &
+ k,                                                                            &                                                          &
               ! omp segment length
  ii,                                                                           &
               ! omp block loop counter
  l,                                                                            &
               ! vector counter
+ tdims_omp_block,                                                              &
+              ! omp block length
+ tdims_seg_block,                                                              &
+              ! omp segment length
  max_threads
+
  integer, parameter :: j = 1 ! Array dimension, LFRic Parameter
 
 integer(kind=jpim), parameter :: zhook_in  = 0
@@ -341,15 +341,15 @@ character(len=*), parameter :: RoutineName='BDY_IMPL3'
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 call start_timing( bdy_imp3, '__bdy_imp3__ ')
 
-blm1 = bl_levels-1
-
 max_threads = 1
 !$ max_threads = omp_get_max_threads()
 tdims_omp_block  = ceiling(real(tdims%i_len)/max_threads)
 tdims_seg_block = min(tdims_omp_block, tdims%i_len)
 
-!$OMP  PARALLEL DEFAULT(none) SHARED(tdims_seg_block,l_correct,bl_levels,      &
-!$OMP  blm1,tdims, dqw_nt,dtl_nt,q_latest,qcl_latest,dtrdz_v,dtrdz_u,udims,    &
+blm1 = bl_levels-1
+
+!$OMP  PARALLEL DEFAULT(none) SHARED(l_correct,bl_levels,                      &
+!$OMP  tdims, dqw_nt,dtl_nt,q_latest,qcl_latest,dtrdz_v,dtrdz_u,udims,         &
 !$OMP  rdz_v,gamma1,q,qcl,qcf,t_latest,t,ftl,rhokh,dtl,rdz_charney_grid,dqw,   &
 !$OMP  tau_x,rhokm_u,du,rdz_u,vdims,tau_y,dv, qcf_latest,                      &
 !$OMP  qw,tl,r_theta_levels,r_theta_u,r_theta_v,r_rho_levels,fqw,              &
@@ -357,7 +357,8 @@ tdims_seg_block = min(tdims_omp_block, tdims%i_len)
 !$OMP  cq_cm_u_1,cq_cm_v_1,du_1,dv_1,                                          &
 !$OMP  dqw1_1,dtl1_1,ctctq1_1,                                                 &
 !$OMP  ct_prod, cu_prod, cv_prod,k_blend_tq,k_blend_u,k_blend_v,               &
-!$OMP  gamma_in,cq_cm_u,cq_cm_v,du_nt,dv_nt,rhokm_v,lcrcp,lsrcp)               &
+!$OMP  gamma_in,cq_cm_u,cq_cm_v,du_nt,dv_nt,rhokm_v,lcrcp,lsrcp,               &
+!$OMP  blm1, tdims_seg_block)                                                  &
 !$OMP  private(k,i,r_sq,rbt,temp,temp_u,temp_v,l,temp_out,temp_u_out,          &
 !$OMP  temp_v_out,at,am,rbm,rr_sq,ii,gamma1_uv,gamma2_uv)
 
@@ -452,7 +453,7 @@ end do
 do ii = tdims%i_start, tdims%i_end, tdims_seg_block
   do k = blm1, 2, -1
     l = 0
-    do i = ii, min(ii+tdims_seg_block -1, tdims%i_end)
+    do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
       r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
       rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
       dqw(i,j,k) = ( -dtrdz_charney_grid(i,j,k)*                               &
@@ -476,7 +477,7 @@ do ii = tdims%i_start, tdims%i_end, tdims_seg_block
     call oneover_v(l, temp, temp_out)
 
     l = 0
-    do i = ii, min(ii+tdims_seg_block -1, tdims%i_end)
+    do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
       l = l + 1
       dqw(i,j,k) = temp_out(l) * dqw(i,j,k)
       dtl(i,j,k) = temp_out(l) * dtl(i,j,k)
@@ -533,7 +534,7 @@ if ( .not. l_correct ) then
   do ii = tdims%i_start, tdims%i_end, tdims_seg_block
     do k = blm1, 2, -1
       l = 0
-      do i = ii, min(ii+tdims_seg_block -1, tdims%i_end)
+      do i = ii, min(ii+tdims_seg_block-1, tdims%i_end)
         r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
         rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
         dqw1(i,j,k) = -dtrdz_charney_grid(i,j,k) *                             &
