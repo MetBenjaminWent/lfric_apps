@@ -213,7 +213,7 @@ contains
     type( field_type ) :: mr_ice
 
     integer(i_def) :: ncells
-    integer(tik)   :: id
+    integer(tik)   :: id, bl_exp_tik, bl_du_tik
 
     if ( LPROF ) call start_timing( id, 'bl.explicit' )
 
@@ -368,6 +368,7 @@ contains
     ! Switch UM to running i-first on whole domain
     call um_sizes_init(ncells)
     ! Call explicit BL scheme
+    if ( LPROF ) call start_timing( bl_exp_tik, 'bl_exp_kernel_type' )
     call invoke(bl_exp_kernel_type( theta, rho, rho_in_wth, wetrho_in_wth,     &
                                     exner, exner_in_wth, u_in_w3, v_in_w3,     &
                                     w_in_wth, velocity_w2v, mr_n(imr_v),       &
@@ -408,6 +409,7 @@ contains
                                       wetrho_in_w3,                            &
                                       rhokm_w2, surf_interp_w2, ngstress_w2,   &
                                       wetrho_in_w2, w2_rmultiplicity) )
+    if ( LPROF ) call stop_timing( bl_exp_tik, 'bl_exp_kernel_type' )
     ! Switch UM back to columns
     call um_sizes_init(1_i_def)
 
@@ -421,12 +423,13 @@ contains
       if ( LPROF ) call start_timing( id, 'bl.explicit' )
     end if
 
+    if ( LPROF ) call start_timing( bl_du_tik, 'bl_exp_du_kernel_type' )
     ! Calculate explicit momentum diffusion on cell faces
     call invoke(bl_exp_du_kernel_type(4_i_def, tau_w2, tau_land_w2, tau_ssi_w2,&
                                       rhokm_w2, rdz_fd1, u_physics,            &
                                       surf_interp_w2, ngstress_w2, fd_tau_w2,  &
                                       sea_current_w2_ptr) )
-
+    if ( LPROF ) call stop_timing( bl_du_tik, 'bl_exp_du_kernel_type' )
     if (l_calc_tau_at_p) then
       call dz_wth%copy_field_properties(rdz_wth)
       call zh%copy_field_properties(taux_land)

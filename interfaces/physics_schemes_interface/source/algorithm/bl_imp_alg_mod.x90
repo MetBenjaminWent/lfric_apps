@@ -219,7 +219,7 @@ contains
     type( mesh_type ), pointer :: mesh => null()
     integer(i_def) :: loop, ncells
     logical(l_def) :: diag_step, flag_blpert
-    integer(tik)   :: id
+    integer(tik)   :: id, bl_imp_tik, bl_imp2_tik, bl_imp_du_tik
 
 
     if ( LPROF ) call start_timing( id, 'bl.implicit' )
@@ -354,6 +354,8 @@ contains
     call tau_ssi_w2%copy_field_properties(pseudotau_w2)
     call u_star%copy_field_properties(u_physics_star)
 
+    ! bl_imp_du_tik
+    if ( LPROF ) call start_timing( bl_imp_du_tik, 'bl_imp_du_kernel_type' )
     call invoke(setval_c(du_bl, 0.0_r_def),                                    &
                 setval_c(dissip, 0.0_r_def),                                   &
                 setval_c(wind10m_w2, 0.0_r_def),                               &
@@ -372,7 +374,7 @@ contains
                 ! Map the wind back into dynamics quantities
                 inc_X_times_Y(du_bl, dA),                                      &
                 inc_X_times_Y(dissip, dA) )
-
+    if ( LPROF ) call stop_timing( bl_imp_du_tik, 'bl_imp_du_kernel_type' )
     call u_physics_star%field_final()
 
     if (fric_heating) then
@@ -417,6 +419,7 @@ contains
 
     do loop = 1,2
       ! Call the implicit scheme for scalars
+      if ( LPROF ) call start_timing( bl_imp_tik, 'bl_imp_kernel_type' )
       call invoke(bl_imp_kernel_type( loop, theta, exner_in_wth, mr_n(imr_v),  &
                                       mr_n(imr_cl), mrn_ice, theta_star,       &
                                       height_w3, height_wth, dt_conv,          &
@@ -425,6 +428,7 @@ contains
                                       bl_type_ind, rhokh, fqw, ftl, dqw, dtl,  &
                                       dqw_nt, dtl_nt, qw, tl, ct_ctq,          &
                                       dqw1, dtl1, ct_ctq1 ) )
+      if ( LPROF ) call stop_timing( bl_imp_tik, 'bl_imp_kernel_type' )
       call jules_imp_alg( mr, surf_heat_flux, canopy_evap, water_extraction,   &
                           lake_evap, derived_fields, radiation_fields,         &
                           turbulence_fields, cloud_fields, surface_fields,     &
@@ -433,6 +437,7 @@ contains
                           mr_ice, latent_heat, t1p5m, q1p5m, qcl1p5m,          &
                           t1p5m_ssi, q1p5m_ssi, qcl1p5m_ssi, t1p5m_land,       &
                           q1p5m_land, qcl1p5m_land)
+      if ( LPROF ) call start_timing( bl_imp2_tik, 'bl_imp2_kernel_type' )
       call invoke(bl_imp2_kernel_type( outer, loop, wetrho_in_wth, exner,      &
                                        exner_in_wth, theta_star, height_w3,    &
                                        height_wth, ntml, cumulus, dtheta_bl,   &
@@ -449,6 +454,7 @@ contains
                                        zh_nonloc, zh, zhsc, bl_type_ind, dqw,  &
                                        dtl, dqw_nt, dtl_nt, qw, tl, ct_ctq,    &
                                        fqw_star, ftl_star ) )
+      if ( LPROF ) call stop_timing( bl_imp2_tik, 'bl_imp2_kernel_type' )
     end do !loop
 
     call um_sizes_init(1_i_def)
