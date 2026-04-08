@@ -40,7 +40,7 @@
 {% set ex1a_tech = '' %}
 
 {% set ex1a_perftools = 'module load perftools' %}
-
+#${DATADIR}/temp_build_dir
     [[EX1A_BASE]]
         platform = {{site_vars.host_ex}}
         [[[environment]]]
