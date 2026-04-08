@@ -316,7 +316,7 @@ integer ::                                                                     &
  i,                                                                            &
               ! Loop counter (horizontal field index).
  k,                                                                            &
-              ! omp segment length
+              ! Loop counter (vertical index).
  ii,                                                                           &
               ! omp block loop counter
  l,                                                                            &
@@ -348,9 +348,9 @@ tdims_seg_block = min(tdims_omp_block, tdims%i_len)
 
 blm1 = bl_levels-1
 
-!$OMP  PARALLEL DEFAULT(none) SHARED(l_correct,bl_levels,                      &
-!$OMP  tdims, dqw_nt,dtl_nt,q_latest,qcl_latest,dtrdz_v,dtrdz_u,udims,         &
-!$OMP  rdz_v,gamma1,q,qcl,qcf,t_latest,t,ftl,rhokh,dtl,rdz_charney_grid,dqw,   &
+!$OMP  PARALLEL DEFAULT(none) SHARED(l_correct,bl_levels,tdims,                &
+!$OMP  dqw_nt,dtl_nt,q_latest,qcl_latest, dtrdz_v,dtrdz_u,udims, rdz_v,        &
+!$OMP  gamma1,q,qcl,qcf,t_latest,t,ftl,rhokh,dtl,rdz_charney_grid,dqw,         &
 !$OMP  tau_x,rhokm_u,du,rdz_u,vdims,tau_y,dv, qcf_latest,                      &
 !$OMP  qw,tl,r_theta_levels,r_theta_u,r_theta_v,r_rho_levels,fqw,              &
 !$OMP  dtrdz_charney_grid,gamma2,ct_ctq,dqw1,dtl1,ctctq1,model_type,           &
