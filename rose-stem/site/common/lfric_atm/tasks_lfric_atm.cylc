@@ -203,6 +203,30 @@
         "threads": 4,
     }) %}
 
+{% elif task_ns.conf_name == "nwp_gal9_3n_8T-C192_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["physics_segmentation","um_dump","no_diags"],
+        "resolution": "C192_MG",
+        "DT": 720,
+        "tsteps": 120,
+        "mpi_parts": 48,
+        "task_ranks_per_node": 16,
+        "threads": 8,
+    }) %}
+
+{% elif task_ns.conf_name == "nwp_gal9_3n_16T-C192_MG" %}
+
+{% do task_dict.update({
+        "opt_confs": ["physics_segmentation","um_dump","no_diags"],
+        "resolution": "C192_MG",
+        "DT": 720,
+        "tsteps": 120,
+        "mpi_parts": 24,
+        "task_ranks_per_node": 16,
+        "threads": 16,
+    }) %}
+
 {% elif task_ns.conf_name == "nwp_gal9-C224_MG" %}
 
     {% do task_dict.update({
