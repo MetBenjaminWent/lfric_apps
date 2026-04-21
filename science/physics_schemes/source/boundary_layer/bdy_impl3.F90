@@ -226,6 +226,8 @@ max_threads = 1
 tdims_omp_block  = ceiling(real(tdims%i_len)/max_threads)
 tdims_seg_block = min(tdims_omp_block, tdims%i_len)
 
+blm1 = bl_levels-1
+
 !$OMP  PARALLEL DEFAULT(none) SHARED(tdims_seg_block,l_correct,bl_levels,      &
 !$OMP  blm1,tdims, dqw_nt,dtl_nt,q_latest,qcl_latest,                          &
 !$OMP  gamma1,q,qcl,qcf,t_latest,t,ftl,rhokh,dtl,rdz_charney_grid,dqw,         &
@@ -235,7 +237,7 @@ tdims_seg_block = min(tdims_omp_block, tdims%i_len)
 !$OMP  dqw1_1,dtl1_1,ctctq1_1,                                                 &
 !$OMP  ct_prod, k_blend_tq,                                                    &
 !$OMP  gamma_in,lcrcp,lsrcp)                                                   &
-!$OMP  private(k,j,i,r_sq,rbt,temp,l,temp_out,                                 &
+!$OMP  private(k,i,r_sq,rbt,temp,l,temp_out,                                   &
 !$OMP  at,am,rbm,rr_sq,ii)
 
 if ( l_correct ) then
