@@ -18,6 +18,7 @@ from psyclone.psyir.nodes import (
     Call,
     Assignment,
     Reference,
+    Return,
     OMPParallelDirective,
     OMPDoDirective,
     OMPParallelDoDirective,
@@ -35,10 +36,10 @@ from psyclone.psyir.symbols import (
     INTEGER_TYPE,
     CHARACTER_TYPE,
 )
+from psyclone.psyir.transformations import OMPParallelTrans
 from psyclone.transformations import (
     OMPLoopTrans,
     TransformationError,
-    OMPParallelTrans,
     OMPParallelLoopTrans,
 )
 

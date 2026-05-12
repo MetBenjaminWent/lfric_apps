@@ -41,8 +41,7 @@ from psyclone.psyir.nodes import Loop
 from psyclone.transformations import OMPParallelLoopTrans, TransformationError
 from psyclone.psyir.symbols import DataSymbol
 from transmute_psytrans.transmute_functions import (
-    first_priv_red_init,
-    mark_explicit_privates,
+    first_priv_red_init
 )
 
 OMP_TRANS = OMPParallelLoopTrans()
@@ -74,7 +73,7 @@ def trans(psyir):
         # some non-PURE subroutines called within this loop
         "force": True,
         # several WRITE statements used for diagnostics
-        "node-type-check": False,
+        "node_type_check": False,
     }
     # For the coarse-grained approach, we have *one* loop we want to work on
     # - the loop over segments. This gives almost complete coverage for GLOMAP,
@@ -89,8 +88,6 @@ def trans(psyir):
                 symbols_to_add.extend(
                     ["i_end", "i_end_cp", "j", "nbs_index", "y"]
                 )
-                # set some symbols to be PRIVATE
-                mark_explicit_privates(loop, symbols_to_add)
                 # CCE compiler fix - initialise some FIRSTPRIVATE variables
                 first_priv_red_init(
                     loop,
@@ -120,7 +117,7 @@ def trans(psyir):
                     insert_at_start=True,
                 )
                 OMPParallelLoopTrans(omp_schedule="dynamic").apply(
-                    loop, options=opts
+                    loop, force_private=symbols_to_add, **opts
                 )
 
             except TransformationError as err:

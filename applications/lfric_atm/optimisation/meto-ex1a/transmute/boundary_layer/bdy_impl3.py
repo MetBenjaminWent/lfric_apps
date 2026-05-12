@@ -24,6 +24,7 @@ from psyclone.psyir.nodes import (
 #from transmute_psytrans.transmute_functions import (
 from transmute_psytrans.transmute_functions import (
     loop_replacement_of,
+    set_pure_subroutines,
     OMP_DO_LOOP_TRANS_STATIC)
 
 Loop.set_loop_type_inference_rules({
@@ -58,6 +59,30 @@ def trans(psyir):
         for removal_type in remove_loop_type:
             loop_replacement_of(node, removal_type)
 
+    safe_pure_calls = ["oneover_v"]
+
+    ignore_dependencies_for =[
+            "ct_ctq",
+            "dqw",
+            "dtl",
+            "temp",
+            "temp_out",
+            "ctctq1",
+            "dqw1",
+            "dtl1",
+            "l"
+            ]
+
+    force_private = [
+            "temp",
+            "temp_out",
+            "l"
+            ]
+
+    # Set the pure calls if needed
+    if safe_pure_calls:
+        set_pure_subroutines(psyir, safe_pure_calls)            
+
     # First convert assignments to loops whenever possible
     for assignment in psyir.walk(Assignment):
         try:
@@ -69,13 +94,19 @@ def trans(psyir):
     for loop in psyir.walk(Loop):
         if not loop.ancestor(Directive):
             try:
-                OMP_DO_LOOP_TRANS_STATIC.apply(loop, nowait=True)
-            except TransformationError:
+                OMP_DO_LOOP_TRANS_STATIC.apply(loop, ignore_dependencies_for=ignore_dependencies_for, nowait=True)
+            except TransformationError as err:
                 # Not all of the loops in the example can be parallelised.
+                print(f"Add OMP loop: {err}")
                 pass
 
     # Apply the largest possible parallel regions and remove any barriers that
     # can be removed.
     for routine in psyir.walk(Routine):
-        MaximalOMPParallelRegionTrans().apply(routine)
+        #try:
+        MaximalOMPParallelRegionTrans().apply(routine, force_private=force_private)
+        # except TransformationError as err:
+        #     # Not all of the loops in the example can be parallelised.
+        #     print(f"Span Parallel: {TransformationError}")
+        #     pass
         minsync_trans.apply(routine)
