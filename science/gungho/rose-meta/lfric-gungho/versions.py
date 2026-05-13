@@ -130,7 +130,6 @@ class vn31_t443(MacroUpgrade):
         self.add_setting(
             config, ["namelist:iau_bcorr_io(bcorr1)", "name"], "''"
         )
-
         return config, self.reports
 
 
@@ -145,7 +144,6 @@ class vn31_t464(MacroUpgrade):
         self.add_setting(
             config, ["namelist:cloud", "pc2_turb_horiz"], ".false."
         )
-
         return config, self.reports
 
 
@@ -158,6 +156,8 @@ class vn31_t382(MacroUpgrade):
     def upgrade(self, config, meta_config=None):
         # Commands From: rose-meta/lfric-lfric_atm
         """Set segmentation size for the Boundary Layer"""
-        self.change_setting_value(config, ["namelist:physics", "bl_segment"], "16")
-        
+        self.change_setting_value(
+            config, ["namelist:physics", "bl_segment"], "16"
+        )
+
         return config, self.reports
