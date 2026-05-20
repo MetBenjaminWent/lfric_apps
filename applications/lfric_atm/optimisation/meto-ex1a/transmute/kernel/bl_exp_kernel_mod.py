@@ -21,20 +21,19 @@ from transmute_psytrans.transmute_functions import (
 )
 
 
-def check_literals(node):
+def check_literals(node: Loop) -> bool:
     '''
-    Check if the bounds, found in the literals are a value
-    or are a variable.
+    Check if the loop bounds, which can be found in the literals
+    are a named variable (return True), or a number (return False).
     '''
     literals = node.walk(Literal)
-    # Position 2 in the array relates to the range of the loop node
-    # This range, if a variable is used is 1
-    # Therefore if a number is used, it will be above 1
-    # Relative to this file, 3 is the only range in question
+    # literals[1] in the list relates to the range of the loop node
+    # This range, if a string variable is used is notes 1.
+    # Therefore if a number is used, the value will be greater 1.
     if int(literals[1].value) > 1:
-        # Return False if there is one
+        # Return False if there is a number
         return False
-    # Return True if there isn't one, indicating an appropriate loop
+    # Return True if there isn't a number
     return True
 
 
@@ -113,15 +112,22 @@ def trans(psyir):
         ancestor = loop.ancestor(Loop)
 
         # There are three loop variables in this file, l, k or i
+        # For this override script, (and currently the global script), the
+        # philosophy is to apply the OMP to the top most loop of a loop
+        # nest/stack.
+        # We will check the node ancestry to confirm there is no loop above it.
         if loop.variable.name == 'k':
-            # check if a k loop bound is not a variable and not ideal to thread
-            # over due to the low range, and there are no loop ancestors
+            # Some of the k loops go over a numbered range which is quite low
+            # (l1000), and we want to avoid adding OMP in this instance.
+            # Therefore we check if a k loop bound is a variable and that there
+            # are no loop ancestors.
             if check_literals(loop) and not ancestor:
                 safe_to_transform = True
 
         elif loop.variable.name == 'i':
-            # If there is an ancestor, we generally don't want to
-            # unless that ancestor was not ideal to thread over
+            # If there is an ancestor, we generally don't want to add OMP.
+            # However we know a k loop has a numbered range which is quite low
+            # We will allow this exception to the ancestor rule.
             if ancestor:
                 if not check_literals(ancestor):
                     safe_to_transform = True
@@ -129,6 +135,7 @@ def trans(psyir):
                 safe_to_transform = True
 
         else:  # (loop.variable.name == 'l')
+            # The l loops are quite straightforwards in this script.
             if not ancestor:
                 safe_to_transform = True
 
