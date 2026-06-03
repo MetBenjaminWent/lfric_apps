@@ -125,6 +125,8 @@ use free_tracers_inputs_mod, only: l_wtrac, n_wtrac
 use wtrac_bl_mod,            only: bl_wtrac_type
 use wtrac_atm_step_mod,      only: atm_step_wtrac_type
 
+use timing_mod,             only: start_timing, stop_timing, tik, LPROF
+
 implicit none
 
 !  Inputs :-
@@ -811,7 +813,11 @@ integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
 real(kind=jprb)               :: zhook_handle
 
+integer(tik)              :: bdy_expl2_tik
+
+
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+call start_timing( bdy_expl2_tik, '__bdy_expl2__ ')
 
 !Set up automatic segment tuning
 
@@ -825,7 +831,7 @@ if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 !$OMP  SHARED( pdims, dynamic_bl_diag, ntml_save, ntml, bl_levels,             &
 !$OMP          weight_1dbl, weight_1dbl_rho, BL_diag, u_s, fb_surf )           &
 !$OMP  private( i, j, k )
-!$OMP  do SCHEDULE(STATIC)
+!$OMP  do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     dynamic_bl_diag(i,j) = .false.
@@ -854,7 +860,7 @@ end do
 !-----------------------------------------------------------------------
  ! Obukhov length
 if (BL_diag%l_oblen) then
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       !       Limit the magnitude of the Obukhov length to avoid
@@ -873,7 +879,7 @@ end if
 
 ! Ustar
 if (BL_diag%l_ustar) then
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       BL_diag%ustar(i,j)=u_s(i,j)
@@ -884,7 +890,7 @@ end if
 
 ! Surface buoyancy flux
 if (BL_diag%l_wbsurf) then
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       BL_diag%wbsurf(i,j)=fb_surf(i,j)
@@ -913,7 +919,7 @@ call btq_int (                                                                 &
 !$OMP  PARALLEL DEFAULT(SHARED) private(i, j, k, weight1,  weight2,            &
 !$OMP  weight3, zpr, dzv, dzu, l, slope, dsldzm_ga,                            &
 !$OMP  qs_tl, frac_sat, frac_dry, frac_edg, frac_lev, qc_tot, bt_rh, bq_rh )
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     grad_t_adj(i,j) = min( max_t_grad,                                         &
@@ -950,7 +956,7 @@ if ( .not. l_use_surf_in_ri ) then
   ! extrapolate dbdz itself from level 2, with the sl and qw gradients being
   ! used in the variance calculations and with i_interp_local_cf_dbdz
   ! so extrapolate them here
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       dsldz(i,j,1)    = dsldz(i,j,2)
@@ -982,7 +988,7 @@ else ! l_use_surf_in_ri = true
   end do ! j
 !$OMP end do NOWAIT
   k=1
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       dsldz(i,j,k)    = ( tl(i,j,k) - tstar(i,j) )                             &
@@ -1040,7 +1046,7 @@ case (i_interp_local_gradients)
   ! (ie instead of using centred value that uses surface parameters)
   if ( .not. l_use_surf_in_ri ) then
     k = 2
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
         dbdz(i,j,k) = g*( bt_gb(i,j,k-1)*dsldz(i,j,k) +                        &
@@ -1161,7 +1167,7 @@ case (i_interp_local_cf_dbdz)
   end do
 !$OMP end do NOWAIT
   k = 1
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = tdims%j_start, tdims%j_end
     do i = tdims%i_start, tdims%i_end
       ! At surface, just use buoyancy coefficients from the first theta-level
@@ -1331,7 +1337,7 @@ end if
 !-----------------------------------------------------------------------
 !  Set-up 2D array for standard deviation of subgrid orography.
 !-----------------------------------------------------------------------
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     sigma_h(i,j) = zero
@@ -1501,7 +1507,7 @@ omp_block = pdims%j_end
 
 !$OMP PARALLEL DEFAULT(SHARED) private(i, j, k, jj, ntop, z_scale)
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     ! First override the provisional cumulus diagnosis if the
@@ -1523,7 +1529,7 @@ if (idyndiag == DynDiag_ZL) then
   ! Original version - causes spuriously deep boundary layers if
   ! BL_LEVELS is >> 3km
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
 
@@ -1543,7 +1549,7 @@ if (idyndiag == DynDiag_ZL) then
 
 else if (idyndiag == DynDiag_ZL_corrn) then
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
 
@@ -1569,7 +1575,7 @@ else if (idyndiag == DynDiag_ZL_corrn) then
 
 else if (idyndiag == DynDiag_ZL_CuOnly) then
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
 
@@ -1607,7 +1613,7 @@ else if (idyndiag == DynDiag_Ribased ) then
   ! As DynDiag_ZL_CuOnly but also allow ZH(Ri) to overrule the
   ! Cumulus diagnosis
   !------------------------------------------------------------
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       topbl(i,j)           = .false.
@@ -1645,7 +1651,7 @@ else if (idyndiag == DynDiag_Ribased ) then
       zhloc_depth_fac = zhloc_depth_fac_rp(rp_idx)
     end if
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
 
@@ -1680,7 +1686,7 @@ else if (idyndiag == DynDiag_Ribased ) then
 
   else  ! old version: not good to set ntml=ntop for small zh/L
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
 
@@ -1726,7 +1732,7 @@ end if  ! tests on iDynDiag
 !$OMP SCHEDULE(STATIC)                                                         &
 !$OMP DEFAULT(none)                                                            &
 !$OMP private(j,i)                                                             &
-!$OMP SHARED(pdims,ntml_nl,ntml)
+!$OMP SHARED(pdims,ntml_nl,ntml) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     ntml_nl(i,j) = ntml(i,j)
@@ -1743,7 +1749,7 @@ if (nl_bl_levels < bl_levels) then
 !$OMP SCHEDULE(STATIC)                                                         &
 !$OMP DEFAULT(none)                                                            &
 !$OMP private(j,i)                                                             &
-!$OMP SHARED(pdims,ntml_nl,nl_bl_levels,zh,z_uv)
+!$OMP SHARED(pdims,ntml_nl,nl_bl_levels,zh,z_uv) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       if ( ntml_nl(i,j) > nl_bl_levels-1 ) then
@@ -1790,7 +1796,7 @@ do k = 2, bl_levels
 end do
 !$OMP end do NOWAIT
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     ft_nt(i,j,1)  = zero
@@ -1825,7 +1831,7 @@ if (l_wtrac) then
     end do
 !$OMP end do
 
-!$OMP  do SCHEDULE(STATIC)
+!$OMP  do SCHEDULE(STATIC) collapse(2)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
         wtrac_bl(i_wt)%fq_nt(i,j,1)    = zero
@@ -1883,7 +1889,7 @@ else   ! not NON_LOCAL_BL
 !$OMP        ntml_nl,zhnl,grad_t_adj,grad_q_adj,dsc,dsc_disc_inv,ntdsc,nbdsc,  &
 !$OMP        zhsc,dzh,coupled,kent,kent_dsc,t_frac,zrzi,we_lim,t_frac_dsc,     &
 !$OMP        zdsc_base,zrzi_dsc,we_lim_dsc,kplume)
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       ! surface mixed layer
@@ -1914,7 +1920,7 @@ else   ! not NON_LOCAL_BL
   end do
 !$OMP end do NOWAIT
   do ient = 1, 3
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
         t_frac(i,j,ient) = zero
@@ -1935,7 +1941,7 @@ end if  ! test on NON_LOCAL_BL
 !$OMP SCHEDULE(STATIC)                                                         &
 !$OMP DEFAULT(none)                                                            &
 !$OMP private(j,i)                                                             &
-!$OMP SHARED(pdims,l_shallow_cth)
+!$OMP SHARED(pdims,l_shallow_cth) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     l_shallow_cth(i,j) = .false.
@@ -1952,7 +1958,7 @@ if (blending_option == blend_cth_shcu_only) then
 !$OMP private(i,j,k)                                                           &
 !$OMP SHARED(pdims,bl_levels,z_uv,l_shallow_cth,cumulus,ntml,cf_bulk,          &
 !$OMP        shallow_cu_maxtop,cloud_base_found,cloud_top_found)
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       cloud_base_found(i,j) = .false.
@@ -1961,7 +1967,7 @@ if (blending_option == blend_cth_shcu_only) then
   end do
 !$OMP end do
   do k = 3, bl_levels-1
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
         if ( cumulus(i,j) .and. k > ntml(i,j)+1 .and.                          &
@@ -2089,7 +2095,7 @@ do k = 2, bl_levels
 end do
 !$OMP end do NOWAIT
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
       !----------------------------------------------------------
@@ -2247,7 +2253,7 @@ if (BL_diag%l_tke) then
     ! increment ntml/ntdsc due to the inversion rise or fall over the
     ! current timestep, but doesn't increment zhnl/zhsc to keep it consistent.
     ! We need to check for this to get sensible interpolation weights...
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
     do j = pdims%j_start, pdims%j_end
       do i = pdims%i_start, pdims%i_end
         if ( sml_disc_inv(i,j) > 0 .and. ntml_nl(i,j) > 1 ) then
@@ -2329,7 +2335,7 @@ if (BL_diag%l_tke) then
   ! is a larger rhokmz in a resolved inversion
 !$OMP  PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                              &
 !$OMP  SHARED( pdims,  bl_levels, rhokmz, BL_diag, tke_loc, tke_nl )           &
-!$OMP  private(i, j, k, kp)
+!$OMP  private(i, j, k, kp) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       kp=2
@@ -2529,7 +2535,7 @@ end if
 !$OMP PARALLEL DEFAULT(SHARED) private(i, j, k)
 
 if (BL_diag%l_zht) then
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       bl_diag%zht(i,j) = max( zhnl(i,j) , zhsc(i,j) )
@@ -2541,7 +2547,7 @@ if (BL_diag%l_zht) then
 !$OMP end do NOWAIT
 end if
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     ! Max height of BL turbulent mixing
@@ -2572,7 +2578,7 @@ do j = pdims%j_start, pdims%j_end
 end do
 !$OMP end do NOWAIT
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     if (dynamic_bl_diag(i,j)) then
@@ -2659,7 +2665,7 @@ end do
 !$OMP        land_pts,land_index,ho2r2_orog,l_shallow,bl_type_5,bl_type_6,     &
 !$OMP        ntml_save,shallowc)
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     uw0(i,j) = -rhokm(i,j,1) *                                                 &
@@ -2670,7 +2676,7 @@ do j = pdims%j_start, pdims%j_end
 end do
 !$OMP end do NOWAIT
 if (formdrag ==  explicit_stress) then
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       uw0(i,j) = uw0(i,j) - tau_fd_x(i,j,1)
@@ -2688,7 +2694,7 @@ end if
 
 if (non_local_bl == on) then
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       if ( cumulus(i,j) ) then
@@ -2704,7 +2710,7 @@ if (non_local_bl == on) then
 
 else ! non-local scheme not being used so always use local scheme values
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       ntml(i,j) = ntml_local(i,j)
@@ -2714,7 +2720,7 @@ else ! non-local scheme not being used so always use local scheme values
 
 end if
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     wstar(i,j) = zero
@@ -2773,7 +2779,7 @@ if (l_param_conv) then
   ! if cumulus is still true in order to trigger convection
   ! at the correct level
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
   do j = pdims%j_start, pdims%j_end
     do i = pdims%i_start, pdims%i_end
       if ( .not. cumulus(i,j) ) l_shallow(i,j) = .false.
@@ -2788,7 +2794,7 @@ end if    ! (l_param_conv)
 !                                        0.0 if .not. CUMULUS
 !-----------------------------------------------------------------------
 
-!$OMP do SCHEDULE(STATIC)
+!$OMP do SCHEDULE(STATIC) collapse(2)
 do j = pdims%j_start, pdims%j_end
   do i = pdims%i_start, pdims%i_end
     if ( cumulus(i,j) .and. l_shallow(i,j) ) then
@@ -3038,6 +3044,7 @@ end if ! i_cld_vn == i_cld_bimodal
 !If autotuning is active, decide what to do with the
 !trial segment size and report the current status.
 
+call stop_timing( bdy_expl2_tik )
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 return
 end subroutine bdy_expl2
