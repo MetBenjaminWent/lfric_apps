@@ -44,7 +44,7 @@
     [[EX1A_BASE]]
         platform = {{site_vars.host_ex}}
         [[[environment]]]
-            BUILD_ROOT = ${TMPDIR}
+            BUILD_ROOT = /data/users/benjamin.went/temp_build_dir
             HYPERTHREADS    = 1
             CORES_PER_NODE  = {{site_vars.node_cores}}
             NUMA_REGIONS_PER_NODE = 2
@@ -59,7 +59,7 @@
         [[[environment]]]
             TRANSMUTE_INCLUDE_METHOD = specify_include
         [[[environment]]]
-            USE_LEGACY_TIMER=true
+            USE_VERNIER=true
             USE_TIMING_WRAPPER=true
         [[[directives]]]
             -l tmpsize=12GB
