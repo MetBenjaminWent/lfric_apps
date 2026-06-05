@@ -44,7 +44,7 @@
     [[EX1A_BASE]]
         platform = {{site_vars.host_ex}}
         [[[environment]]]
-            BUILD_ROOT = ${TMPDIR}
+            BUILD_ROOT = /data/users/benjamin.went/temp_build_dir
             HYPERTHREADS    = 1
             CORES_PER_NODE  = {{site_vars.node_cores}}
             NUMA_REGIONS_PER_NODE = 2
