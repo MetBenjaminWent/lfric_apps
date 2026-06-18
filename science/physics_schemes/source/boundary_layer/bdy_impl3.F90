@@ -314,7 +314,7 @@ end do
 
 do k = blm1, 2, -1
   !$OMP do SCHEDULE(STATIC)
-  do i = tdims%i_start, tdims%i_end,
+  do i = tdims%i_start, tdims%i_end
     r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
     rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
     dqw(i,j,k) = ( -dtrdz_charney_grid(i,j,k)*                               &
@@ -387,7 +387,7 @@ if ( .not. l_correct ) then
 
   do k = blm1, 2, -1
     !$OMP do SCHEDULE(DYNAMIC)
-    do i = tdims%i_start, tdims%i_end,
+    do i = tdims%i_start, tdims%i_end
       r_sq = r_rho_levels(i,j,k)*r_rho_levels(i,j,k)
       rr_sq = r_rho_levels(i,j,k+1)*r_rho_levels(i,j,k+1)
       dqw1(i,j,k) = -dtrdz_charney_grid(i,j,k) *                             &
@@ -410,7 +410,7 @@ if ( .not. l_correct ) then
       dtl1(i,j,k) = temp(i) * dtl1(i,j,k)
       ctctq1(i,j,k) = temp(i) * ctctq1(i,j,k)
     end do
-  !$OMP end do
+    !$OMP end do
   end do !blm1,2,-1
 
 !$OMP do SCHEDULE(STATIC)
