@@ -774,16 +774,12 @@ end if
 ! 0.  Calculate top-of-b.l. velocity scales and Prandtl number.
 !-----------------------------------------------------------------------
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
-!$OMP  private(i, k, ii, jj, i_wt, c_ws, wstar3, pr_neut, pr_conv, w_m_neut,   &
+!$OMP  private(i, k, ii, i_wt, c_ws, wstar3, pr_neut, pr_conv, w_m_neut,   &
 !$OMP  zeta_s_fac, sf_term, sf_shear_term, zeta_r_sq, ir_term, zr,             &
 !$OMP  evap_term, dz_inv, l_rad, alpha_t, dr_term, zil_corr,                   &
-!$OMP  rhokh_ent, frac_top, zh_pr, factor, rhokm_dsct,                         &
-!$OMP  wsl_dzrad_int, wqw_dzrad_int, db_ratio, zb_ktop, f2, fsc,               &
-!$OMP  z_ratio, z_pr, wslng, wqwng, wb_scld, wb_cld, cld_frac, l,              &
-!$OMP  j1, i1, ic,  w_m_hb_3, zk_uv, zk_tq, Prandtl, w_h_uv, w_h_tq,           &
-!$OMP  w_m_uv, w_m_tq, w_s_cubed_tq, w_s_cubed_uv, gamma_wbs, c_tke,           &
-!$OMP  n_sweep, ns, lcl_fac, ng_stress_calculate, l_apply_surf_ent, interp,    &
-!$OMP  rho_we_dsc_no_surf, k_inv)
+!$OMP  rhokh_ent, frac_top,wsl_dzrad_int, wqw_dzrad_int, db_ratio, zb_ktop,    &
+!$OMP  f2, fsc, z_ratio, z_pr, wslng, wqwng, wb_scld, wb_cld, cld_frac,        &
+!$OMP  l_apply_surf_ent, interp,rho_we_dsc_no_surf, k_inv)
 
 !cdir collapse
 !$OMP do SCHEDULE(DYNAMIC)
@@ -1952,8 +1948,13 @@ end do ! ii
 !$OMP end do
 
 end if  ! test in kprof_cu
+!$OMP end parallel
 
 ! ----------------------------------------------------------------------
+
+!$OMP  PARALLEL DEFAULT(SHARED)                                                &
+!$OMP  private(i, k, jj, z_pr, wb_scld, wb_cld, cld_frac, l, j1, i1,           &
+!$OMP  ic, n_sweep)
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
   l = i - pdims%i_start + 1 + pdims%i_len * (j - pdims%j_start)
@@ -2169,7 +2170,12 @@ do n_sweep = 1, num_sweeps_bflux
 !$OMP end do
 
 end do ! n_sweep
+!$OMP end parallel
 
+! ----------------------------------------------------------------------
+
+!$OMP  PARALLEL DEFAULT(SHARED)                                                &
+!$OMP  private(i, k, ii, wsl_dzrad_int, wqw_dzrad_int, z_pr, interp, k_inv)
 !$OMP do SCHEDULE(DYNAMIC)
 do ii = pdims%i_start, pdims%i_end,bl_segment_size
   do i = ii, min(ii+bl_segment_size-1, pdims%i_end)
@@ -2375,7 +2381,13 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
   end do ! i
 end do ! ii
 !$OMP end do
+!$OMP end parallel
 
+! ----------------------------------------------------------------------
+
+!$OMP  PARALLEL DEFAULT(SHARED)                                                &
+!$OMP  private(i, k, f2, fsc, z_ratio, z_pr, wslng, wqwng, wb_scld,             &
+!$OMP  wb_cld, cld_frac, l, j1, i1, ic, n_sweep, ns, interp)
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
   l = i - pdims%i_start + 1 + pdims%i_len * (j - pdims%j_start)
@@ -2661,7 +2673,12 @@ do n_sweep = 1, num_sweeps_bflux
 !$OMP end do
 
 end do  ! loop over sweeps
+!$OMP end parallel
 
+! ----------------------------------------------------------------------
+
+!$OMP  PARALLEL DEFAULT(SHARED)                                                &
+!$OMP  private(i, k, ii, factor, gamma_wbs)
 ! Convert integrated WB to profiles of WB itself for diagnostics
 if (model_type == mt_single_column) then
 
@@ -2886,12 +2903,17 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
   end do ! i
 end do ! ii
 !$OMP end do
+!$OMP end parallel
 
 !-----------------------------------------------------------------------
 ! 4.  Calculate height dependent turbulent
 !     transport coefficients within the mixing layer.
 !-----------------------------------------------------------------------
-
+!$OMP  PARALLEL DEFAULT(SHARED)                                                &
+!$OMP  private(i, k, ii, factor, z_ratio, z_pr, zh_pr, w_m_hb_3, zk_uv,            &
+!$OMP  rhokm_dsct, zk_tq, Prandtl, w_h_uv, w_h_tq, w_m_uv, w_m_tq,                 &
+!$OMP  c_ws, pr_neut, pr_conv, wstar3,       &
+!$OMP  w_s_cubed_tq, w_s_cubed_uv, c_tke, ng_stress_calculate)
 ! Reset identifiers of base of decoupled layer mixing
 
 !$OMP MASTER
