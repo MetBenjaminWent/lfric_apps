@@ -117,8 +117,6 @@ def trans(psyir: Routine):
     :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
     """
 
-    fortran_file_name = str(psyir.root.name)
-
     # Identify extra parallel regions (loops inside callnumber loop, up to numseg)
     numseg_loop = None
     try:
@@ -139,6 +137,7 @@ def trans(psyir: Routine):
                 numseg_loop,
                 ignore_dependencies_for=false_dep_vars_seg,
                 node_type_check=False)
+
         except TransformationError as err:
             logger.warning(f"{fortran_file_name}: Trying loop but{err}")
 
@@ -173,4 +172,3 @@ def is_numseg_loop(node: Node):
         and node.variable.name == "i"
         and any(ref.name == "num_seg" for ref in node.stop_expr.walk(Reference))
     )
-
