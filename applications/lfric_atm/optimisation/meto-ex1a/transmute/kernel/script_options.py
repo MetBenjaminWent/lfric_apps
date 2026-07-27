@@ -22,6 +22,7 @@ FILE_EXTEN = ".xu90"
 SCRIPT_OPTIONS_DICT = {}
 
 # File keys
+# Disabled due build slow downs CCE, psyclone Issue to fix this is #3418
 SCRIPT_OPTIONS_DICT["aerosol_ukca_kernel_mod"+str(FILE_EXTEN)] = {
         "ignore_dependencies_for": [
             "surf_wetness", "l_tile_active", "o3p", "o3",
@@ -109,6 +110,7 @@ SCRIPT_OPTIONS_DICT["bm_tau_kernel_mod"+str(FILE_EXTEN)] = {
         ]
 }
 
+# Disabled due build slow downs CCE, psyclone Issue to fix this is #3418
 SCRIPT_OPTIONS_DICT["conv_comorph_kernel_mod"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
         "precfrac", "cca_2d", "cape_diluted", "lowest_cca_2d",
@@ -174,23 +176,6 @@ SCRIPT_OPTIONS_DICT["jules_extra_kernel_mod"+str(FILE_EXTEN)] = {
     ]
 }
 
-SCRIPT_OPTIONS_DICT["jules_imp_kernel_mod"+str(FILE_EXTEN)] = {
-    "ignore_dependencies_for": [
-        "tstar_land", "sea_ice_pensolar", "ashtf_prime_sea", "dtstar_sea",
-        "ashtf_prime", "dtstar_sice", "heat_flux_bl", "moist_flux_bl",
-        "tile_heat_flux", "tile_moisture_flux", "tile_temperature",
-        "screen_temperature", "tile_heat_flux", "tile_moisture_flux",
-        "snowice_sublimation", "surf_heat_flux", "canopy_evap",
-        "snowice_melt", "time_since_transition", "surf_ht_flux",
-        "water_extraction", "lake_evap", "snomlt_surf_htf", "soil_evap",
-        "soil_surf_ht_flux", "t1p5m", "q1p5m", "qcl1p5m", "rh1p5m",
-        "t1p5m_ssi", "q1p5m_ssi", "qcl1p5m_ssi", "rh1p5m_ssi",
-        "t1p5m_land_loc", "q1p5m_land_loc", "t1p5m_land",
-        "q1p5m_land", "qcl1p5m_land", "rh1p5m_land", "t1p5m_surft",
-        "q1p5m_surft", "latent_heat", "surf_sw_net", "surf_radnet",
-        "surf_lw_up", "surf_lw_down", "sea_ice_temperature", "latent_heat",
-    ]
-}
 
 SCRIPT_OPTIONS_DICT["lsp_prognostic_tnuc_kernel_mod"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
@@ -198,6 +183,7 @@ SCRIPT_OPTIONS_DICT["lsp_prognostic_tnuc_kernel_mod"+str(FILE_EXTEN)] = {
     ]
 }
 
+# Not currently perfomant for nwp_gal9 at 2,4,8 threads, disabled
 SCRIPT_OPTIONS_DICT["lw_rad_tile_kernel_mod"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
         "tile_lw_grey_albedo", "emis_nvg", "emis_pft",
@@ -231,18 +217,10 @@ SCRIPT_OPTIONS_DICT["pc2_initiation_kernel_mod"+str(FILE_EXTEN)] = {
     ]
 }
 
+# Not currently perfomant for nwp_gal9 at 2,4,8 threads, disabled
 SCRIPT_OPTIONS_DICT["photol_kernel_mod"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
         "photol_rates",
-    ]
-}
-
-SCRIPT_OPTIONS_DICT["sw_rad_tile_kernel_mod"+str(FILE_EXTEN)] = {
-    "node-type-check": False,
-    "ignore_dependencies_for": [
-        "albedo_obs_scaling", "tile_sw_direct_albedo",
-        "tile_sw_diffuse_albedo", "sea_ice_pensolar_frac_direct",
-        "sea_ice_pensolar_frac_diffuse",
     ]
 }
 
@@ -252,6 +230,7 @@ SCRIPT_OPTIONS_DICT["smith_kernel_mod"+str(FILE_EXTEN)] = {
     ]
 }
 
+# Not currently perfomant for nwp_gal9 at 2,4,8 threads, disabled
 SCRIPT_OPTIONS_DICT["spectral_gwd_kernel_mod"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
         "du_spectral_gwd", "dv_spectral_gwd", "dtemp_spectral_gwd",
