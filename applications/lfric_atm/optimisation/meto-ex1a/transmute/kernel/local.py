@@ -15,10 +15,16 @@ Overrides currently include:
 '''
 
 import logging
-from psyclone.transformations import (
-    TransformationError)
+from psyclone.psyir.transformations import (
+    ArrayAssignment2LoopsTrans,
+    OMPLoopTrans,
+    OMPMinimiseSyncTrans,
+    TransformationError,
+    MaximalOMPParallelRegionTrans,
+)
 from psyclone.psyir.nodes import (
     Loop, Call,
+    Assignment,
     OMPParallelDoDirective,
     OMPParallelDirective,
     OMPDoDirective,)
