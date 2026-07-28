@@ -88,6 +88,19 @@ def trans(psyir):
     to each loop.
     '''
 
+    # declare 'case_default_used'. To get the correct subroutine,
+    # Just jump to the first loop, grab it's schedule and check
+    # the symbol table, which itself points at the routine.
+    for loop in psyir.walk(Loop):
+        for schedule in loop.walk(Schedule):
+            symtab = schedule.symbol_table
+            case_default_used = symtab.find_or_create(
+            "case_default_used",
+                symbol_type=DataSymbol,
+                datatype=ScalarType.boolean_type())
+            break
+        break
+
     # Work through each loop in the file and OMP PARALLEL DO
     #for loop in psyir.walk(Loop):
 
@@ -205,7 +218,6 @@ def move_default_case_contents(loop):
         # loop is the parents parent
             # add the assignment at 0
         loop.loop_body.addchild(assign_false, 0)
-        ## ##
 
         ## Move the case default (else) contents to a new ifblock, ##
         ## controlled by case_default_used ##
