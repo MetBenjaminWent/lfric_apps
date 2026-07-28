@@ -242,6 +242,8 @@ subroutine lw_inc_code(nlayers, n_profile,                                     &
     tio_mix_ratio_now, tio_well_mixed, &
     vo_mix_ratio_now, vo_well_mixed
 
+  !$ use omp_lib, only: omp_get_max_threads
+
   implicit none
 
   ! Arguments
@@ -292,7 +294,7 @@ subroutine lw_inc_code(nlayers, n_profile,                                     &
   logical(l_def), intent(in) :: rad_this_tstep
 
   ! Local variables for the kernel
-  integer(i_def) :: n_profile_list
+  integer(i_def) :: n_profile_list, n_profile_list_seg
   integer(i_def), allocatable :: profile_list(:)
   integer(i_def) :: j, jj, k, kk, l, ll
   integer(i_def) :: wth_0, wth_1, wth_last
