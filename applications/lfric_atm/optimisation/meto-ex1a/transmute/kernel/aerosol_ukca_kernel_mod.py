@@ -4,14 +4,11 @@
 # under which the code may be used.
 # -----------------------------------------------------------------------------
 '''
-A local.py script for all kernels, where instead of adding OMP across the
-outermost loop, it is placed around the i loop, or across the l loop.
-This script imports a SCRIPT_OPTIONS_DICT which can be used to override
-small aspects of this script per file it is applied to.
-Overrides currently include:
-* ignore_dependencies_for
-* node_type_check
-* safe_pure_calls
+A override for aerosol_ukca_kernel_mod. Adding OMP parallel do to all
+loops causes the CCE compiler to fail to build the file within a reasonable
+timeframe, or at all.
+We can still add them to standard i loops, but for the loops for the tracers,
+it requires something a little more bespoke.
 '''
 
 import logging
@@ -35,6 +32,7 @@ from psyclone.psyir.nodes import (
     OMPDoDirective,)
 from psyclone.psyir.symbols import DataSymbol, ScalarType
 from transmute_psytrans.transmute_functions import (
+    get_ancestors,
     get_children,
     get_all_children,
     get_outer_loops,
@@ -88,7 +86,9 @@ def trans(psyir):
     to each loop.
     '''
 
-    # declare 'case_default_used'. To get the correct subroutine,
+    ### Over the tracers, where safe with current PSyclone ###
+
+    # Declare 'case_default_used'. To get the correct subroutine,
     # Just jump to the first loop, grab it's schedule and check
     # the symbol table, which itself points at the routine.
     for loop in psyir.walk(Loop):
@@ -101,100 +101,92 @@ def trans(psyir):
             break
         break
 
-    # Work through each loop in the file and OMP PARALLEL DO
-    #for loop in psyir.walk(Loop):
-
     # Identify outer loops
     outer_loops = [loop for loop in get_outer_loops(psyir)
                 if not loop.ancestor(Loop)]
 
     for index, loop in enumerate(outer_loops):
-        #if loop.variable.name == 'm' and index in [0]:
-        if loop.variable.name == 'm':
+        # It seems applying this to all of the m loops which contain loops is
+        # causing KGO issues. This is looking like that case_default_used is
+        # not being correctly force privatised by PSyclone.
+        # We can however still apply it safely to some.
+        if loop.variable.name == 'm' and index in [0,1]:
             # Are there any loops?
             if get_all_children(loop, node_type=Loop):
                 move_default_case_contents(loop)
-                print(index)
                 nodes_potential = get_children(loop)
                 print(nodes_potential)
                 try:
-                    OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[1:-1])
+                    OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[1:-1],
+                    force_private=["case_default_used"])
                 except (TransformationError, IndexError) as err:
                     logging.warning(
                         "%s: Could not transform because:\n %s", index, err)
 
-    print(outer_loops)
-    print(len(outer_loops))
-
-    # # Loop m 1:
-    # nodes_potential = get_children(outer_loops[0])
-    # try:
-    #     OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[1:-1])
-    # except (TransformationError, IndexError) as err:
-    #     logging.warning(
-    #         "Could not transform because:\n %s", err)
-
-    # # Loop m 2:
-    # nodes_potential = get_children(outer_loops[1])
-    # try:
-    #     OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[1:-1])
-    # except (TransformationError, IndexError) as err:
-    #     logging.warning(
-    #         "Could not transform because:\n %s", err)
-
-    # Loops 3,4:
+    ### End over tracers ###
+    
+    # To reduce some parallel sections for CCE, we can group these two easily
     try:
         OMP_PARALLEL_REGION_TRANS.apply(outer_loops[2:4])
     except (TransformationError, IndexError) as err:
         logging.warning(
             "Could not transform because:\n %s", err)
 
-
-    # Work through all loops
+    # To add do inside any spanned parallel sections
     for loop in psyir.walk(Loop):
         # For each loop which is inside a OMPParallelDirective, and not a OMPDoDirective
         # parallelise
         if loop.ancestor(OMPParallelDirective) and not loop.ancestor(OMPDoDirective):
+            if loop.variable.name in ['i', 'j']:
+                # To add do inside any spanned parallel sections
+                try:
+                    OMP_DO_LOOP_TRANS_STATIC.apply(
+                        loop)
+                except (TransformationError, IndexError) as err:
+                    logging.warning(
+                        "Could not transform because:\n %s", err)
+
+    # To add parallel do (sparingly) around any remaining 'i' loops
+    for loop in psyir.walk(Loop):
+        if (
+            loop.ancestor(OMPParallelDoDirective) is not None
+            or loop.ancestor(OMPDoDirective) is not None
+            or loop.ancestor(OMPParallelDirective) is not None
+        ):
+            continue
+
+        # We don't want to add parallel do's around loops inside 'm' loops
+        # Where possible, this has already been done.
+        loop_ancestors = get_ancestors(loop, node_type=Loop)
+        found_outer_ancestor = False
+        for loop_ancestor in loop_ancestors:
+            if str(loop_ancestor.variable.name) in ['m']:
+                found_outer_ancestor = True
+        if found_outer_ancestor:
+            continue
+
+        # To add parallel do (sparingly) around any remaining 'i' loops
+        if loop.variable.name == 'i':
             try:
-                OMP_DO_LOOP_TRANS_STATIC.apply(
+                OMP_PARALLEL_LOOP_DO_TRANS_STATIC.apply(
                     loop)
             except (TransformationError, IndexError) as err:
                 logging.warning(
                     "Could not transform because:\n %s", err)
 
 
-        # if loop.variable.name == 'm':
-        #     # print(loop.variable.name)
-        #     # children = get_all_children(loop, node_type=Loop)
-        #     generic_children = get_children(loop)
-        #     loop_grandchildren = get_children(generic_children[0], node_type=Loop)
-        #     if loop_grandchildren:
-        #         print(loop_grandchildren)
-        #         if isinstance(loop_grandchildren[0], Loop):
-        #             print("Success")
-
-
-        # # If there is an OMP ancestor skip.
-        # if (
-        #     loop.ancestor(OMPParallelDoDirective) is not None
-        #     or loop.ancestor(OMPDoDirective) is not None
-        #     or loop.ancestor(OMPParallelDirective) is not None
-        # ):
-        #     continue
-        # # Allow loops over 'i' and 'l' indexes to be parallelised.
-        # if loop.variable.name in ['i', 'l']:
-        #     try:
-        #         OMP_PARALLEL_LOOP_DO_TRANS_STATIC.apply(
-        #             loop, 
-        #             ignore_dependencies_for=ignore_dependencies_for,
-        #             node_type_check=node_type_check)
-        #     except (TransformationError, IndexError) as err:
-        #         logging.warning(
-        #             "Could not transform because:\n %s", err)
-
 def move_default_case_contents(loop):
     """
-    Seems to be safe atm
+    This kernel requires the moving of a logging call out of an generated
+    ifblock (which originally an case) for the else (default) clause, so that
+    a parallel section can be spanned over the ifblock. This reduces the number
+    parallel sections present in the file.
+    So that the moved logging statement is still called as needed, if the
+    else clause is used (by a tracer not being present), it flips a boolean,
+    which is a flag to control whether the following if clause is called,
+    which contains the moved logging statement.
+    :arg loop: the Loop node for which we will move the logging statement.
+    :type loop: :py:class:`Loop`
     """
     issue_nodes = get_all_children(loop, node_type=Fparser2CodeBlock)
     for issue_node in issue_nodes:
