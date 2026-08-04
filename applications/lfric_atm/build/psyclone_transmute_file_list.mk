@@ -23,6 +23,7 @@ export PSYCLONE_PHYSICS_FILES = \
                                 bl_imp2_kernel_mod \
                                 btq_int \
                                 conv_gr_kernel_mod \
+                                conv_comorph_kernel_mod \
                                 ex_flux_tq \
                                 ex_flux_uv \
                                 fm_drag \
