@@ -106,22 +106,35 @@ def trans(psyir):
                 if not loop.ancestor(Loop)]
 
     for index, loop in enumerate(outer_loops):
+        # Cant do:
+        # 21 - frac_sea inits, etc, shared but messy
         # It seems applying this to all of the m loops which contain loops is
         # causing KGO issues. This is looking like that case_default_used is
         # not being correctly force privatised by PSyclone.
         # We can however still apply it safely to some.
-        if loop.variable.name == 'm' and index in [0,1]:
-            # Are there any loops?
-            if get_all_children(loop, node_type=Loop):
+        if (get_all_children(loop, node_type=Loop) and 
+            loop.variable.name == 'm' and index in [
+                0, 1, 20, 24, 25, 26, 27, 28, 29, 30,
+                31, 32, 33, 34, 35, 36, 37]):
+            if index in [
+                0, 1, 20, 24, 25, 26, 27, 28, 29, 30,
+                31, 32, 33, 34, 35,]:
                 move_default_case_contents(loop)
-                nodes_potential = get_children(loop)
-                print(nodes_potential)
-                try:
-                    OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[1:-1],
-                    force_private=["case_default_used"])
-                except (TransformationError, IndexError) as err:
-                    logging.warning(
-                        "%s: Could not transform because:\n %s", index, err)
+
+            nodes_potential = get_children(loop)
+            if index in [33, 34]:
+                nodes_span = [3,-1]
+            elif index in [36, 37]:
+                nodes_span = [2, 3]
+            else:
+                nodes_span = [1,-1]
+            try:
+                OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[
+                    nodes_span[0]:nodes_span[1]],
+                force_private=["case_default_used"])
+            except (TransformationError, IndexError) as err:
+                logging.warning(
+                    f"{index}: Could not transform because:\n {err}")
 
     ### End over tracers ###
     
@@ -130,7 +143,7 @@ def trans(psyir):
         OMP_PARALLEL_REGION_TRANS.apply(outer_loops[2:4])
     except (TransformationError, IndexError) as err:
         logging.warning(
-            "Could not transform because:\n %s", err)
+            f"{index}: Could not transform because:\n {err}")
 
     # To add do inside any spanned parallel sections
     for loop in psyir.walk(Loop):
@@ -141,10 +154,11 @@ def trans(psyir):
                 # To add do inside any spanned parallel sections
                 try:
                     OMP_DO_LOOP_TRANS_STATIC.apply(
-                        loop)
+                        loop,
+                        ignore_dependencies_for=ignore_dependencies_for)
                 except (TransformationError, IndexError) as err:
                     logging.warning(
-                        "Could not transform because:\n %s", err)
+                        f"{index}: Could not transform because:\n {err}")
 
     # To add parallel do (sparingly) around any remaining 'i' loops
     for loop in psyir.walk(Loop):
@@ -172,7 +186,7 @@ def trans(psyir):
                     loop)
             except (TransformationError, IndexError) as err:
                 logging.warning(
-                    "Could not transform because:\n %s", err)
+                    f"{index}: Could not transform because:\n {err}")
 
 
 def move_default_case_contents(loop):
