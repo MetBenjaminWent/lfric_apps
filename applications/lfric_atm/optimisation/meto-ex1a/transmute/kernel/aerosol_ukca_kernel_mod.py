@@ -7,8 +7,8 @@
 A override for aerosol_ukca_kernel_mod. Adding OMP parallel do to all
 loops causes the CCE compiler to fail to build the file within a reasonable
 timeframe, or at all.
-We can still add them to standard i loops, but for the loops for the tracers,
-it requires something a little more bespoke.
+We can still add them to standard i loops, but for the loops for the tracers
+require re-organising to span a parallel section over the ifblock node.
 '''
 
 import logging
@@ -81,9 +81,14 @@ ignore_dependencies_for = [
 
 def trans(psyir):
     '''
-    PSyclone function call, run through psyir object,
-    each schedule (or subroutine) and apply paralleldo transformations
-    to each loop.
+    PSyclone function call, run through psyir object.
+    * Insert manual parallel regions around specific nodes.
+    * Re-organise some if blocks to allow spanning parallel regions.
+    * Add OMP do inside these regions.
+    * Insert parallel do around remaining loop nodes.
+
+    :param psyir: the PSyIR of the provided file.
+    :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
     '''
 
     ### Over the tracers, where safe with current PSyclone ###
@@ -138,7 +143,7 @@ def trans(psyir):
 
     ### End over tracers ###
     
-    # To reduce some parallel sections for CCE, we can group these two easily
+    # To reduce some parallel sections for CCE, we can group these nodes
     try:
         OMP_PARALLEL_REGION_TRANS.apply(outer_loops[2:4])
     except (TransformationError, IndexError) as err:

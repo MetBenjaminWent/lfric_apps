@@ -23,7 +23,6 @@ export PSYCLONE_PHYSICS_FILES = \
                                 bl_imp2_kernel_mod \
                                 btq_int \
                                 conv_gr_kernel_mod \
-                                conv_comorph_kernel_mod \
                                 ex_flux_tq \
                                 ex_flux_uv \
                                 fm_drag \
@@ -58,7 +57,8 @@ export PSYCLONE_PHYSICS_FILES = \
 # List to use PSyclone explicitly without any opt script
 # This will remove hand written (OMP) directives in the source
 # Used by both methods, specify_include and specify_exclude
-export PSYCLONE_PASS_NO_SCRIPT = ukca_abdulrazzak_ghan
+export PSYCLONE_PASS_NO_SCRIPT = ukca_abdulrazzak_ghan \
+                                 conv_comorph_kernel_mod
 
 
 ##### TRANSMUTE_INCLUDE_METHOD specify_exclude #####

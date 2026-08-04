@@ -22,6 +22,7 @@ from psyclone.psyir.transformations import (
 )
 from psyclone.psyir.nodes import (
     Loop, Call,
+    Routine,
     Schedule,
     Literal,
     Reference,
@@ -73,9 +74,14 @@ ignore_dependencies_for = [
 
 def trans(psyir):
     '''
-    PSyclone function call, run through psyir object,
-    each schedule (or subroutine) and apply paralleldo transformations
-    to each loop.
+    PSyclone function call, run through psyir object.
+    * Insert manual parallel regions around specific nodes.
+    * Re-organise some if blocks to allow spanning parallel regions.
+    * Add OMP do inside these regions.
+    * Insert parallel do around remaining loop nodes.
+
+    :param psyir: the PSyIR of the provided file.
+    :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
     '''
 
     ### Over the tracers, where safe with current PSyclone ###
@@ -97,13 +103,17 @@ def trans(psyir):
     outer_loops = [loop for loop in get_outer_loops(psyir)
                 if not loop.ancestor(Loop)]
 
+    # Work through the outer loops, those that are over n,
+    # readjust the tracer loop to move the logging
+    # Then span a parallel section over the ifblock
     for index, loop in enumerate(outer_loops):
         if (get_all_children(loop, node_type=Loop) and 
-            loop.variable.name == 'n'): 
-            move_default_case_contents(loop)
-            print(index)
+            loop.variable.name == 'n'):
+            # This node needs the logging moved
+            if index in [8]:
+                move_default_case_contents(loop)
             nodes_potential = get_children(loop)
-            print(nodes_potential)
+            # As this node didn't get moved, use different range
             if index in [56]:
                 nodes_span = [0, 1]
             else:
@@ -111,45 +121,57 @@ def trans(psyir):
             try:
                 OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[
                     nodes_span[0]:nodes_span[1]],
-                force_private=["case_default_used"])
+                    force_private=["case_default_used"])
             except (TransformationError, IndexError) as err:
                 logging.warning(
                     f"{index}: Could not transform because:\n {err}")
 
     ### End over tracers ###
-    
-    # To reduce some parallel sections for CCE, we can group
-    # Some of these loops into parallel sections
+
+    # To reduce some parallel sections for CCE, we can group these nodes
+    top_nodes = []
+    for index, node in enumerate(psyir.walk(Routine)[0].children):
+        top_nodes.append(node)
     try:
-        OMP_PARALLEL_REGION_TRANS.apply(outer_loops[0:2])
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[0:2])
     except (TransformationError, IndexError) as err:
         logging.warning(
             f"Could not transform because:\n {err}")
-        print(err)
     try:
-        OMP_PARALLEL_REGION_TRANS.apply(outer_loops[2:4])
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[7:13])
     except (TransformationError, IndexError) as err:
         logging.warning(
             f"Could not transform because:\n {err}")
-        print(err)
     try:
-        OMP_PARALLEL_REGION_TRANS.apply(outer_loops[10:13])
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[17:20])
     except (TransformationError, IndexError) as err:
         logging.warning(
             f"Could not transform because:\n {err}")
-        print(err)
     try:
-        OMP_PARALLEL_REGION_TRANS.apply(outer_loops[13:15])
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[23:25])
     except (TransformationError, IndexError) as err:
         logging.warning(
             f"Could not transform because:\n {err}")
-        print(err)
     try:
-        OMP_PARALLEL_REGION_TRANS.apply(outer_loops[19:21])
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[51:56])
     except (TransformationError, IndexError) as err:
         logging.warning(
             f"Could not transform because:\n {err}")
-        print(err)
+    try:
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[69:75])
+    except (TransformationError, IndexError) as err:
+        logging.warning(
+            f"Could not transform because:\n {err}")
+    try:
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[78:80])
+    except (TransformationError, IndexError) as err:
+        logging.warning(
+            f"Could not transform because:\n {err}")
+    try:
+        OMP_PARALLEL_REGION_TRANS.apply(top_nodes[81:89])
+    except (TransformationError, IndexError) as err:
+        logging.warning(
+            f"Could not transform because:\n {err}")
 
     # To add do inside any spanned parallel sections
     for loop in psyir.walk(Loop):
@@ -174,16 +196,6 @@ def trans(psyir):
             or loop.ancestor(OMPDoDirective) is not None
             or loop.ancestor(OMPParallelDirective) is not None
         ):
-            continue
-
-        # We don't want to add parallel do's around loops inside 'm' loops
-        # Where possible, this has already been done.
-        loop_ancestors = get_ancestors(loop, node_type=Loop)
-        found_outer_ancestor = False
-        for loop_ancestor in loop_ancestors:
-            if str(loop_ancestor.variable.name) in ['n']:
-                found_outer_ancestor = True
-        if found_outer_ancestor:
             continue
 
         # To add parallel do (sparingly) around any remaining 'i' loops

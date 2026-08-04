@@ -15,6 +15,7 @@ Overrides currently include:
 '''
 
 import logging
+from psyclone.psyir.transformations import TransformationError
 from psyclone.psyir.nodes import (
     Loop, Call,
     OMPParallelDoDirective,
