@@ -52,7 +52,7 @@ def trans(psyir):
     # Walk the loops of the psyir obj
     for loop in psyir.walk(Loop):
         # There is only one loop to parallelise, ll
-        if loop.loop_type == "ll":
+        if loop.variable.name == "ll":
             # Apply the transformation
             try:
                 OMP_PARALLEL_LOOP_DO_TRANS_STATIC.apply(
