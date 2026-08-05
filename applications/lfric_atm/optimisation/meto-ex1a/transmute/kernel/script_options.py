@@ -22,47 +22,6 @@ FILE_EXTEN = ".xu90"
 SCRIPT_OPTIONS_DICT = {}
 
 # File keys
-# Disabled due build slow downs CCE, psyclone Issue to fix this is #3418
-SCRIPT_OPTIONS_DICT["aerosol_ukca_kernel_mod"+str(FILE_EXTEN)] = {
-        "ignore_dependencies_for": [
-            "surf_wetness", "l_tile_active", "o3p", "o3",
-            "n", "no", "no3", "lumped_n", "n2o5", "ho2no2",
-            "hono2", "h2o2", "ch4", "co", "hcho", "meoo",
-            "meooh", "h", "oh", "ho2", "cl", "cl2o2", "clo",
-            "oclo", "br", "lumped_br", "brcl", "brono2",
-            "n2o", "lumped_cl", "hocl", "hbr", "hobr", "hobr",
-            "clono2", "cfcl3", "cf2cl2", "mebr", "hono", "c2h6",
-            "etoo", "etooh", "mecho", "meco3", "pan", "c3h8",
-            "n_proo", "i_proo", "i_proo", "i_prooh", "etcho",
-            "etco3", "me2co", "mecoch2oo", "mecoch2ooh", "ppan",
-            "meono2", "c5h8", "iso2", "isooh", "ison", "macr",
-            "macrooh", "macro2", "mpan", "hacet", "mgly",
-            "nald", "hcooh", "meco3h", "meco2h", "h2", "meoh",
-            "n_prooh", "msa", "nh3", "cs2", "csul", "h2s", "so3",
-            "passive_o3", "age_of_air", "dms", "so2", "h2so4",
-            "dmso", "monoterpene", "secondary_organic", "n_nuc_sol",
-            "nuc_sol_su", "nuc_sol_om", "n_ait_sol", "ait_sol_su",
-            "nuc_sol_om", "n_ait_sol", "ait_sol_su", "ait_sol_om",
-            "n_acc_sol", "acc_sol_su", "acc_sol_bc", "acc_sol_om",
-            "acc_sol_ss", "n_cor_sol", "cor_sol_su", "cor_sol_bc",
-            "cor_sol_om", "cor_sol_ss", "n_ait_ins", "ait_ins_bc",
-            "ait_ins_om", "n_acc_ins", "acc_ins_du", "n_cor_ins",
-            "cor_ins_du", "cloud_drop_no_conc", "drydp_ait_sol",
-            "drydp_acc_sol", "drydp_cor_sol", "drydp_ait_ins",
-            "drydp_acc_ins", "drydp_cor_ins", "wetdp_ait_sol",
-            "wetdp_acc_sol", "wetdp_cor_sol", "rhopar_ait_sol",
-            "rhopar_acc_sol", "rhopar_cor_sol", "rhopar_ait_ins",
-            "rhopar_acc_ins", "rhopar_cor_ins", "pvol_su_ait_sol",
-            "pvol_bc_ait_sol", "pvol_om_ait_sol", "pvol_wat_ait_sol",
-            "pvol_su_acc_sol", "pvol_bc_acc_sol", "pvol_om_acc_sol",
-            "pvol_ss_acc_sol", "pvol_wat_acc_sol", "pvol_su_cor_sol",
-            "pvol_bc_cor_sol", "pvol_om_cor_sol", "pvol_ss_cor_sol",
-            "pvol_wat_cor_sol", "pvol_bc_ait_ins", "pvol_om_ait_ins",
-            "pvol_du_acc_ins", "pvol_du_cor_ins", "no2", "bro", "hcl",
-            "o1d", "ait_sol_bc",
-    ]
-}
-
 SCRIPT_OPTIONS_DICT["bl_exp_kernel_mod"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
         "tnuc_nlcl", "dw_bl", "surf_interp", "bq_bl", "bt_bl",
