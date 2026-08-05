@@ -1240,6 +1240,8 @@ contains
     !   map_wth(1) points to level 0
     !   map_w3(1)  points to level 1
     !-----------------------------------------------------------------------
+    !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(i, k)
+    !$OMP do SCHEDULE(STATIC)
     do i = 1, row_length
       do k = 0, nlayers
         ! w wind on theta levels
@@ -1269,10 +1271,12 @@ contains
       p_rho_levels(i,1,1) = p_theta_levels(i,1,0)
       p_rho_levels(i,1,nlayers+1) = 0.0_r_um
     end do
+    !$OMP end do
 
     !-----------------------------------------------------------------------
     ! Things passed from other parametrization schemes on this timestep
     !-----------------------------------------------------------------------
+    !$OMP do SCHEDULE(STATIC)
     do i = 1, row_length
       zh(i,1) = zh_2d(map_2d(1,i))
       zhnl(i,1) = zh_nonloc(map_2d(1,i))
@@ -1280,6 +1284,8 @@ contains
       zhsc(i,1) = zhsc_2d(map_2d(1,i))
       bl_type_7(i,1) = bl_type_ind(map_bl(1,i)+6)
     end do
+    !$OMP end do
+    !$OMP end PARALLEL
 
     ! If this is the last solver outer loop then tracers may need convecting.
     ! Enable tracers for UKCA if a UKCA tracer list is available
