@@ -26,11 +26,11 @@
 
 # LFRic Apps
 %aerosol_ukca_alg_mod_psy.o: private FFLAGS_SAFE_OPTIMISATION = -O0
-%aerosol_ukca_kernel_mod.o: private FFLAGS_SAFE_OPTIMISATION = -O0 -hipa0 -hmsgs
+%aerosol_ukca_kernel_mod.o: private FFLAGS_SAFE_OPTIMISATION = -O0 -hipa0
 %bl_exp_alg_mod_psy.o: private FFLAGS_SAFE_OPTIMISATION = -O0
 %bl_imp_alg_mod_psy.o: private FFLAGS_SAFE_OPTIMISATION = -O0
 %conv_comorph_alg_mod_psy.o: private FFLAGS_SAFE_OPTIMISATION = -O0
-%conv_comorph_kernel_mod.o: private FFLAGS_SAFE_OPTIMISATION = -O0 -hipa0 -hmsgs
+%conv_comorph_kernel_mod.o: private FFLAGS_SAFE_OPTIMISATION = -O0 -hipa0
 %conv_gr_alg_mod_psy.o: private FFLAGS_SAFE_OPTIMISATION = -O0
 %gungho_model_mod.o: private FFLAGS_SAFE_OPTIMISATION = -O0
 %init_aerosol_fields_alg_mod_psy.o: private FFLAGS_SAFE_OPTIMISATION = -O0
