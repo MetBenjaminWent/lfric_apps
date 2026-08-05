@@ -57,8 +57,7 @@ export PSYCLONE_PHYSICS_FILES = \
 # List to use PSyclone explicitly without any opt script
 # This will remove hand written (OMP) directives in the source
 # Used by both methods, specify_include and specify_exclude
-export PSYCLONE_PASS_NO_SCRIPT = ukca_abdulrazzak_ghan \
-                                 conv_comorph_kernel_mod
+export PSYCLONE_PASS_NO_SCRIPT = ukca_abdulrazzak_ghan
 
 
 ##### TRANSMUTE_INCLUDE_METHOD specify_exclude #####
