@@ -12,15 +12,11 @@ require re-organising to span a parallel section over the ifblock node.
 '''
 
 import logging
-from psyclone.psyir.transformations import (
-    ArrayAssignment2LoopsTrans,
-    OMPLoopTrans,
-    OMPMinimiseSyncTrans,
+from psyclone.transformations import (
     TransformationError,
-    MaximalOMPParallelRegionTrans,
 )
 from psyclone.psyir.nodes import (
-    Loop, Call,
+    Loop,
     Schedule,
     Literal,
     Reference,
@@ -79,6 +75,7 @@ ignore_dependencies_for = [
     "o1d", "ait_sol_bc",
 ]
 
+
 def trans(psyir):
     '''
     PSyclone function call, run through psyir object.
@@ -90,25 +87,15 @@ def trans(psyir):
     :param psyir: the PSyIR of the provided file.
     :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
     '''
-
-    ### Over the tracers, where safe with current PSyclone ###
-
+    # ## Over the tracers, where safe with current PSyclone ## #
     # Declare 'case_default_used'. To get the correct subroutine,
     # Just jump to the first loop, grab it's schedule and check
     # the symbol table, which itself points at the routine.
-    for loop in psyir.walk(Loop):
-        for schedule in loop.walk(Schedule):
-            symtab = schedule.symbol_table
-            case_default_used = symtab.find_or_create(
-            "case_default_used",
-                symbol_type=DataSymbol,
-                datatype=ScalarType.boolean_type())
-            break
-        break
 
     # Identify outer loops
-    outer_loops = [loop for loop in get_outer_loops(psyir)
-                if not loop.ancestor(Loop)]
+    outer_loops = [
+        loop for loop in get_outer_loops(psyir)
+        if not loop.ancestor(Loop)]
 
     for index, loop in enumerate(outer_loops):
         # Cant do:
@@ -117,32 +104,40 @@ def trans(psyir):
         # causing KGO issues. This is looking like that case_default_used is
         # not being correctly force privatised by PSyclone.
         # We can however still apply it safely to some.
-        if (get_all_children(loop, node_type=Loop) and 
+        if (get_all_children(loop, node_type=Loop) and
             loop.variable.name == 'm' and index in [
                 0, 1, 20, 24, 25, 26, 27, 28, 29, 30,
                 31, 32, 33, 34, 35, 36, 37]):
             if index in [
-                0, 1, 20, 24, 25, 26, 27, 28, 29, 30,
-                31, 32, 33, 34, 35,]:
+                    0, 1, 20, 24, 25, 26, 27, 28, 29, 30,
+                    31, 32, 33, 34, 35,]:
+                # Get the symbol table of the ancestor schedule, that belonging
+                # to the routine, given these loops will have no other
+                # ancestors. Add or find case_default_used.
+                symtab = loop.ancestor(Schedule).symbol_table
+                case_default_used = symtab.find_or_create(
+                    "case_default_used",
+                    symbol_type=DataSymbol,
+                    datatype=ScalarType.boolean_type())
                 move_default_case_contents(loop)
 
             nodes_potential = get_children(loop)
             if index in [33, 34]:
-                nodes_span = [3,-1]
+                nodes_span = [3, -1]
             elif index in [36, 37]:
                 nodes_span = [2, 3]
             else:
-                nodes_span = [1,-1]
+                nodes_span = [1, -1]
             try:
                 OMP_PARALLEL_REGION_TRANS.apply(nodes_potential[
                     nodes_span[0]:nodes_span[1]],
-                force_private=["case_default_used"])
+                    force_private=["case_default_used"])
             except (TransformationError, IndexError) as err:
                 logging.warning(
                     f"{index}: Could not transform because:\n {err}")
 
-    ### End over tracers ###
-    
+    # ## End over tracers ## #
+
     # To reduce some parallel sections for CCE, we can group these nodes
     try:
         OMP_PARALLEL_REGION_TRANS.apply(outer_loops[2:4])
@@ -152,9 +147,11 @@ def trans(psyir):
 
     # To add do inside any spanned parallel sections
     for loop in psyir.walk(Loop):
-        # For each loop which is inside a OMPParallelDirective, and not a OMPDoDirective
-        # parallelise
-        if loop.ancestor(OMPParallelDirective) and not loop.ancestor(OMPDoDirective):
+        # For each loop which is inside a OMPParallelDirective,
+        # and not a OMPDoDirective, parallelise
+        if (
+                loop.ancestor(OMPParallelDirective)
+                and not loop.ancestor(OMPDoDirective)):
             if loop.variable.name in ['i', 'j']:
                 # To add do inside any spanned parallel sections
                 try:
@@ -223,18 +220,18 @@ def move_default_case_contents(loop):
         rhs_true = Literal("true", ScalarType.boolean_type())
         assign_true = Assignment.create(lhs_true, rhs_true)
 
-        ## case_default_used will alow us to span a parallel section ##
-        ## Add it at the start, outside the region. It does not matter ##
-        ## which thread sets the value ##
+        # # case_default_used will alow us to span a parallel section # #
+        # # Add it at the start, outside the region. It does not matter # #
+        # # which thread sets the value # #
         # loop is the parents parent
-            # add the assignment at 0
+        # -- add the assignment at 0
         loop.loop_body.addchild(assign_false, 0)
 
-        ## Move the case default (else) contents to a new ifblock, ##
-        ## controlled by case_default_used ##
+        # # Move the case default (else) contents to a new ifblock, # #
+        # # controlled by case_default_used # #
         # loop is the parents parent
-            # need to add an if block around the new assignment
-                # and the Fparser2CodeBlock node here
+        # -- need to add an if block around the new assignment
+        # -- -- and the Fparser2CodeBlock node here
         node_parent_children = issue_node.parent.children
         # as we detach nodes, node_parent_children shrinks
         # so position 1 is now actually 0
@@ -245,20 +242,20 @@ def move_default_case_contents(loop):
             if_body.append(node_parent_children[0].detach())
         ifblock = IfBlock.create(condition, if_body)
         loop.loop_body.addchild(ifblock, 2)
-        ## ##
+        # # # #
 
-        ## Find the else node and add ## 
+        # # Find the else node and add # #
         # loop is the parents parent case_default_used is true
-            # actually needs to be added to else body of if node
+        # -- actually needs to be added to else body of if node
         if_nodes = get_children(loop, node_type=IfBlock)
         cursor = if_nodes[0].else_body
         # cursor is the schedule of the node, cursor[0] is the node
         while len(cursor.children) == 1 and isinstance(cursor[0], IfBlock):
             if cursor[0].else_body is None:
-                cursor = None # The nested if don't end with an else block
+                cursor = None  # The nested if don't end with an else block
                 break
             cursor = cursor[0].else_body
         # One it breaks at the case default (else),
         # we have the right part of the if block
         cursor.addchild(assign_true, 0)
-        ## ##
+        # # # #

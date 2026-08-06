@@ -27,7 +27,6 @@ from psyclone.psyir.nodes import (
     Schedule,
 )
 from psyclone.psyir.symbols import (
-    DataSymbol,
     ContainerSymbol,
     RoutineSymbol,
     ImportInterface,
@@ -623,7 +622,7 @@ def loop_replacement_of(routine_itr,
                 tmp = loop.detach()  # noqa: F841 #pylint: disable=W0612
 
 
-def add_omp_parallel_region( #pylint: disable=R0913
+def add_omp_parallel_region(  # pylint: disable=R0913
     start_node,
     end_node,
     *,
@@ -764,7 +763,7 @@ def get_children(node, node_type=Node, exclude=()):
     return children
 
 
-def get_all_children(node, node_type=Node, exclude=()):
+def get_all_children(node, node_type=Node):
     """
     A version of get_children, which instead recurses all the way down.
     Get all immediate descendents of a Node with a given type, i.e., those at
