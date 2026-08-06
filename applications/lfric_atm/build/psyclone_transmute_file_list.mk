@@ -50,8 +50,6 @@ export PSYCLONE_PHYSICS_FILES = \
                                 jules_exp_kernel_mod \
                                 jules_extra_kernel_mod
 
-#conv_comorph_kernel_mod \
-
 ##### TRANSMUTE_INCLUDE_METHOD specify_include #####
 
 # List to use PSyclone explicitly without any opt script
