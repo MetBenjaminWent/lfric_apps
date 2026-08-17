@@ -108,6 +108,10 @@ def trans(psyir):
             loop.variable.name == 'm' and index in [
                 0, 1, 20, 24, 25, 26, 27, 28, 29, 30,
                 31, 32, 33, 34, 35, 36, 37]):
+            # For m loops over tracers, where we want to move the
+            # Fparser2CodeBlock, add the new flag case_default_used
+            # to the symbol table of the routine above. This allows
+            # force_private-ing of this, and adds it to the declarations above.
             if index in [
                     0, 1, 20, 24, 25, 26, 27, 28, 29, 30,
                     31, 32, 33, 34, 35,]:
@@ -122,10 +126,20 @@ def trans(psyir):
                 move_default_case_contents(loop)
 
             nodes_potential = get_children(loop)
+            # Tracer Loops where we have moved the Fparser2CodeBlock, and added
+            # an ifblock at the end. There are also assignments at the start we
+            # don't need inside the OMP block. So span from node 3 to one
+            # before the last.
             if index in [33, 34]:
                 nodes_span = [3, -1]
+            # Non Tracer, these nodes have not been moved, therefore we
+            # target for OMP the outer if block and ignore the assignments
+            # at the start
             elif index in [36, 37]:
                 nodes_span = [2, 3]
+            # Tracer loops where we have moved the Fparser2CodeBlock, and added
+            # an ifblock at the end. Ignore the first newly added assignment
+            # too.
             else:
                 nodes_span = [1, -1]
             try:
