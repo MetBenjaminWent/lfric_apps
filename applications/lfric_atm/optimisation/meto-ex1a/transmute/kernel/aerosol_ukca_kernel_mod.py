@@ -207,10 +207,10 @@ def trans(psyir):
 
 def move_default_case_contents(loop):
     """
-    This kernel requires the moving of a logging call out of an generated
-    ifblock (which originally an case) for the else (default) clause, so that
-    a parallel section can be spanned over the ifblock. This reduces the number
-    parallel sections present in the file.
+    This kernel requires the moving of a logging call out of a generated
+    ifblock (which originally was a case) for the else (default) clause, so
+    that a parallel section can be spanned over the ifblock. This reduces
+    the number of parallel sections present in the file.
     So that the moved logging statement is still called as needed, if the
     else clause is used (by a tracer not being present), it flips a boolean,
     which is a flag to control whether the following if clause is called,
