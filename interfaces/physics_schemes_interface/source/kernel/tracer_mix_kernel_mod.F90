@@ -154,27 +154,27 @@ contains
     integer(i_def) :: k, i
 
     ! profile fields from level 1 upwards
-    real(r_um), dimension(seg_len,1,nlayers) :: z_rho, r_rho_levels
+    real(r_um), dimension(seg_len,nlayers) :: z_rho, r_rho_levels
 
     ! profile field on boundary layer levels
-    real(r_um), dimension(seg_len,1,bl_levels) :: dtrdz_charney_grid, &
+    real(r_um), dimension(seg_len,bl_levels) :: dtrdz_charney_grid, &
          tracer_mixed, tracer_flux
 
     ! profile fields from level 2 upwards
-    real(r_um), dimension(seg_len,1,2:bl_levels) :: rhokh_mix_bl
+    real(r_um), dimension(seg_len,2:bl_levels) :: rhokh_mix_bl
 
     ! profile fields from level 0 upwards
-    real(r_um), dimension(seg_len,1,0:nlayers) :: r_theta_levels
+    real(r_um), dimension(seg_len,0:nlayers) :: r_theta_levels
 
     ! single level real fields
-    real(r_um), dimension(seg_len,1) :: zhnl, zhsc, surf_dep_flux, zeroes, &
+    real(r_um), dimension(seg_len) :: zhnl, zhsc, surf_dep_flux, zeroes, &
          rhokh_mix_surf
 
-    real(r_um), dimension(seg_len,1,3) :: t_frac, t_frac_dsc, we_lim, &
+    real(r_um), dimension(seg_len,3) :: t_frac, t_frac_dsc, we_lim, &
          we_lim_dsc, zrzi, zrzi_dsc
 
     ! single level integer fields
-    integer(i_um), dimension(seg_len,1) :: kent, kent_dsc
+    integer(i_um), dimension(seg_len) :: kent, kent_dsc
 
     real(r_um), dimension(bl_levels) :: alpha_tr
 
@@ -184,53 +184,53 @@ contains
     do i = 1, seg_len
       do k = 0, nlayers
         ! height of theta levels from centre of planet
-        r_theta_levels(i,1,k) = height_wth(map_wth(1,i) + k) + planet_radius
+        r_theta_levels(i,k) = height_wth(map_wth(1,i) + k) + planet_radius
       end do
       do k = 1, nlayers
         ! height of rho levels from centre of planet
-        r_rho_levels(i,1,k) = height_w3(map_w3(1,i) + k-1) + planet_radius
+        r_rho_levels(i,k) = height_w3(map_w3(1,i) + k-1) + planet_radius
         ! height of levels above surface
-        z_rho(i,1,k) = r_rho_levels(i,1,k)-r_theta_levels(i,1,0)
+        z_rho(i,k) = r_rho_levels(i,k)-r_theta_levels(i,0)
       end do
     end do
 
     ! surface and interior scalar diffusivity
     do i = 1, seg_len
-      rhokh_mix_surf(i,1) = rhokh_bl(map_w3(1,i))
+      rhokh_mix_surf(i) = rhokh_bl(map_w3(1,i))
       do k = 2, bl_levels
-        rhokh_mix_bl(i,1,k) = rhokh_bl(map_w3(1,i) + k-1) * rdz_w3(map_w3(1,i) + k-1)
+        rhokh_mix_bl(i,k) = rhokh_bl(map_w3(1,i) + k-1) * rdz_w3(map_w3(1,i) + k-1)
       end do
     end do
 
     ! mixed layer depths
     do i = 1, seg_len
-      zhnl(i,1) = zh_nonloc(map_2d(1,i))
-      zhsc(i,1) = zhsc_2d(map_2d(1,i))
+      zhnl(i) = zh_nonloc(map_2d(1,i))
+      zhsc(i) = zhsc_2d(map_2d(1,i))
     end do
 
     ! tracer to mix
     do i = 1, seg_len
       do k=1,bl_levels
-        dtrdz_charney_grid(i,1,k) = dtrdz_tq_bl(map_wth(1,i) + k)
-        tracer_mixed(i,1,k) = tracer(map_wth(1,i) + k)
+        dtrdz_charney_grid(i,k) = dtrdz_tq_bl(map_wth(1,i) + k)
+        tracer_mixed(i,k) = tracer(map_wth(1,i) + k)
       end do
     end do
 
     ! Entrainment mixing parameters
     do i = 1, seg_len
-      kent(i,1) = level_ent(map_2d(1,i))
-      kent_dsc(i,1) = level_ent_dsc(map_2d(1,i))
+      kent(i) = level_ent(map_2d(1,i))
+      kent_dsc(i) = level_ent_dsc(map_2d(1,i))
       do k = 1, 3
-        we_lim(i,1,k) = ent_we_lim(map_ent(1,i) + k - 1)
-        t_frac(i,1,k) = ent_t_frac(map_ent(1,i) + k - 1)
-        zrzi(i,1,k) = ent_zrzi(map_ent(1,i) + k - 1)
-        we_lim_dsc(i,1,k) = ent_we_lim_dsc(map_ent(1,i) + k - 1)
-        t_frac_dsc(i,1,k) = ent_t_frac_dsc(map_ent(1,i) + k - 1)
-        zrzi_dsc(i,1,k) = ent_zrzi_dsc(map_ent(1,i) + k - 1)
+        we_lim(i,k) = ent_we_lim(map_ent(1,i) + k - 1)
+        t_frac(i,k) = ent_t_frac(map_ent(1,i) + k - 1)
+        zrzi(i,k) = ent_zrzi(map_ent(1,i) + k - 1)
+        we_lim_dsc(i,k) = ent_we_lim_dsc(map_ent(1,i) + k - 1)
+        t_frac_dsc(i,k) = ent_t_frac_dsc(map_ent(1,i) + k - 1)
+        zrzi_dsc(i,k) = ent_zrzi_dsc(map_ent(1,i) + k - 1)
       end do
     end do
 
-    call  tr_mix (                                                           &
+    call tr_mix (                                                           &
          ! IN fields
          r_theta_levels, r_rho_levels, pdims, bl_levels, alpha_tr,           &
          rhokh_mix_bl, rhokh_mix_surf, dtrdz_charney_grid, zeroes, zeroes,   &
@@ -244,7 +244,7 @@ contains
     ! copy back mixed variable, and update 0th level
     do k = 1, bl_levels
       do i = 1, seg_len
-        tracer(map_wth(1,i)+k) = tracer_mixed(i,1,k)
+        tracer(map_wth(1,i)+k) = tracer_mixed(i,k)
       end do
     end do
     do i = 1, seg_len

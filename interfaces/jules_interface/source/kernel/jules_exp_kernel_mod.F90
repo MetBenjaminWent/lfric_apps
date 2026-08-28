@@ -714,6 +714,10 @@ contains
 
     ! profile fields from level 0 upwards
     real(r_um), dimension(seg_len,1,0:1) :: p_theta_levels, q, qcl, qcf
+    real(r_um), dimension(seg_len,0:1)   :: p_theta_levels_2d, q_2d, qcf_2d, &
+                                            qcl_2d
+    real(r_um), dimension(seg_len,1)     :: temperature_2d,                  &
+                                            bulk_cloud_fraction_2d
 
     real(r_um), dimension(co2_dim_len,co2_dim_row) :: co2
 
@@ -773,6 +777,10 @@ contains
 
     real(r_um), dimension(seg_len,1,1) ::                                      &
          bt, bq, bt_cld, bq_cld, a_qs, a_dqsdt, dqsdt
+        real(r_um), dimension(seg_len,1) :: bt_2d, bq_2d, bt_cld_2d,           &
+                                            bq_cld_2d, bt_blend_2d,            &
+                                            bq_blend_2d, a_qs_2d, a_dqsdt_2d,  &
+                                            dqsdt_2d
     real(r_um), dimension(seg_len,1) :: charnock_w
 
     ! This is an idealised fixed value for ustar.
@@ -1399,14 +1407,44 @@ contains
     ! External science code called
     !-----------------------------------------------------------------------
 
+    ! Copy in and out of 3d locally and 2d for the boundary layer
+    ! p_theta_levels/q/qcf/qcl are needed on both level 0 (surface) and
+    ! level 1, so must be copied for both k values.
+    do k = 0, 1
+      do i = 1, seg_len
+        p_theta_levels_2d(i,k) = p_theta_levels(i,1,k)
+        q_2d(i,k) = q(i,1,k)
+        qcf_2d(i,k) = qcf(i,1,k)
+        qcl_2d(i,k) = qcl(i,1,k)
+      end do
+    end do
+    ! temperature and bulk_cloud_fraction only ever hold a single level
+    do i = 1, seg_len
+      temperature_2d(i,1) = temperature(i,1,1)
+      bulk_cloud_fraction_2d(i,1) = bulk_cloud_fraction(i,1,1)
+    end do
     call buoy_tq (                                                             &
        ! IN dimensions/logicals
        1,                                                                      &
        ! IN fields
-       p_theta_levels,temperature,q,qcf,qcl,bulk_cloud_fraction,               &
+       p_theta_levels_2d,temperature_2d,q_2d,qcf_2d,qcl_2d,                    &
+       bulk_cloud_fraction_2d,                                                 &
        ! OUT fields
-       bt,bq,bt_cld,bq_cld,bt_blend,bq_blend,a_qs,a_dqsdt,dqsdt                &
+       bt_2d,bq_2d,bt_cld_2d,bq_cld_2d,bt_blend_2d,bq_blend_2d,                &
+       a_qs_2d,a_dqsdt_2d,dqsdt_2d                                             &
        )
+    ! bt/bq/etc are all single-level outputs (bl_levels=1 was passed above)
+    do i = 1, seg_len
+      bt(i,1,1) = bt_2d(i,1)
+      bq(i,1,1) = bq_2d(i,1)
+      bt_cld(i,1,1) = bt_cld_2d(i,1)
+      bq_cld(i,1,1) = bq_cld_2d(i,1)
+      bt_blend(i,1,1) = bt_blend_2d(i,1)
+      bq_blend(i,1,1) = bq_blend_2d(i,1)
+      a_qs(i,1,1) = a_qs_2d(i,1)
+      a_dqsdt(i,1,1) = a_dqsdt_2d(i,1)
+      dqsdt(i,1,1) = dqsdt_2d(i,1)
+    end do
 
     allocate(hcons_soilt(land_field))
     allocate(emis_soil(land_field))
