@@ -142,20 +142,28 @@ real(r_um) :: field_1D(row_length, bl_levels)
   ! tracer mixing ratio (kg/kg)
 
 ! local variables
-real(r_um) :: rhokh_1(row_length)            ! surface exchange coeff.
-real(r_um) :: res_factor(row_length)         ! dry deposition coeff.
+real(r_um) :: rhokh_1(row_length)                  ! surface exchange coeff.
+real(r_um) :: res_factor(row_length)               ! dry deposition coeff.
 real(r_um) :: f_field(row_length, rows, bl_levels) ! tracer flux from tr_mix
-real(r_um) :: f_field_1D(row_length, bl_levels) ! tracer flux from tr_mix
+real(r_um) :: f_field_1D(row_length, bl_levels)    ! tracer flux from tr_mix
 real(r_um) :: surf_dep_flux(row_length, rows)      ! surf. deposition flux from
                                                    ! tr_mix
-real(r_um) :: surf_dep_flux_1D(row_length)      ! surf. deposition flux from
-                                             ! tr_mix
-integer(i_um) :: i, k, n
+real(r_um) :: surf_dep_flux_1D(row_length)         ! surf. deposition flux from
+                                                   ! tr_mix
+integer(i_um) :: i, k   ! Local loop indexes
 
-rhokh_1(:) = 0.0_r_um
-res_factor(:) = 0.0_r_um
+! rhokh_1(:) = 0.0_r_um
+! res_factor(:) = 0.0_r_um
 
+!$OMP  PARALLEL DEFAULT(SHARED)                                                &
+!$OMP  private( i, k )
+!$OMP  do SCHEDULE(STATIC)
 do i = 1, row_length
+  ! Local inits
+  rhokh_1(i) = 0.0_r_um
+  res_factor(i) = 0.0_r_um
+
+! Copies to different array sizes
   r_theta_levels_1D(i,0) = r_theta_levels(i,1,0)
   kent_1D(i) = kent(i,1)
   kent_dsc_1D(i) = kent_dsc(i,1)
@@ -163,6 +171,8 @@ do i = 1, row_length
   zhnl_1D(i) = zhnl(i,1)
   zhsc_1D(i) = zhsc(i,1)
 end do
+!$OMP end do
+!$OMP  do SCHEDULE(STATIC)
 do k = 1, bl_levels
   do i = 1, row_length
     r_theta_levels_1D(i,k) = r_theta_levels(i,1,k)
@@ -172,11 +182,15 @@ do k = 1, bl_levels
     field_1D(i,k) = field(i,1,k)
   end do
 end do
+!$OMP end do
+!$OMP  do SCHEDULE(STATIC)
 do k = 2, bl_levels
   do i = 1, row_length
     rhokh_rdz_1D(i,k) = rhokh_rdz(i,1,k)
   end do
 end do
+!$OMP end do
+!$OMP  do SCHEDULE(STATIC)
 do k = 1, nlev_ent_tr_mix
   do i = 1, row_length
     we_lim_1D(i,k) = we_lim(i,1,k)
@@ -187,6 +201,8 @@ do k = 1, nlev_ent_tr_mix
     zrzi_dsc_1D(i,k) = zrzi_dsc(i,1,k)
   end do
 end do
+!$OMP end do
+!$OMP end PARALLEL
 
 call tr_mix( r_theta_levels_1D, r_rho_levels_1D, pdims, bl_levels,             &
              alpha_cd, rhokh_rdz_1D, rhokh_1, dtrdz_1D, surf_em_1D,            &
@@ -196,13 +212,18 @@ call tr_mix( r_theta_levels_1D, r_rho_levels_1D, pdims, bl_levels,             &
              ! Output fields
              field_1D, f_field_1D, surf_dep_flux_1D)
 
+!$OMP  PARALLEL DEFAULT(SHARED)                                                &
+!$OMP  private( i, k )
+!$OMP  do SCHEDULE(STATIC)
 do k = 1, bl_levels
   do i = 1, row_length
     field(i,1,k) = field_1D(i,k)
-    f_field(i,1,k) = f_field_1D(i,k)
-    surf_dep_flux(i,1) = surf_dep_flux_1D(i)
+    ! f_field(i,1,k) = f_field_1D(i,k)
+    ! surf_dep_flux(i,1) = surf_dep_flux_1D(i)
   end do
 end do
+!$OMP end do
+!$OMP end PARALLEL
 
 return
 end subroutine bl_tracer_mix

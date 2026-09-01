@@ -739,26 +739,11 @@ contains
           if (.not. l_casim) then
             !for casim there should be no mixing of ice and so latest
             !and earliest are the same
-            ! do k = 1, nlayers
-            !   do i = 1, seg_len
-            !     qcf_latest_pc2(i,1,k) = qcf_latest(i,k)
-            !     qcf_earliest_pc2(i,1,k) = qcf_earliest(i,k)
-            !     cff_earliest_pc2(i,1,k) = cff_earliest(i,k)
-            !     cff_latest_pc2(i,1,k) = cff_latest(i,k)
-            !     cf_latest_pc2(i,1,k) = cf_latest(i,k)
-            !   end do
-            ! end do
 
             call pc2_bl_inhom_ice( qcf_latest, qcf_earliest,                   &
                                    cff_earliest, cff_latest,                   &
                                    cf_latest)
 
-            ! do k = 1, nlayers
-            !   do i = 1, seg_len
-            !     cff_latest(i,k) = cff_latest_pc2(i,1,k)
-            !     cf_latest(i,k) = cf_latest_pc2(i,1,k)
-            !   end do
-            ! end do
           end if
 
           ! --------------------------------------------------------------------
