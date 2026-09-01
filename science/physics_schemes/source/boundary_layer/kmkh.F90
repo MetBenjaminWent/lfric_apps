@@ -66,49 +66,49 @@ logical,intent(in) ::                                                          &
 type (strnewbldiag), intent(in out) :: BL_diag
 
 integer, intent(in) ::                                                         &
- ntml(pdims%i_start:pdims%i_end),                    &
+ ntml(pdims%i_start:pdims%i_end),                                              &
                               ! in Number of model levels in the
                               !    turbulently mixed layer.
- ntdsc(pdims%i_start:pdims%i_end),                   &
+ ntdsc(pdims%i_start:pdims%i_end),                                             &
                               ! in Top level for turb mixing in
                               !    cloud layer
- sml_disc_inv(pdims%i_start:pdims%i_end),            &
+ sml_disc_inv(pdims%i_start:pdims%i_end),                                      &
                               ! in Flags for whether discontinuous
  dsc_disc_inv(pdims%i_start:pdims%i_end)
                               ! in inversions are diagnosed
 
 real(kind=r_bl), intent(in) ::                                                 &
- weight_1dbl(pdims%i_start:pdims%i_end,bl_levels),   &
- weight_1dbl_rho(pdims%i_start:pdims%i_end,          &
+ weight_1dbl(pdims%i_start:pdims%i_end,bl_levels),                             &
+ weight_1dbl_rho(pdims%i_start:pdims%i_end,                                    &
                  bl_levels)
                               ! in Weighting applied to 1D BL scheme,
                               !    to blend with Smagorinsky scheme,
                               !    on theta and rho levels
 ! INOUT arguments
 real(kind=r_bl), intent(in out) ::                                             &
- rhokmz(tdims%i_start:tdims%i_end,                   &
+ rhokmz(tdims%i_start:tdims%i_end,                                             &
         2:bl_levels),                                                          &
                               ! INOUT Non-local turbulent mixing
                               !    coefficient for momentum.
- rhokhz(tdims%i_start:tdims%i_end,                   &
+ rhokhz(tdims%i_start:tdims%i_end,                                             &
         2:bl_levels),                                                          &
                               ! INOUT Non-local turbulent mixing
                               !    coefficient for heat and moisture
- rhokm_top(tdims%i_start:tdims%i_end,                &
+ rhokm_top(tdims%i_start:tdims%i_end,                                          &
            2:bl_levels),                                                       &
                               ! INOUT Non-local top-down turbulent
                               !    mixing coefficient for momentum.
- rhokh_top(tdims%i_start:tdims%i_end,                &
+ rhokh_top(tdims%i_start:tdims%i_end,                                          &
            2:bl_levels),                                                       &
                               ! INOUT Non-local top-down turbulent
                               !    mixing coefficient for heat
                               !    and moisture.
- rhokm(pdims_s%i_start:pdims_s%i_end,            &
+ rhokm(pdims_s%i_start:pdims_s%i_end,                                          &
        bl_levels),                                                             &
                               ! INOUT Layer K-1 - to - layer K
                               !       turbulent mixing coefficient
                               !       for momentum.
- rhokh(tdims%i_start:tdims%i_end,bl_levels),         &
+ rhokh(tdims%i_start:tdims%i_end,bl_levels),                                   &
                               ! INOUT Layer K-1 - to - layer K
                               !       turbulent mixing coefficient
                               !       for heat and moisture.
@@ -153,10 +153,10 @@ if (Keep_Ri_FA == on) then
 !$OMP do SCHEDULE(STATIC)
   do k = 2, bl_levels
     do i = pdims%i_start, pdims%i_end
-      if ( ( ( cumulus(i) .or. sml_disc_inv(i) >= 1) .and.                 &
-           (k == ntml(i)+1 .or. k == ntml(i)+2) ) .or.                     &
+      if ( ( ( cumulus(i) .or. sml_disc_inv(i) >= 1) .and.                     &
+           (k == ntml(i)+1 .or. k == ntml(i)+2) ) .or.                         &
 
-           ( dsc_disc_inv(i)  >=  1 .and.                                    &
+           ( dsc_disc_inv(i)  >=  1 .and.                                      &
            (k == ntdsc(i)+1 .or. k == ntdsc(i)+2) ) ) then
         rhokh(i,k) = zero
         rhokm(i,k) = zero
@@ -175,10 +175,10 @@ else if (Keep_Ri_FA == except_disc_inv) then
 !$OMP do SCHEDULE(STATIC)
   do k = 2, bl_levels
     do i = pdims%i_start, pdims%i_end
-      if ( ( sml_disc_inv(i)  >=  1 .and.                                    &
-           (k == ntml(i)+1 .or. k == ntml(i)+2) ) .or.                     &
+      if ( ( sml_disc_inv(i)  >=  1 .and.                                      &
+           (k == ntml(i)+1 .or. k == ntml(i)+2) ) .or.                         &
 
-           ( dsc_disc_inv(i)  >=  1 .and.                                    &
+           ( dsc_disc_inv(i)  >=  1 .and.                                      &
            (k == ntdsc(i)+1 .or. k == ntdsc(i)+2) ) ) then
         rhokh(i,k) = (one-weight_1dbl(i,k))*rhokh(i,k)
         rhokm(i,k) = (one-weight_1dbl(i,k))*rhokm(i,k)
@@ -196,10 +196,10 @@ else
 !$OMP do SCHEDULE(STATIC)
   do k = 2, bl_levels
     do i = pdims%i_start, pdims%i_end
-      if ( (cumulus(i) .and. ( (l_param_conv .and. k >  ntml(i))           &
-           .or. (.not. l_param_conv .and. k >= ntml(i)) )) .or.             &
+      if ( (cumulus(i) .and. ( (l_param_conv .and. k >  ntml(i))               &
+           .or. (.not. l_param_conv .and. k >= ntml(i)) )) .or.                &
 
-           ( dsc_disc_inv(i)  >=  1 .and. k  >   ntdsc(i) ) .or.           &
+           ( dsc_disc_inv(i)  >=  1 .and. k  >   ntdsc(i) ) .or.               &
 
            ( sml_disc_inv(i)  >=  1 .and. k  >   ntml(i) ) ) then
         !   This also means no local mixing within any DSC layer
@@ -223,8 +223,8 @@ if (kprof_cu == off) then
   do k = 2, bl_levels
     do i = pdims%i_start, pdims%i_end
 
-      if (cumulus(i) .and. ( (l_param_conv .and. k == ntml(i)+1)           &
-           .or. (.not. l_param_conv .and.                                  &
+      if (cumulus(i) .and. ( (l_param_conv .and. k == ntml(i)+1)               &
+           .or. (.not. l_param_conv .and.                                      &
                        k >= ntml(i) .and. k <  ntml(i)+2) )) then
         rhokhz(i,k)=zero
         rhokmz(i,k)=zero
@@ -309,9 +309,9 @@ end if
 do k = 2, bl_levels
   do i = pdims%i_start, pdims%i_end
 
-    rhokh(i,k) = max( rhokh(i,k) ,                                           &
+    rhokh(i,k) = max( rhokh(i,k) ,                                             &
            weight_1dbl_rho(i,k)*(rhokhz(i,k)+rhokh_top(i,k)) )
-    rhokm(i,k) = max( rhokm(i,k) ,                                           &
+    rhokm(i,k) = max( rhokm(i,k) ,                                             &
            weight_1dbl(i,k)*(rhokmz(i,k)+rhokm_top(i,k)) )
 
   end do ! P_POINTS,i

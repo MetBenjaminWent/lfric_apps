@@ -46,49 +46,49 @@ type(array_dims), intent(in) :: r_dims ! in size of r_X_levels fields
 
 real(kind=real_umphys), intent(in) ::                                          &
  gamma_in(bl_levels),                                                          &
- r_theta_levels(r_dims%i_start:r_dims%i_end,       &
+ r_theta_levels(r_dims%i_start:r_dims%i_end,                                   &
                  0:bl_levels),                                                 &
- r_rho_levels(r_dims%i_start:r_dims%i_end,         &
+ r_rho_levels(r_dims%i_start:r_dims%i_end,                                     &
                bl_levels),                                                     &
                                ! in height of model rho and theta levels
- rhokh_rdz(pdims%i_start:, 2:),                                 &
+ rhokh_rdz(pdims%i_start:, 2:),                                                &
                                ! in Mixing coeff. above surface
                                !    = RHOKH(,K)*RDZ(K)
                                !    for K>=2 (from IMP_SOLVER).
- rhokh_1(pdims%i_start:),                                       &
+ rhokh_1(pdims%i_start:),                                                      &
                                ! in  Surface exchange coeff.
                                !     from P243 (SF_EXCH)
- dtrdz(pdims%i_start:, :),                                      &
+ dtrdz(pdims%i_start:, :),                                                     &
                                ! in  dt/(rho*r*r*dz) for scalar
                                !     flux divergence
- surf_em(pdims%i_start:),                                       &
+ surf_em(pdims%i_start:),                                                      &
                                ! in, Surface emissions in kg/m2/s
- res_factor(pdims%i_start:),                                    &
+ res_factor(pdims%i_start:),                                                   &
                                ! in, dry dep coeff=Ra/(Ra+Rb+Rc)
-  we_lim(pdims%i_start:,:),                                     &
+  we_lim(pdims%i_start:,:),                                                    &
                                ! in rho*entrainment rate implied by
                                !     placing of subsidence
-  zrzi(pdims%i_start:,:),                                       &
+  zrzi(pdims%i_start:,:),                                                      &
                                ! in (z-z_base)/(z_i-z_base)
-  t_frac(pdims%i_start:,:),                                     &
+  t_frac(pdims%i_start:,:),                                                    &
                                ! in a fraction of the timestep
-  we_lim_dsc(pdims%i_start:,:),                                 &
+  we_lim_dsc(pdims%i_start:,:),                                                &
                                ! in rho*entrainment rate implied by
                                !     placing of subsidence
-  zrzi_dsc(pdims%i_start:,:),                                   &
+  zrzi_dsc(pdims%i_start:,:),                                                  &
                                ! in (z-z_base)/(z_i-z_base)
-  t_frac_dsc(pdims%i_start:,:),                                 &
+  t_frac_dsc(pdims%i_start:,:),                                                &
                                ! in a fraction of the timestep
-  z_uv(pdims%i_start:,:),                                       &
+  z_uv(pdims%i_start:,:),                                                      &
                                ! in Z_uv(*,K) is height of half
                                !    level k-1/2.
-  zhsc(pdims%i_start:),                                         &
+  zhsc(pdims%i_start:),                                                        &
                                ! in Top of decoupled layer
   zhnl(pdims%i_start:)
                                ! in Top of surface mixed layer
 
 integer, intent(in) ::                                                         &
-  kent(pdims%i_start:),                                         &
+  kent(pdims%i_start:),                                                        &
                                ! in grid-level of SML inversion
   kent_dsc(pdims%i_start:)
                                ! in grid-level of DSC inversion
@@ -100,7 +100,7 @@ real(kind=real_umphys), intent(in out) ::                                      &
 
 ! out arguments
 real(kind=real_umphys), intent(out) ::                                         &
- f_field(pdims%i_start:,:),                                     &
+ f_field(pdims%i_start:,:),                                                    &
                                ! out Flux of tracer in kg/m2/s.
  surf_dep_flux(pdims%i_start:)
                                ! out, surface deposn flux (kg/m2/s)
@@ -113,10 +113,10 @@ real(kind=real_umphys),parameter:: smallp=tiny(one)
 !   Workspace :-
 
 real(kind=real_umphys) ::                                                      &
- rhok_dep(pdims%i_start:pdims%i_end),                &
+ rhok_dep(pdims%i_start:pdims%i_end),                                          &
                                 ! Surface deposition coeficient
  gamma_rhokh_rdz(pdims%i_start:pdims%i_end,                                    &
-     2:bl_levels),                                                 &
+     2:bl_levels),                                                             &
                          ! gamma*RHOKH_RDZ
  dz_disc,                                                                      &
                          ! Temporary in subgrid zi calculation
@@ -128,7 +128,7 @@ real(kind=real_umphys) ::                                                      &
 
 ! Arrays for vectorisation
 real(kind=real_umphys) ::                                                      &
-        dfield_sml(pdims%i_start:pdims%i_end),       &
+        dfield_sml(pdims%i_start:pdims%i_end),                                 &
                          ! Jump in field across SML inversion
         dfield_dsc(pdims%i_start:pdims%i_end)
                          ! Jump in field across DSC inversion
@@ -170,7 +170,7 @@ do k = 1, bl_levels
   if ( k>1 ) then
     do i = pdims%i_start, pdims%i_end
       gamma_rhokh_rdz(i,k) = gamma_in(k) * rhokh_rdz(i,k)
-      f_field(i,k) = - rhokh_rdz(i,k) *                                    &
+      f_field(i,k) = - rhokh_rdz(i,k) *                                        &
                          (field(i,k) - field(i,k-1))
     end do
   else
@@ -213,16 +213,16 @@ do i = pdims%i_start, pdims%i_end
     dzlkp1  = z_uv(i,k+2) - z_uv(i,k+1)
     dz_disc = z_uv(i,k+2) - zhnl(i)
     if (dz_disc/dzlkp1  >   0.1) then
-      dfield_sml(i) = (field(i,k+1)-field(i,k))                        &
+      dfield_sml(i) = (field(i,k+1)-field(i,k))                                &
                           * dzlkp1 /dz_disc
 
-      if ( field(i,k+2)  >   field(i,k+1) .and.                          &
+      if ( field(i,k+2)  >   field(i,k+1) .and.                                &
                   field(i,k+1)  >   field(i,k) ) then
-        dfield_sml(i) = min( field(i,k+2)-field(i,k),                  &
+        dfield_sml(i) = min( field(i,k+2)-field(i,k),                          &
                                 dfield_sml(i) )
-      else if ( field(i,k+2)  <   field(i,k+1) .and.                     &
+      else if ( field(i,k+2)  <   field(i,k+1) .and.                           &
                 field(i,k+1)  <   field(i,k) ) then
-        dfield_sml(i) = max( field(i,k+2)-field(i,k),                  &
+        dfield_sml(i) = max( field(i,k+2)-field(i,k),                          &
                                 dfield_sml(i) )
       else  ! FIELD non-monotonic
         dfield_sml(i) = field(i,k+1)-field(i,k)
@@ -248,16 +248,16 @@ do i = pdims%i_start, pdims%i_end
     dzlkp1  = z_uv(i,k+2) - z_uv(i,k+1)
     dz_disc = z_uv(i,k+2) - zhsc(i)
     if (dz_disc/dzlkp1  >   0.1) then
-      dfield_dsc(i) = (field(i,k+1)-field(i,k))                        &
+      dfield_dsc(i) = (field(i,k+1)-field(i,k))                                &
                           * dzlkp1 /dz_disc
 
-      if ( field(i,k+2)  >   field(i,k+1) .and.                          &
+      if ( field(i,k+2)  >   field(i,k+1) .and.                                &
             field(i,k+1)  >   field(i,k) ) then
-        dfield_dsc(i) = min( field(i,k+2)-field(i,k),                  &
+        dfield_dsc(i) = min( field(i,k+2)-field(i,k),                          &
                                 dfield_dsc(i) )
-      else if ( field(i,k+2)  <   field(i,k+1) .and.                     &
+      else if ( field(i,k+2)  <   field(i,k+1) .and.                           &
                 field(i,k+1)  <   field(i,k) ) then
-        dfield_dsc(i) = max( field(i,k+2)-field(i,k),                  &
+        dfield_dsc(i) = max( field(i,k+2)-field(i,k),                          &
                                 dfield_dsc(i) )
       else  ! FIELD non-monotonic
         dfield_dsc(i) = field(i,k+1)-field(i,k)
@@ -280,30 +280,30 @@ do ient = 1, 3
   do i = pdims%i_start, pdims%i_end
 
     k = kent(i)-2+ient
-    if ( k > 1 .and. k <= bl_levels .and.                                    &
+    if ( k > 1 .and. k <= bl_levels .and.                                      &
                       t_frac(i,ient) > 0.0) then
       if ( abs(field(i,k)-field(i,k-1)) >= smallp ) then
         dfield_inv = dfield_sml(i)
         ! DFIELD_INV must have same sign as
         ! local gradient to get right sign of flux
-        if ( dfield_sml(i) / (field(i,k)-field(i,k-1))                 &
+        if ( dfield_sml(i) / (field(i,k)-field(i,k-1))                         &
               <   0.0 ) dfield_inv = field(i,k)-field(i,k-1)
-        f_field_ent = t_frac(i,ient) * ( f_field(i,1)                    &
-          - ( we_lim(i,ient) * dfield_inv + f_field(i,1) )               &
+        f_field_ent = t_frac(i,ient) * ( f_field(i,1)                          &
+          - ( we_lim(i,ient) * dfield_inv + f_field(i,1) )                     &
             * zrzi(i,ient) )
         ! interpolation to surface flux must not change the sign
         ! of the entrainment flux otherwise KH will be <0!
-        if ( f_field_ent / (field(i,k)-field(i,k-1))  > 0.0 )            &
-          f_field_ent = - t_frac(i,ient) *                                 &
+        if ( f_field_ent / (field(i,k)-field(i,k-1))  > 0.0 )                  &
+          f_field_ent = - t_frac(i,ient) *                                     &
                     we_lim(i,ient) * dfield_inv * zrzi(i,ient)
         ! Restrict size of RHOKH for numerical safety
         km1 = max( k-1, 2 )
-        gamma_rhokh_rdz(i,k) = gamma_rhokh_rdz(i,k) +                    &
-                min( - gamma_in(k)*f_field_ent/                              &
-                        ( field(i,k)-field(i,k-1) ),                      &
+        gamma_rhokh_rdz(i,k) = gamma_rhokh_rdz(i,k) +                          &
+                min( - gamma_in(k)*f_field_ent/                                &
+                        ( field(i,k)-field(i,k-1) ),                           &
                       10.0*gamma_rhokh_rdz(i,km1) )
         ! Recalculate explicit flux using entrainment KH
-        f_field(i,k) = - (gamma_rhokh_rdz(i,k) / gamma_in(k)) *          &
+        f_field(i,k) = - (gamma_rhokh_rdz(i,k) / gamma_in(k)) *                &
                             (field(i,k) - field(i,k-1))
       end if
     end if
@@ -311,26 +311,26 @@ do ient = 1, 3
   !$OMP end do NOWAIT
 
   !$OMP do SCHEDULE(STATIC)
-  do i = pdims%i_start, pdims%i_end 
+  do i = pdims%i_start, pdims%i_end
     k = kent_dsc(i)-2+ient
     if ( kent_dsc(i) >= 3 .and. k <= bl_levels ) then
-      if ( t_frac_dsc(i,ient) > 0.0                                        &
+      if ( t_frac_dsc(i,ient) > 0.0                                            &
             .and. abs(field(i,k)-field(i,k-1)) >= smallp ) then
         dfield_inv = dfield_dsc(i)
         ! DFIELD_INV must have same sign as
         ! local gradient to get right sign of flux
-        if ( dfield_dsc(i) / (field(i,k)-field(i,k-1))                 &
+        if ( dfield_dsc(i) / (field(i,k)-field(i,k-1))                         &
               <   0.0 ) dfield_inv = field(i,k)-field(i,k-1)
-        f_field_ent = - t_frac_dsc(i,ient) *                               &
+        f_field_ent = - t_frac_dsc(i,ient) *                                   &
             we_lim_dsc(i,ient) * dfield_inv * zrzi_dsc(i,ient)
         ! Restrict size of RHOKH for numerical safety
         km1 = max( k-1, 2 )
-        gamma_rhokh_rdz(i,k) = gamma_rhokh_rdz(i,k) +                    &
-                  min( - gamma_in(k)*f_field_ent/                             &
-                                  ( field(i,k)-field(i,k-1) ),           &
+        gamma_rhokh_rdz(i,k) = gamma_rhokh_rdz(i,k) +                          &
+                  min( - gamma_in(k)*f_field_ent/                              &
+                                  ( field(i,k)-field(i,k-1) ),                 &
                       10.0*gamma_rhokh_rdz(i,km1) )
         ! Recalculate explicit flux using entrainment KH
-        f_field(i,k) = - (gamma_rhokh_rdz(i,k) / gamma_in(k)) *          &
+        f_field(i,k) = - (gamma_rhokh_rdz(i,k) / gamma_in(k)) *                &
                           (field(i,k) - field(i,k-1))
       end if
     end if

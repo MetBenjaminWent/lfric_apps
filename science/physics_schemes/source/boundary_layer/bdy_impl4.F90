@@ -165,7 +165,7 @@ max_threads = 1
 tdims_omp_block  = ceiling(real(tdims%i_len)/max_threads)
 tdims_seg_block = min(tdims_omp_block, tdims%i_len)
 
-!$OMP  PARALLEL DEFAULT(SHARED) private(i,k,ii,at,rbt,gamma1_uv,             &
+!$OMP  PARALLEL DEFAULT(SHARED) private(i,k,ii,at,rbt,gamma1_uv,               &
 !$OMP  gamma2_uv,r_sq)
 if ( .not. l_correct ) then
   !  1st stage: predictor
@@ -187,11 +187,11 @@ if ( .not. l_correct ) then
   ftl(i,1)   = r_sq * ftl(i,1)
   fqw(i,2)   = r_sq * fqw(i,2)
   ftl(i,2)   = r_sq * ftl(i,2)
-  dqw(i,1) = gamma2(i) * ( -dtrdz_charney_grid(i,1) *                        &
+  dqw(i,1) = gamma2(i) * ( -dtrdz_charney_grid(i,1) *                          &
     ( fqw(i,2) - fqw(i,1) ) + dqw_nt(i,1) )
-  dtl(i,1) = gamma2(i) * ( -dtrdz_charney_grid(i,1) *                        &
+  dtl(i,1) = gamma2(i) * ( -dtrdz_charney_grid(i,1) *                          &
     ( ftl(i,2) - ftl(i,1) ) + dtl_nt(i,1) )
-  at = -dtrdz_charney_grid(i,1) *                                            &
+  at = -dtrdz_charney_grid(i,1) *                                              &
         gamma1(i)*rhokh(i,2)*rdz_charney_grid(i,2)
   rbt = 1.0_r_bl / ( 1.0_r_bl - at*( 1.0_r_bl + ct_ctq(i,2) ) )
   dqw(i,1) = rbt*(dqw(i,1) - at*dqw(i,2) )

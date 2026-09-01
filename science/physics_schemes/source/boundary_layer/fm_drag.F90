@@ -73,25 +73,25 @@ integer, intent(in):: land_index(land_pts) ! Index for compressed
                                                ! point to be processed
 
 real(kind=r_bl), intent(in)::                                                  &
- u_p(pdims%i_start:pdims%i_end,bl_levels),           &
+ u_p(pdims%i_start:pdims%i_end,bl_levels),                                     &
                                     ! Wind component in x direction
                                     ! horizontally interpolated to
                                     ! P-grid (m/s)
- v_p(pdims%i_start:pdims%i_end,bl_levels),           &
+ v_p(pdims%i_start:pdims%i_end,bl_levels),                                     &
                                     ! Wind component in y direction
                                     ! horizontally interpolated to
                                     ! P-grid (m/s)
- tl(tdims%i_start:tdims%i_end, bl_levels),           &
+ tl(tdims%i_start:tdims%i_end, bl_levels),                                     &
                                     ! Ice/liquid water temperature
- qw(tdims%i_start:tdims%i_end, bl_levels),           &
+ qw(tdims%i_start:tdims%i_end, bl_levels),                                     &
                                     ! Total water content
- bt_gb(tdims%i_start:tdims%i_end,bl_levels),         &
+ bt_gb(tdims%i_start:tdims%i_end,bl_levels),                                   &
                                     ! grid-box mean buoyancy param for
                                     ! tl on th-levels
- bq_gb(tdims%i_start:tdims%i_end,bl_levels),         &
+ bq_gb(tdims%i_start:tdims%i_end,bl_levels),                                   &
                                     ! grid-box mean buoyancy param for
                                     ! qw on th-levels
- rho_wet_tq(tdims%i_start:tdims%i_end,               &
+ rho_wet_tq(tdims%i_start:tdims%i_end,                                         &
             bl_levels),                                                        &
                                     ! For a vertically staggered grid
                                     ! with a u,v-level first above the
@@ -105,7 +105,7 @@ real(kind=r_bl), intent(in)::                                                  &
                                     ! BL_LEVELS.
                                     ! (Value for BL_LEVELS not used
                                     ! in either case.)
- z_uv(pdims%i_start:pdims%i_end,bl_levels+1),        &
+ z_uv(pdims%i_start:pdims%i_end,bl_levels+1),                                  &
                                     ! For a vertically staggered grid
                                     ! with a u,v-level first above the
                                     ! surface, Z_UV(*,K) is the height
@@ -117,7 +117,7 @@ real(kind=r_bl), intent(in)::                                                  &
                                     ! input to elements 1 to BL_LEVELS
                                     ! (1st value not used in either
                                     !  case.)
- z_tq(tdims%i_start:tdims%i_end,bl_levels),          &
+ z_tq(tdims%i_start:tdims%i_end,bl_levels),                                    &
                                     ! For a vertically staggered grid
                                     ! with a u,v-level first above the
                                     ! surface, Z_TQ(*,K) is the height
@@ -129,12 +129,12 @@ real(kind=r_bl), intent(in)::                                                  &
                                     ! input to elements 1 to BL_LEVELS
                                     ! (Value for BL_LEVELS not used
                                     ! in either case.)
- z0m(tdims%i_start:tdims%i_end),                     &
+ z0m(tdims%i_start:tdims%i_end),                                               &
                                     ! Roughness length for momentum (m
- zh(tdims%i_start:tdims%i_end),                      &
+ zh(tdims%i_start:tdims%i_end),                                                &
                                     ! Boundary layer height (actually
                                     ! ZH_PREV)
- rib_surf(tdims%i_start:tdims%i_end),                &
+ rib_surf(tdims%i_start:tdims%i_end),                                          &
                                     ! Bulk Richardson number for
                                     ! lowest layer
  sil_orog_land(land_pts)
@@ -142,10 +142,10 @@ real(kind=r_bl), intent(in)::                                                  &
                                     ! orography per unit hoz. area
 
 real(kind=r_bl), intent(out)::                                                 &
- tau_fd_x(tdims%i_start:tdims%i_end,                 &
+ tau_fd_x(tdims%i_start:tdims%i_end,                                           &
           bl_levels),                                                          &
                                          ! X-comp of orographic stress
- tau_fd_y(tdims%i_start:tdims%i_end,                 &
+ tau_fd_y(tdims%i_start:tdims%i_end,                                           &
           bl_levels) ! Y-comp of orographic stress
                                          ! (N/m^2)
 
@@ -237,7 +237,7 @@ end if
 ! 0. Set stresses to zero
 !------------------------------------------------------------------
 !$OMP PARALLEL DEFAULT(none)                                                   &
-!$OMP private(i,l,height_fac,wta,wtb,rib_fn,zeta,tausx,tausy,k,              &
+!$OMP private(i,l,height_fac,wta,wtb,rib_fn,zeta,tausx,tausy,k,                &
 !$OMP         fp_x_low, fp_y_low,fp_x_steep,fp_y_steep)                        &
 !$OMP SHARED(bl_levels,tdims,tau_fd_x, tau_fd_y,land_pts,land_index,h_m,       &
 !$OMP        k_for_buoy,u_hm,v_hm,tl_hm,qw_hm,rib,z_uv,v_p,fd_stability_dep,   &
@@ -289,9 +289,9 @@ if (land_pts > 0) then
       if (h_m(l) <= z_uv(i,k) .and. h_m(l) >= z_uv(i,k-1)) then
 
         k_for_buoy(l) = k-1   ! theta-level below that containing h_m
-        wta = ( h_m(l) - z_uv(i,k-1) )                                       &
+        wta = ( h_m(l) - z_uv(i,k-1) )                                         &
                  /( z_uv(i,k) - z_uv(i,k-1) )
-        wtb = ( z_uv(i,k) - h_m(l) )                                         &
+        wtb = ( z_uv(i,k) - h_m(l) )                                           &
                  /( z_uv(i,k) - z_uv(i,k-1) )
         u_hm(l) = wta*u_p(i,k) + wtb*u_p(i,k-1)
         v_hm(l) = wta*v_p(i,k) + wtb*v_p(i,k-1)
@@ -308,9 +308,9 @@ if (land_pts > 0) then
       do l = 1, land_pts
         i = land_index_i(l)
         if ( h_m(l)<=z_tq(i,k) .and. h_m(l)>=z_tq(i,k-1) ) then
-          wta = ( h_m(l) - z_tq(i,k-1) )                                     &
+          wta = ( h_m(l) - z_tq(i,k-1) )                                       &
                       /( z_tq(i,k) - z_tq(i,k-1) )
-          wtb = ( z_tq(i,k) - h_m(l)   )                                     &
+          wtb = ( z_tq(i,k) - h_m(l)   )                                       &
                       /( z_tq(i,k) - z_tq(i,k-1) )
           tl_hm(l) = wta*tl(i,k) + wtb*tl(i,k-1)
           qw_hm(l) = wta*qw(i,k) + wtb*qw(i,k-1)
@@ -324,13 +324,13 @@ if (land_pts > 0) then
       if (k_for_buoy(l) > 1) then
         k = k_for_buoy(l)
         i = land_index_i(l)
-        db_surf(l) = rib_surf(i)*z_tq(i,1)*                                &
-                     (u_p(i,1)*u_p(i,1)+v_p(i,1)*v_p(i,1))/            &
+        db_surf(l) = rib_surf(i)*z_tq(i,1)*                                    &
+                     (u_p(i,1)*u_p(i,1)+v_p(i,1)*v_p(i,1))/                    &
                      (z_uv(i,1)*z_uv(i,1))
         rib(l) = h_m(l)*(                                                      &
-            g*( bt_gb(i,k)*( tl_hm(l)-tl(i,1)+                             &
-                               grcp*(h_m(l)-z_tq(i,1)) )                     &
-              + bq_gb(i,k)*(qw_hm(l)-qw(i,1)) ) + db_surf(l) )/            &
+            g*( bt_gb(i,k)*( tl_hm(l)-tl(i,1)+                                 &
+                               grcp*(h_m(l)-z_tq(i,1)) )                       &
+              + bq_gb(i,k)*(qw_hm(l)-qw(i,1)) ) + db_surf(l) )/                &
                       max(1.0e-12_r_bl, (u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l)) )
       end if
     end do ! land_pts
@@ -369,10 +369,10 @@ if (land_pts > 0) then
             sqrt(u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l))
       tausy=(vkman/zeta)*(vkman/zeta)*v_hm(l)*                                 &
             sqrt(u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l))
-      fp_x(l) = rho_wet_tq(i,1)*alpha*beta*pi_squared                        &
+      fp_x(l) = rho_wet_tq(i,1)*alpha*beta*pi_squared                          &
               *sil_orog_land(l)*sil_orog_land(l)                               &
               *rib_fn*tausx
-      fp_y(l) = rho_wet_tq(i,1)*alpha*beta*pi_squared                        &
+      fp_y(l) = rho_wet_tq(i,1)*alpha*beta*pi_squared                          &
               *sil_orog_land(l)*sil_orog_land(l)                               &
               *rib_fn*tausy
     else if (fd_hill_option == steep_hill) then
@@ -381,9 +381,9 @@ if (land_pts > 0) then
 
       tausx=u_hm(l)*sqrt(u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l))
       tausy=v_hm(l)*sqrt(u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l))
-      fp_x(l)=one_half*rho_wet_tq(i,1)*orog_drag_param*                      &
+      fp_x(l)=one_half*rho_wet_tq(i,1)*orog_drag_param*                        &
               sil_orog_land(l)*rib_fn*tausx
-      fp_y(l)=one_half*rho_wet_tq(i,1)*orog_drag_param*                      &
+      fp_y(l)=one_half*rho_wet_tq(i,1)*orog_drag_param*                        &
               sil_orog_land(l)*rib_fn*tausy
 
     else if (fd_hill_option == capped_lowhill) then
@@ -392,19 +392,19 @@ if (land_pts > 0) then
 
       tausx=u_hm(l)*sqrt(u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l))
       tausy=v_hm(l)*sqrt(u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l))
-      fp_x_steep=one_half*rho_wet_tq(i,1)*orog_drag_param*                   &
+      fp_x_steep=one_half*rho_wet_tq(i,1)*orog_drag_param*                     &
                  sil_orog_land(l)*rib_fn*tausx
-      fp_y_steep=one_half*rho_wet_tq(i,1)*orog_drag_param*                   &
+      fp_y_steep=one_half*rho_wet_tq(i,1)*orog_drag_param*                     &
                  sil_orog_land(l)*rib_fn*tausy
 
       ! Compute Wood and Mason (1993) low-hill drag expression
 
       tausx=(vkman/zeta)*(vkman/zeta)*tausx
       tausy=(vkman/zeta)*(vkman/zeta)*tausy
-      fp_x_low = rho_wet_tq(i,1)*alpha*beta*pi_squared                       &
+      fp_x_low = rho_wet_tq(i,1)*alpha*beta*pi_squared                         &
               *sil_orog_land(l)*sil_orog_land(l)                               &
               *rib_fn*tausx
-      fp_y_low = rho_wet_tq(i,1)*alpha*beta*pi_squared                       &
+      fp_y_low = rho_wet_tq(i,1)*alpha*beta*pi_squared                         &
               *sil_orog_land(l)*sil_orog_land(l)                               &
               *rib_fn*tausy
 

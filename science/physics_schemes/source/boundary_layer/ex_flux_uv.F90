@@ -40,8 +40,10 @@ implicit none
 ! ARGUMENTS WITH intent in. IE: INPUT VARIABLES.
 
 type(array_dims), intent(in) ::                                                &
-   dimsi,      & ! Array dimensions for the inputs
-   dimsi_s,    & ! Array dimensions for input u or v (has halos).
+   dimsi,                                                                      &
+   ! Array dimensions for the inputs
+   dimsi_s,                                                                    &
+   ! Array dimensions for input u or v (has halos).
    dimso         ! Array dimensions for the outputs and work variables
 
 integer, intent(in) :: bl_levels
@@ -51,27 +53,27 @@ integer, intent(in) :: bl_levels
 
 real(kind=r_bl), intent(in) ::                                                 &
   rdz_u_v (dimsi%i_start:dimsi%i_end,                                          &
-       2:bl_levels),                                                       &
+       2:bl_levels),                                                           &
 !                                in Reciprocal of the vertical
 !                                   distance from level K-1 to
 !                                   level K. (K > 1) on wind levels
     rhokm_u_v (dimsi%i_start:dimsi%i_end,                                      &
-         bl_levels),                                                     &
+         bl_levels),                                                           &
 !                                in Exchange coefficients for
 !                                   momentum, on UV-grid with
 !                                   first and last j_end ignored.
 !                                   for K>=2 (from KMKH).
     f_ngstress_uv(dimsi%i_start:dimsi%i_end,                                   &
-          2:bl_levels),                                                &
+          2:bl_levels),                                                        &
 !                                in dimensionless function for
                                !    non-gradient wind stress,
                                !    either U or V depending on call
     u_v (dimsi_s%i_start:dimsi_s%i_end,                                        &
-     bl_levels),                                                           &
+     bl_levels),                                                               &
 !                                in Westerly_Southerly component of
 !                                   wind.
     tau_xy_fd_uv(dimsi%i_start:dimsi%i_end,                                    &
-         bl_levels),                                                   &
+         bl_levels),                                                           &
                                ! in X/Y-component of form-drag stress
                                !    at a UV point
     zhnl(dimso%i_start:dimso%i_end)    ! in non-local BL depth

@@ -55,10 +55,10 @@ integer, intent(in) ::                                                         &
  bl_levels,                                                                    &
                             ! in No. of atmospheric levels for which
 !                                boundary layer fluxes are calculated.
-   ntml(pdims%i_start:pdims%i_end),                  &
+   ntml(pdims%i_start:pdims%i_end),                                            &
                               ! in Number of model layers in turbulent
 !                                  mixing layer.
-   ntdsc(pdims%i_start:pdims%i_end),                 &
+   ntdsc(pdims%i_start:pdims%i_end),                                           &
                               ! in Top level for turb mixing in any
 !                                  decoupled Sc layer
    nbdsc(pdims%i_start:pdims%i_end)
@@ -74,29 +74,29 @@ logical, intent(in) ::                                                         &
 !     Declaration of new BL diagnostics.
 type (strnewbldiag), intent(in out) :: BL_diag
 real(kind=r_bl), intent(in) ::                                                 &
-  tl(tdims%i_start:tdims%i_end, bl_levels),          &
+  tl(tdims%i_start:tdims%i_end, bl_levels),                                    &
                             ! in Liquid/frozen water temperture (K)
-  qw(tdims%i_start:tdims%i_end, bl_levels),          &
+  qw(tdims%i_start:tdims%i_end, bl_levels),                                    &
                             ! in Total water content (kg/kg)
-  rhokh(tdims%i_start:tdims%i_end,                   &
+  rhokh(tdims%i_start:tdims%i_end,                                             &
         bl_levels),                                                            &
                             ! in Exchange coeffs for scalars
-  rhokhz(pdims%i_start:pdims%i_end,                  &
+  rhokhz(pdims%i_start:pdims%i_end,                                            &
          2:bl_levels),                                                         &
                             ! in Non-local turbulent mixing
                             !    coefficient for heat and moisture
-  weight_1dbl(pdims%i_start:pdims%i_end,             &
+  weight_1dbl(pdims%i_start:pdims%i_end,                                       &
               bl_levels),                                                      &
                             ! in Weighting applied to 1D BL scheme,
                             !    to blend with Smagorinsky scheme
-  rdz(pdims%i_start:pdims%i_end,bl_levels),          &
+  rdz(pdims%i_start:pdims%i_end,bl_levels),                                    &
                             ! in RDZ(,1) is the reciprocal
                             !     height of level 1, i.e. of the
                             !     middle of layer 1.  For K > 1,
                             !     RDZ(,K) is the reciprocal of the
                             !     vertical distance from level
                             !     K-1 to level K.
-  grad_t_adj(pdims%i_start:pdims%i_end),             &
+  grad_t_adj(pdims%i_start:pdims%i_end),                                       &
                             ! in Temperature gradient adjustmenent
                             !    for non-local mixing in unstable
                             !    turbulent boundary layer.
@@ -106,34 +106,34 @@ real(kind=r_bl), intent(in) ::                                                 &
 !                                  turbulent boundary layer.
 
 real(kind=r_bl), intent(in) ::                                                 &
-  ft_nt(pdims%i_start:pdims%i_end,                   &
+  ft_nt(pdims%i_start:pdims%i_end,                                             &
         bl_levels+1),                                                          &
                             ! in Non-turbulent heat and moisture flux
-  fq_nt(pdims%i_start:pdims%i_end,                   &
+  fq_nt(pdims%i_start:pdims%i_end,                                             &
         bl_levels+1)        !    (on rho levels, surface flux(K=1)=0)
 real(kind=r_bl), intent(in) ::                                                 &
-  rhof2(pdims%i_start:pdims%i_end,                   &
+  rhof2(pdims%i_start:pdims%i_end,                                             &
         2:bl_levels),                                                          &
                             ! in f2 and fsc term shape profiles
-  rhofsc(pdims%i_start:pdims%i_end,                  &
+  rhofsc(pdims%i_start:pdims%i_end,                                            &
          2:bl_levels)
 real(kind=r_bl), intent(in) ::                                                 &
-  tothf_zh(pdims%i_start:pdims%i_end),               &
+  tothf_zh(pdims%i_start:pdims%i_end),                                         &
                             ! in Total heat fluxes at inversions
-  tothf_zhsc(pdims%i_start:pdims%i_end),             &
+  tothf_zhsc(pdims%i_start:pdims%i_end),                                       &
 
-  totqf_zh(pdims%i_start:pdims%i_end),               &
+  totqf_zh(pdims%i_start:pdims%i_end),                                         &
                             ! in Total moisture fluxes at inversions
-  totqf_zhsc(pdims%i_start:pdims%i_end),             &
+  totqf_zhsc(pdims%i_start:pdims%i_end),                                       &
 
-  ft_nt_dscb(pdims%i_start:pdims%i_end),             &
+  ft_nt_dscb(pdims%i_start:pdims%i_end),                                       &
                             ! in Non-turbulent heat and moisture flux
   fq_nt_dscb(pdims%i_start:pdims%i_end)
                             !      at the base of the DSC layer.
 
 ! ARGUMENTS WITH intent INOUT.
 real(kind=r_bl), intent(in out) ::                                             &
-  ftl(pdims%i_start:pdims%i_end, bl_levels),         &
+  ftl(pdims%i_start:pdims%i_end, bl_levels),                                   &
                            ! INOUT FTL(,K) contains net turb
 !                                   sensible heat flux into layer K
 !                                   from below; so FTL(,1) is the
@@ -272,9 +272,9 @@ do k = 2, bl_levels
   ! 1. "Explicit" fluxes of TL and QW, on P-grid.
   !-----------------------------------------------------------------------
   do i = pdims%i_start, pdims%i_end
-    grad_ftl = - rhokh(i,k) *                                                &
+    grad_ftl = - rhokh(i,k) *                                                  &
       ( ( ( tl(i,k) - tl(i,k-1) ) * rdz(i,k) ) + grcp )
-    grad_fqw = - rhokh(i,k) *                                                &
+    grad_fqw = - rhokh(i,k) *                                                  &
           ( qw(i,k) - qw(i,k-1) ) * rdz(i,k)
 
       ! Copy down gradient flux into BL diagnostics array
@@ -312,9 +312,9 @@ do k = 2, bl_levels
       !  within the surface-based mixed layer.
       !-------------------------------------------------------------
     if (k  <=  ntml(i) + p1 ) then
-      non_grad_ftl = weight_1dbl(i,k) *                                      &
+      non_grad_ftl = weight_1dbl(i,k) *                                        &
                                  rhokhz(i,k) * grad_t_adj(i)
-      non_grad_fqw = weight_1dbl(i,k) *                                      &
+      non_grad_fqw = weight_1dbl(i,k) *                                        &
                                  rhokhz(i,k) * grad_q_adj(i)
       ftl(i,k) = ftl(i,k) + non_grad_ftl
       fqw(i,k) = fqw(i,k) + non_grad_fqw
@@ -343,8 +343,8 @@ if (l_wtrac) then
 !$OMP do SCHEDULE(STATIC)
     do k = 2, bl_levels
       do i = pdims%i_start, pdims%i_end
-        grad_fqw = - rhokh(i,k) *                                            &
-          ( wtrac_bl(i_wt)%qw(i,k) - wtrac_bl(i_wt)%qw(i,k-1) )              &
+        grad_fqw = - rhokh(i,k) *                                              &
+          ( wtrac_bl(i_wt)%qw(i,k) - wtrac_bl(i_wt)%qw(i,k-1) )                &
             * rdz(i,k)
         !-------------------------------------------------------------
         ! Entrainment fluxes were specified directly in FQW in
@@ -359,9 +359,9 @@ if (l_wtrac) then
         !  within the surface-based mixed layer.
         !-------------------------------------------------------------
         if (k  <=  ntml(i) + p1 ) then
-          non_grad_fqw = weight_1dbl(i,k) *                                  &
+          non_grad_fqw = weight_1dbl(i,k) *                                    &
                         rhokhz(i,k) * wtrac_bl(i_wt)%grad_q_adj(i)
-          wtrac_bl(i_wt)%fqw(i,k) = wtrac_bl(i_wt)%fqw(i,k)                  &
+          wtrac_bl(i_wt)%fqw(i,k) = wtrac_bl(i_wt)%fqw(i,k)                    &
                                       + non_grad_fqw
         end if
       end do
@@ -381,12 +381,12 @@ if (flux_grad  ==  LockWhelan2006) then
       if ( k  <=  ntml(i) + p1) then
         f2_ftl  = rhof2(i,k)  * tothf_zh(i)
         fsc_ftl = rhofsc(i,k) * tothf_zh(i)
-        ftl(i,k)   = ftl(i,k) + weight_1dbl(i,k) *                           &
+        ftl(i,k)   = ftl(i,k) + weight_1dbl(i,k) *                             &
                    ( f2_ftl + fsc_ftl - ft_nt(i,k) )
 
         f2_fqw  = rhof2(i,k)  * totqf_zh(i)
         fsc_fqw = rhofsc(i,k) * totqf_zh(i)
-        fqw(i,k)   = fqw(i,k) + weight_1dbl(i,k) *                           &
+        fqw(i,k)   = fqw(i,k) + weight_1dbl(i,k) *                             &
                    ( f2_fqw + fsc_fqw - fq_nt(i,k) )
 
         if (scm_bl_diags) then
@@ -400,20 +400,20 @@ if (flux_grad  ==  LockWhelan2006) then
 
       if ( k  <=  ntdsc(i) .and. k >= nbdsc(i) ) then
 
-        f2_ftl  = rhof2(i,k)  *                                              &
+        f2_ftl  = rhof2(i,k)  *                                                &
                           ( tothf_zhsc(i)-ft_nt_dscb(i) )
-        fsc_ftl = rhofsc(i,k) *                                              &
+        fsc_ftl = rhofsc(i,k) *                                                &
                           ( tothf_zhsc(i)-ft_nt_dscb(i) )
-        ftl(i,k)   = ftl(i,k) + weight_1dbl(i,k) *                           &
-                   ( f2_ftl + fsc_ftl                                        &
+        ftl(i,k)   = ftl(i,k) + weight_1dbl(i,k) *                             &
+                   ( f2_ftl + fsc_ftl                                          &
                        - ( ft_nt(i,k)-ft_nt_dscb(i) ) )
 
-        f2_fqw  = rhof2(i,k)  *                                              &
+        f2_fqw  = rhof2(i,k)  *                                                &
                           ( totqf_zhsc(i)-fq_nt_dscb(i) )
-        fsc_fqw = rhofsc(i,k) *                                              &
+        fsc_fqw = rhofsc(i,k) *                                                &
                           ( totqf_zhsc(i)-fq_nt_dscb(i) )
-        fqw(i,k)   = fqw(i,k) + weight_1dbl(i,k) *                           &
-                   ( f2_fqw + fsc_fqw                                        &
+        fqw(i,k)   = fqw(i,k) + weight_1dbl(i,k) *                             &
+                   ( f2_fqw + fsc_fqw                                          &
                        - ( fq_nt(i,k)-fq_nt_dscb(i) ) )
 
         if (scm_bl_diags) then

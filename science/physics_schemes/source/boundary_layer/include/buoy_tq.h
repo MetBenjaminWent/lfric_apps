@@ -45,22 +45,22 @@ real(kind=prec), intent(out) ::                                                &
     bl_levels),                                                                &
                               ! out A buoyancy parameter for clear air
  bq_cld(tdims%i_start:tdims%i_end,                                             &
-    bl_levels),                                                            &
+    bl_levels),                                                                &
                             ! out A buoyancy parameter for cloudy air
  bt_cld(tdims%i_start:tdims%i_end,                                             &
-    bl_levels),                                                            &
+    bl_levels),                                                                &
                             ! out A buoyancy parameter for cloudy air
  bq_gb(tdims%i_start:tdims%i_end,                                              &
-   bl_levels),                                                             &
+   bl_levels),                                                                 &
                               ! out A grid-box mean buoyancy parameter
  bt_gb(tdims%i_start:tdims%i_end,                                              &
-   bl_levels),                                                             &
+   bl_levels),                                                                 &
                               ! out A grid-box mean buoyancy parameter
  a_qs(tdims%i_start:tdims%i_end,                                               &
-   bl_levels),                                                             &
+   bl_levels),                                                                 &
                             ! out Saturated lapse rate factor
  a_dqsdt(tdims%i_start:tdims%i_end,                                            &
-     bl_levels),                                                           &
+     bl_levels),                                                               &
                             ! out Saturated lapse rate factor
  dqsdt(tdims%i_start:tdims%i_end,                                              &
    bl_levels)
@@ -68,9 +68,10 @@ real(kind=prec), intent(out) ::                                                &
 
 ! LOCAL VARIABLES.
 real(kind=prec) ::                                                             &
- qs(tdims%i_start:tdims%i_end), & ! WORK Saturated mixing ratio.
- tmp1(tdims%i_start:tdims%i_end), & ! TEMP array to contain lc or ls
-
+ qs(tdims%i_start:tdims%i_end),                                                &
+ ! WORK Saturated mixing ratio.
+ tmp1(tdims%i_start:tdims%i_end),                                              &
+ ! TEMP array to contain lc or ls
  tmp2(tdims%i_start:tdims%i_end) ! TEMP array to contain lcrcp or lsrcp
 
 integer ::                                                                     &
@@ -142,11 +143,11 @@ do k = 1, bl_levels
 
   do i = tdims%i_start, tdims%i_end
     bt(i,k) = 1.0_prec/t(i,k)
-    bq(i,k) =                                                                &
+    bq(i,k) =                                                                  &
       c_virtual/(1.0_prec+c_virtual*q(i,k)-qcl(i,k)-qcf(i,k))
 
 
-    dqsdt(i,k) = (repsilon * tmp1(i) * qs(i))                                &
+    dqsdt(i,k) = (repsilon * tmp1(i) * qs(i))                                  &
                  / ( r * t(i,k) * t(i,k) )
 
 
@@ -167,9 +168,9 @@ do k = 1, bl_levels
     ! 1.4 Calculate grid-box mean buoyancy parameters.
     !--------------------------------------------------------------
 
-    bt_gb(i,k) = bt(i,k) +                                                   &
+    bt_gb(i,k) = bt(i,k) +                                                     &
                    cf_bulk(i,k)*( bt_cld(i,k) - bt(i,k) )
-    bq_gb(i,k) = bq(i,k) +                                                   &
+    bq_gb(i,k) = bq(i,k) +                                                     &
                    cf_bulk(i,k)*( bq_cld(i,k) - bq(i,k) )
 
   end do ! p_points,i

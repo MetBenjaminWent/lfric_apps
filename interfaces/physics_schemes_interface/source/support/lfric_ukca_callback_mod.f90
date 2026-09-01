@@ -188,11 +188,11 @@ do k = 1, nlev_ent_tr_mix
   end do
 end do
 
-call tr_mix( r_theta_levels_1D, r_rho_levels_1D, pdims, bl_levels,      &
-             alpha_cd, rhokh_rdz_1D, rhokh_1, dtrdz_1D, surf_em_1D,      &
-             res_factor, kent_1D, we_lim_1D, t_frac_1D, zrzi_1D,         &
-             kent_dsc_1D, we_lim_dsc_1D, t_frac_dsc_1D, zrzi_dsc_1D,     &
-             zhnl_1D, zhsc_1D, z_uv_1D,                                   &
+call tr_mix( r_theta_levels_1D, r_rho_levels_1D, pdims, bl_levels,             &
+             alpha_cd, rhokh_rdz_1D, rhokh_1, dtrdz_1D, surf_em_1D,            &
+             res_factor, kent_1D, we_lim_1D, t_frac_1D, zrzi_1D,               &
+             kent_dsc_1D, we_lim_dsc_1D, t_frac_dsc_1D, zrzi_dsc_1D,           &
+             zhnl_1D, zhsc_1D, z_uv_1D,                                        &
              ! Output fields
              field_1D, f_field_1D, surf_dep_flux_1D)
 

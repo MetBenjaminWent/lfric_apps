@@ -75,47 +75,47 @@ integer, intent(in) ::                                                         &
                  ! IN num of levs requiring log-profile correction
 
 integer, intent(in) ::                                                         &
- ntml_nl(pdims%i_start:pdims%i_end),                 &
+ ntml_nl(pdims%i_start:pdims%i_end),                                           &
                  ! IN Number of model layers in the turbulently
                  !    mixed layer as determined from the non-local
                  !    scheme.
- ntdsc(pdims%i_start:pdims%i_end),                   &
+ ntdsc(pdims%i_start:pdims%i_end),                                             &
                  ! IN Top level of any decoupled Sc
- nbdsc(pdims%i_start:pdims%i_end),                   &
+ nbdsc(pdims%i_start:pdims%i_end),                                             &
                  ! IN Bottom level of any decoupled Sc layer.
  ntpar(pdims%i_start:pdims%i_end)
                  ! IN Top level of parcel ascent
 
 real(kind=r_bl), intent(in) ::                                                 &
- sigma_h(pdims%i_start:pdims%i_end),                 &
+ sigma_h(pdims%i_start:pdims%i_end),                                           &
                  ! IN Standard deviation of subgrid
                  !    orography (m)
- rho_wet_tq(tdims%i_start:tdims%i_end,bl_levels),                             &
+ rho_wet_tq(tdims%i_start:tdims%i_end,bl_levels),                              &
                  ! IN density on theta levels;
                  !    used in RHOKM so wet density
- rmlmax2(pdims%i_start:pdims%i_end,bl_levels),       &
+ rmlmax2(pdims%i_start:pdims%i_end,bl_levels),                                 &
                  ! IN Square of asymptotic mixing length for Smagorinsky scheme
- z_uv(pdims%i_start:pdims%i_end,bl_levels+1),        &
+ z_uv(pdims%i_start:pdims%i_end,bl_levels+1),                                  &
                  ! IN Z_UV(K) is height of u level k
- z_tq(tdims%i_start:tdims%i_end,bl_levels),          &
+ z_tq(tdims%i_start:tdims%i_end,bl_levels),                                    &
                  ! IN Z_TQ(K) is height of T,Q level k
                  !    NOTE: RI(K) is held at Z_TQ(K-1)
- zhnl(pdims%i_start:pdims%i_end),                    &
+ zhnl(pdims%i_start:pdims%i_end),                                              &
                  ! IN Height of top of surface-driven non-local mixing
- zhpar(pdims%i_start:pdims%i_end),                   &
+ zhpar(pdims%i_start:pdims%i_end),                                             &
                  ! IN Height of top of initial parcel ascent
- zhsc(pdims%i_start:pdims%i_end),                    &
- zdsc_base(pdims%i_start:pdims%i_end),               &
+ zhsc(pdims%i_start:pdims%i_end),                                              &
+ zdsc_base(pdims%i_start:pdims%i_end),                                         &
                  ! IN Base and top heights of decoupled Sc-layer
- z0m(pdims%i_start:pdims%i_end),                     &
+ z0m(pdims%i_start:pdims%i_end),                                               &
                  ! IN Roughness length for momentum (m).
- dvdzm(tdims%i_start:tdims%i_end,2:bl_levels),                                &
+ dvdzm(tdims%i_start:tdims%i_end,2:bl_levels),                                 &
                  ! IN Modulus of wind shear.
- ri(tdims%i_start:tdims%i_end,2:bl_levels),          &
+ ri(tdims%i_start:tdims%i_end,2:bl_levels),                                    &
                  ! IN Local Richardson number.
- flandg(pdims_s%i_start:pdims_s%i_end),          &
+ flandg(pdims_s%i_start:pdims_s%i_end),                                        &
                  ! IN Land fraction on all tiles.
- rneutml_sq(tdims%i_start:tdims%i_end,bl_levels),    &
+ rneutml_sq(tdims%i_start:tdims%i_end,bl_levels),                              &
                  ! IN Square of the neutral mixing length for Smagorinsky
  delta_smag(tdims%i_start:tdims%i_end)
                  ! IN delta_x used by Smagorinsky
@@ -140,11 +140,11 @@ real(kind=r_bl), intent(in out) ::                                             &
                  !       index k held on theta level (k-1)
 ! out arguments
 real(kind=r_bl), intent(out) ::                                                &
- rhokm(pdims_s%i_start:pdims_s%i_end,bl_levels),                              &
+ rhokm(pdims_s%i_start:pdims_s%i_end,bl_levels),                               &
                  ! OUT Layer K-1 - to - layer K exchange coefficient
                  !       for momentum, on UV-grid with first and last
                  !       levels set to "missing data"
- rhokh(pdims%i_start:pdims%i_end,bl_levels),                                  &
+ rhokh(pdims%i_start:pdims%i_end,bl_levels),                                   &
                  ! OUT Layer K-1 - to - layer K exchange coefficient
                  !       for scalars (but currently on th-levels)
                  ! On out: still to be multiplied by rho(if l_mr_physics)
@@ -162,17 +162,17 @@ integer, intent(out) ::                                                        &
 real(kind=r_bl), intent(out) ::                                                &
  lambda_min,                                                                   &
                  ! OUT Min value of length scale LAMBDA.
- fm_3d(tdims%i_start:tdims%i_end,bl_levels),         &
+ fm_3d(tdims%i_start:tdims%i_end,bl_levels),                                   &
                  ! OUT stability function for momentum transport.
                  !     level 1 value is dummy for use in diagnostics
- fh_3d(tdims%i_start:tdims%i_end,bl_levels),         &
+ fh_3d(tdims%i_start:tdims%i_end,bl_levels),                                   &
                  ! OUT stability function for heat and moisture.
                  !     level 1 value is dummy for use in diagnostics
- tke_loc(pdims%i_start:pdims%i_end,2:bl_levels),                              &
+ tke_loc(pdims%i_start:pdims%i_end,2:bl_levels),                               &
                  ! OUT Ri-based scheme diagnosed TKE
- elm(tdims%i_start:tdims%i_end,2:bl_levels),         &
+ elm(tdims%i_start:tdims%i_end,2:bl_levels),                                   &
                  ! OUT Mixing length for momentum
- elh(tdims%i_start:tdims%i_end,2:bl_levels),         &
+ elh(tdims%i_start:tdims%i_end,2:bl_levels),                                   &
                  ! OUT Mixing length for scalars on theta levels
  elh_rho(tdims%i_start:tdims%i_end,2:bl_levels)
                  ! OUT Mixing length for scalars on rho levels
@@ -212,18 +212,18 @@ parameter (                                                                    &
 
 !  Define local storage.
 real(kind=r_bl) ::                                                             &
- ricrit(pdims%i_start:pdims%i_end),                  &
+ ricrit(pdims%i_start:pdims%i_end),                                            &
                  ! Critical Richardson number
- func(pdims%i_start:pdims%i_end),                    &
+ func(pdims%i_start:pdims%i_end),                                              &
                  ! 2D variable for SBL stabiliy function options
- sharp(pdims%i_start:pdims%i_end),                   &
+ sharp(pdims%i_start:pdims%i_end),                                             &
                  ! 2D variable for SHARP stabiliy function
- prandtl_number(pdims%i_start:pdims%i_end),          &
+ prandtl_number(pdims%i_start:pdims%i_end),                                    &
                  ! = KM/KH (currently only calculated for stable)
- BL_weight(pdims%i_start:pdims%i_end,bl_levels),                              &
+ BL_weight(pdims%i_start:pdims%i_end,bl_levels),                               &
                  ! Fractional weight applied to
                  ! BL function, vs free atmos
- turb_length(pdims%i_start:pdims%i_end,2:bl_levels+1),                        &
+ turb_length(pdims%i_start:pdims%i_end,2:bl_levels+1),                         &
                  ! Turbulent length scale on theta levels,
                  ! indexed as Ri (m)
  weight_bltop(pdims%i_start:pdims%i_end)
@@ -505,7 +505,7 @@ do k = 2, bl_levels
     ! height has been reached, set boundary layer height (ZH_LOCAL) to
     ! the height of the lower boundary of the current layer
     !------------------------------------------------------------------
-    if ( .not. topbl(i) .and.                                                &
+    if ( .not. topbl(i) .and.                                                  &
          (ri(i,k) >  ricrit(i) .or. k == bl_levels) ) then
       topbl(i) = .true.
       if (local_fa >= ntml_level_corrn) then
@@ -590,7 +590,7 @@ if ( local_fa==smooth_to_bdys  ) then
       if ( ri(i,k) > ricrit(i) .and. ri(i,k+1) <= ricrit(i) ) then
         interp = ( ri(i,k) - ricrit(i) ) / ( ri(i,k) - ri(i,k+1) )
         interp = max( zero, min( one, interp) )
-        zbot = (one-interp) * z_tq(i,k-1)                                  &
+        zbot = (one-interp) * z_tq(i,k-1)                                      &
              +      interp  * z_tq(i,k)
         kb = k+1
       end if
@@ -599,7 +599,7 @@ if ( local_fa==smooth_to_bdys  ) then
       if ( ri(i,k) <= ricrit(i) .and. ri(i,k+1) > ricrit(i) ) then
         interp = ( ri(i,k) - ricrit(i) ) / ( ri(i,k) - ri(i,k+1) )
         interp = max( zero, min( one, interp) )
-        ztop = (one-interp) * z_tq(i,k-1)                                  &
+        ztop = (one-interp) * z_tq(i,k-1)                                      &
              +      interp  * z_tq(i,k)
         kt = k
       end if
@@ -619,8 +619,8 @@ if ( local_fa==smooth_to_bdys  ) then
           ! (such that L varies quadratically with height,
           !  to make the diffusivity profile look a bit like
           !  the non-local mixing profiles).
-          turb_length(i,kl)                                                &
-            = ( z_tq(i,kl-1) - zbot ) * ( ztop - z_tq(i,kl-1) )          &
+          turb_length(i,kl)                                                    &
+            = ( z_tq(i,kl-1) - zbot ) * ( ztop - z_tq(i,kl-1) )                &
             * 4.0_r_bl / ( ztop - zbot )
         end do
 
@@ -661,8 +661,8 @@ if ( local_fa==smooth_to_bdys  ) then
           turb_length(i,kl) = ztop
         else if ( z_tq(i,kl-1) < ztop ) then
           ! Quadratic tapering in upper half
-          turb_length(i,kl)                                                &
-            = ( z_tq(i,kl-1) ) * ( ztop - z_tq(i,kl-1) )                 &
+          turb_length(i,kl)                                                    &
+            = ( z_tq(i,kl-1) ) * ( ztop - z_tq(i,kl-1) )                       &
             * 4.0_r_bl / ztop
         end if
       end do
@@ -676,8 +676,8 @@ if ( local_fa==smooth_to_bdys  ) then
       ztop = zhsc(i)        ! z_uv(i,ntdsc(i)+1)
       ! Only use where larger than the existing length-scale
       do kl = nbdsc(i), ntdsc(i) + 2
-        turb_length(i,kl) = max( turb_length(i,kl),                      &
-              ( z_tq(i,kl-1) - zbot ) * ( ztop - z_tq(i,kl-1) )          &
+        turb_length(i,kl) = max( turb_length(i,kl),                            &
+              ( z_tq(i,kl-1) - zbot ) * ( ztop - z_tq(i,kl-1) )                &
               * 4.0_r_bl / ( ztop - zbot ) )
       end do
     end if
@@ -721,7 +721,7 @@ else  ! ( .NOT. local_fa==smooth_to_bdys )
       subcrit = .false.
       do k = 3, bl_levels
 
-        if ( k > ntml_local(i)+1  .and.                                      &
+        if ( k > ntml_local(i)+1  .and.                                        &
              ! we know Ri(ntml_local(i)+2) > RiCrit
              ri(i,k) < ricrit(i) .and. .not. subcrit ) then
           kb      = k   ! first level of subcritical Ri in layer
@@ -735,7 +735,7 @@ else  ! ( .NOT. local_fa==smooth_to_bdys )
           !---------------------------------------------------------
           turb_length_layer   = z_uv(i,kt) - z_uv(i,kb-1)
           do kl = kb, kt
-            turb_length(i,kl) = max( turb_length(i,kl),                    &
+            turb_length(i,kl) = max( turb_length(i,kl),                        &
                         min(turb_length_layer,lambda_max_nml*rlambda_fac)   )
           end do
         end if
@@ -756,11 +756,11 @@ else  ! ( .NOT. local_fa==smooth_to_bdys )
     do k = 2, bl_levels
       do i = pdims%i_start, pdims%i_end
         if ( k-1 <= max(ntml_nl(i),ntml_local(i)) ) then
-          turb_length(i,k) =  max( turb_length(i,k),                       &
+          turb_length(i,k) =  max( turb_length(i,k),                           &
               max( z_uv(i,ntml_nl(i)+1), zh_local(i) ) )
         end if
         if ( k-1 >= nbdsc(i) .and. k-1 <= ntdsc(i) ) then
-          turb_length(i,k) = max( turb_length(i,k),                        &
+          turb_length(i,k) = max( turb_length(i,k),                            &
                   ( z_uv(i,ntdsc(i)+1)-z_uv(i,nbdsc(i)) ) )
         end if
       end do
@@ -850,12 +850,12 @@ do k = 2, bl_levels
 
     if (k  <=  k_log_layr) then
       vkz   = vkman * ( z_uv(i,k) - z_uv(i,k-1) )
-      f_log = log( ( z_uv(i,k) + z0m(i)   ) /                              &
+      f_log = log( ( z_uv(i,k) + z0m(i)   ) /                                  &
                    ( z_uv(i,k-1) + z0m(i) ) )
       elm(i,k) = vkz / ( f_log + vkz/lambdam )
       elh(i,k) = vkz / ( f_log + vkz/lambdah )
       vkz   = vkman * ( z_tq(i,k) - z_tq(i,k-1) )
-      f_log = log( ( z_tq(i,k) + z0m(i)   ) /                              &
+      f_log = log( ( z_tq(i,k) + z0m(i)   ) /                                  &
                    ( z_tq(i,k-1) + z0m(i) ) )
       elh_rho(i,k) = vkz / ( f_log + vkz/lambdah )
     else
@@ -881,7 +881,7 @@ do k = 2, bl_levels
       ! zht = interface between BL and FA
       zht = max( z_uv(i,ntml_nl(i)+1) , zh_local(i) )
       ! Relevant scale in cumulus layers can be cloud top height, zhpar
-      if ( cumulus(i) .and. ( blending_option /= blend_cth_shcu_only .or.  &
+      if ( cumulus(i) .and. ( blending_option /= blend_cth_shcu_only .or.      &
                                 l_shallow_cth(i) ) ) then
         z_scale = max( z_scale, zhpar(i) )
         zht     = max( zht, zhpar(i) )
@@ -908,8 +908,8 @@ do k = 2, bl_levels
         if ( blending_option == blend_gridindep_fa .or.                        &
              blending_option == blend_cth_shcu_only ) then
           if (zz <= zht) then
-            weight_1dbl(i,k) =                                               &
-             one - tanh( beta_bl*z_scale/delta_smag(i)) *                    &
+            weight_1dbl(i,k) =                                                 &
+             one - tanh( beta_bl*z_scale/delta_smag(i)) *                      &
                max( zero,                                                      &
                  min( one, (linear0-delta_smag(i)/z_scale)*rlinfac) )
             weight_bltop(i) = weight_1dbl(i,k)
@@ -925,8 +925,8 @@ do k = 2, bl_levels
             !    quickly, hence within at most 1km of zht
             zfa=min( 2.0_r_bl*zht, zht+1000.0_r_bl )
             if (zz <= zfa ) then
-              weight_1dbl(i,k) = one + one_half *                            &
-                                   (weight_bltop(i) - one) *                 &
+              weight_1dbl(i,k) = one + one_half *                              &
+                                   (weight_bltop(i) - one) *                   &
                                    ( one + cos(pi*(zz-zht)/(zfa-zht)) )
             else
               weight_1dbl(i,k) = one
@@ -936,8 +936,8 @@ do k = 2, bl_levels
               ! Except in an elevated turbulent layer where we still use
               ! the standard blending weight
               z_scale = turb_length(i,k)
-              weight_1dbl(i,k) =                                             &
-               one - tanh( beta_bl*z_scale/delta_smag(i)) *                  &
+              weight_1dbl(i,k) =                                               &
+               one - tanh( beta_bl*z_scale/delta_smag(i)) *                    &
                 max( zero,                                                     &
                  min( one, (linear0-delta_smag(i)/z_scale)*rlinfac) )
 
@@ -953,15 +953,15 @@ do k = 2, bl_levels
           else
             beta=beta_fa
           end if
-          weight_1dbl(i,k) =                                                 &
-           one - tanh( beta*z_scale/delta_smag(i)) * max( zero,              &
+          weight_1dbl(i,k) =                                                   &
+           one - tanh( beta*z_scale/delta_smag(i)) * max( zero,                &
                min( one, (linear0-delta_smag(i)/z_scale)*rlinfac) )
         end if
       end if
 
-      elm(i,k) = elm(i,k)*weight_1dbl(i,k) +                             &
+      elm(i,k) = elm(i,k)*weight_1dbl(i,k) +                                   &
                    sqrt(rneutml_sq(i,k-1))*(one-weight_1dbl(i,k))
-      elh(i,k) = elh(i,k)*weight_1dbl(i,k) +                             &
+      elh(i,k) = elh(i,k)*weight_1dbl(i,k) +                                   &
                    sqrt(rneutml_sq(i,k-1))*(one-weight_1dbl(i,k))
     end do
 !$OMP end do
@@ -1049,7 +1049,7 @@ do k = 2, bl_levels
     !$OMP PARALLEL do DEFAULT(SHARED) SCHEDULE(STATIC)                         &
     !$OMP private( i )
     do i = pdims%i_start, pdims%i_end
-      if (ri(i,k) >= zero)                                                   &
+      if (ri(i,k) >= zero)                                                     &
         func(i)=one / ( one + g0 * ri(i,k) )
     end do
     !$OMP end PARALLEL do
@@ -1107,7 +1107,7 @@ do k = 2, bl_levels
         func(i)=func(i)*func(i)
       else
             ! Long tails over land
-        if (ri(i,k) >= zero)                                                 &
+        if (ri(i,k) >= zero)                                                   &
           func(i)= one / ( one + g0 * ri(i,k) )
       end if
     end do
@@ -1140,7 +1140,7 @@ do k = 2, bl_levels
       if ( z_tq(i,k-1)  >=  z_scale ) then
         func(i) = fm_sharpest
       else
-        func(i)= fm_louis *( one - z_tq(i,k-1)/z_scale )                   &
+        func(i)= fm_louis *( one - z_tq(i,k-1)/z_scale )                       &
                     + fm_sharpest * z_tq(i,k-1)/z_scale
       end if
     end do
@@ -1198,7 +1198,7 @@ do k = 2, bl_levels
         if ( z_tq(i,k-1)  >=  z_scale ) then
           func(i) = fm_sharpest
         else
-          func(i) = fm_louis *( one - z_tq(i,k-1)/z_scale )                &
+          func(i) = fm_louis *( one - z_tq(i,k-1)/z_scale )                    &
                       + fm_sharpest * z_tq(i,k-1)/z_scale
         end if
 
@@ -1228,7 +1228,7 @@ do k = 2, bl_levels
             ! Louis land
         if (ri(i,k) >= zero) then
           fm_louis = one / ( one + one_half * g0 * ri(i,k) )
-          func(i)= (one - WeightLouisToLong) * fm_louis * fm_louis +         &
+          func(i)= (one - WeightLouisToLong) * fm_louis * fm_louis +           &
                       WeightLouisToLong * one / ( one + g0 * ri(i,k) )
         end if   ! ri >= 0
       end if  ! FLANDG(i) < one_half
@@ -1258,7 +1258,7 @@ do k = 2, bl_levels
       end if
       sharp(i)=sharp(i)*sharp(i)
 
-      func(i) = func(i) * BL_weight(i,k)                                 &
+      func(i) = func(i) * BL_weight(i,k)                                       &
                 + sharp(i)*( one - BL_weight(i,k) )
 
     end do
@@ -1319,7 +1319,7 @@ do k = 2, bl_levels
 !$OMP SHARED( pdims, prandtl_number, pr_n, ri, k )                             &
 !$OMP private( i )
     do i = pdims%i_start, pdims%i_end
-      prandtl_number(i) = min( pr_max,                                       &
+      prandtl_number(i) = min( pr_max,                                         &
                                   pr_n*(one + 2.0_r_bl*ri(i,k)) )
     end do
 !$OMP end PARALLEL do
@@ -1381,7 +1381,7 @@ do k = 2, bl_levels
 
     if (BL_diag%l_fh) BL_diag%fh(i,k)=fh
 
-    rhokm(i,k) = rho_wet_tq(i,k-1) * elm(i,k) * elm(i,k)               &
+    rhokm(i,k) = rho_wet_tq(i,k-1) * elm(i,k) * elm(i,k)                       &
                                 * dvdzm(i,k) * fm
     if (l_mr_physics) then
         ! Note "RHO" here is always wet density (RHO_WET_TQ) so
@@ -1426,9 +1426,9 @@ do k = 2, bl_levels
       else
         rifac = max( one_half, min( 10.0_r_bl, one - ri(i,k)*rpr ) )
       end if
-      tke_loc(i,k) = ( r_c_tke*elm(i,k)*dvdzm(i,k)*dvdzm(i,k)        &
-                         *(rhokm(i,k)/rho_wet_tq(i,k-1))                 &
-                         *rifac                                              &
+      tke_loc(i,k) = ( r_c_tke*elm(i,k)*dvdzm(i,k)*dvdzm(i,k)                  &
+                         *(rhokm(i,k)/rho_wet_tq(i,k-1))                       &
+                         *rifac                                                &
                        )**two_thirds
     end if
   end do !i

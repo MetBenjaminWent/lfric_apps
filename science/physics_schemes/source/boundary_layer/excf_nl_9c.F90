@@ -93,7 +93,7 @@ logical, intent(in) ::                                                         &
 type (strnewbldiag), intent(in out) :: BL_diag
 
 real(kind=r_bl), intent(in) ::                                                 &
- rdz(pdims%i_start:pdims%i_end,                      &
+ rdz(pdims%i_start:pdims%i_end,                                                &
                 bl_levels),                                                    &
                               ! in Reciprocal of distance between
                               !    T,q-levels (m^-1). 1/RDZ(,K) is
@@ -101,129 +101,129 @@ real(kind=r_bl), intent(in) ::                                                 &
                               !    K-1 to level K, except that for
                               !    K=1 it is just the height of the
                               !    lowest atmospheric level.
- z_uv(pdims%i_start:pdims%i_end,                     &
+ z_uv(pdims%i_start:pdims%i_end,                                               &
                 bl_levels),                                                    &
                               ! in For a vertically staggered grid
                               !    with a u,v-level first above the
                               !    surface, Z_UV(*,K) is the height
                               !    of the k-th u,v-level (half level
                               !    k-1/2) above the surface
- z_tq(pdims%i_start:pdims%i_end,                     &
+ z_tq(pdims%i_start:pdims%i_end,                                               &
                 bl_levels),                                                    &
                               ! in For a vertically staggered grid
                               !    with a u,v-level first above the
                               !    surface, Z_TQ(*,K) is the height
                               !    of the k-th T,q-level (full level
                               !    k) above the surface
- rho_mix(pdims%i_start:pdims%i_end,                  &
+ rho_mix(pdims%i_start:pdims%i_end,                                            &
                 bl_levels),                                                    &
                               ! in For a vertically staggered grid
                               !    with a u,v-level first above the
                               !    surface, RHO_MIX(*,K) is the
                               !    density at the k-th u,v-level
                               !    above the surface
- rho_wet_tq(pdims%i_start:pdims%i_end,               &
+ rho_wet_tq(pdims%i_start:pdims%i_end,                                         &
                 bl_levels),                                                    &
                               ! in For a vertically staggered grid
                               !    with a u,v-level first above the
                               !    surface, RHO_WET_TQ(*,K) is the
                               !    density of the k-th T,q-level
                               !    above the surface
- bqm(pdims%i_start:pdims%i_end,                      &
+ bqm(pdims%i_start:pdims%i_end,                                                &
                 bl_levels),                                                    &
                               ! in Buoyancy parameters for clear and
- btm(pdims%i_start:pdims%i_end,                      &
+ btm(pdims%i_start:pdims%i_end,                                                &
                 bl_levels),                                                    &
                               !    cloudy air on half levels
- bqm_cld(pdims%i_start:pdims%i_end,                  &
+ bqm_cld(pdims%i_start:pdims%i_end,                                            &
                 bl_levels),                                                    &
                               !    (*,K) elements are k+1/2 values
- btm_cld(pdims%i_start:pdims%i_end,                  &
+ btm_cld(pdims%i_start:pdims%i_end,                                            &
                 bl_levels)                  !
 
 real(kind=r_bl), intent(in) ::                                                 &
- rhostar_gb(pdims%i_start:pdims%i_end),              &
+ rhostar_gb(pdims%i_start:pdims%i_end),                                        &
                               ! in Surface density (kg/m3)
- v_s(pdims%i_start:pdims%i_end),                     &
+ v_s(pdims%i_start:pdims%i_end),                                               &
                               ! in Surface friction velocity (m/s).
- fb_surf(pdims%i_start:pdims%i_end),                 &
+ fb_surf(pdims%i_start:pdims%i_end),                                           &
                               ! in Buoyancy flux at the surface over
                               !    density (m^2/s^3).
- zhpar(pdims%i_start:pdims%i_end),                   &
+ zhpar(pdims%i_start:pdims%i_end),                                             &
                               ! in Height of top of NTPAR
                               !    NOTE: CAN BE ABOVE BL_LEVELS-1
- zh_prev(pdims%i_start:pdims%i_end),                 &
+ zh_prev(pdims%i_start:pdims%i_end),                                           &
                               ! in previous timestep surface mixed-layer height
- z_lcl(pdims%i_start:pdims%i_end),                   &
+ z_lcl(pdims%i_start:pdims%i_end),                                             &
                               ! in Height of lifting condensation
                               !    level.
- bflux_surf(pdims%i_start:pdims%i_end),              &
+ bflux_surf(pdims%i_start:pdims%i_end),                                        &
                               ! in Surface buoyancy flux (kg/m/s^3).
- bflux_surf_sat(pdims%i_start:pdims%i_end),          &
+ bflux_surf_sat(pdims%i_start:pdims%i_end),                                    &
                               ! in Saturated-air surface buoyancy
                               !    flux.
- db_top(pdims%i_start:pdims%i_end),                  &
+ db_top(pdims%i_start:pdims%i_end),                                            &
                               ! in Buoyancy jump across the top of
                               !    the SML (m/s^2).
- df_top_over_cp(pdims%i_start:pdims%i_end),          &
+ df_top_over_cp(pdims%i_start:pdims%i_end),                                    &
                               ! in Radiative flux change at cloud top
                               !    divided by c_P (K.kg/m^2/s).
- bt_top(pdims%i_start:pdims%i_end),                  &
+ bt_top(pdims%i_start:pdims%i_end),                                            &
                               ! in Buoyancy parameter at the top of
                               !    the b.l. (m/s^2/K).
- btt_top(pdims%i_start:pdims%i_end),                 &
+ btt_top(pdims%i_start:pdims%i_end),                                           &
                               ! in In-cloud buoyancy parameter at
                               !    the top of the b.l. (m/s^2/K).
- btc_top(pdims%i_start:pdims%i_end),                 &
+ btc_top(pdims%i_start:pdims%i_end),                                           &
                               ! in Cloud fraction weighted buoyancy
                               !    parameter at the top of the b.l.
- db_top_cld(pdims%i_start:pdims%i_end),              &
+ db_top_cld(pdims%i_start:pdims%i_end),                                        &
                               ! in In-cloud buoyancy jump at the
                               !    top of the b.l. (m/s^2).
- chi_s_top(pdims%i_start:pdims%i_end),               &
+ chi_s_top(pdims%i_start:pdims%i_end),                                         &
                               ! in Mixing fraction of just saturated
                               !    mixture at top of the b.l.
- zeta_s(pdims%i_start:pdims%i_end),                  &
+ zeta_s(pdims%i_start:pdims%i_end),                                            &
                               ! in Non-cloudy fraction of mixing
                               !    layer for surface forced
                               !    entrainment term.
- zeta_r(pdims%i_start:pdims%i_end),                  &
+ zeta_r(pdims%i_start:pdims%i_end),                                            &
                               ! in Non-cloudy fraction of mixing
                               !    layer for cloud top radiative
                               !    cooling entrainment term.
- db_dsct(pdims%i_start:pdims%i_end),                 &
+ db_dsct(pdims%i_start:pdims%i_end),                                           &
                               ! in Buoyancy jump across the top of
                               !    the DSC layer (m/s^2).
- df_dsct_over_cp(pdims%i_start:pdims%i_end),         &
+ df_dsct_over_cp(pdims%i_start:pdims%i_end),                                   &
                               ! in Radiative flux change at DSC top
                               !    divided by c_P (K.kg/m^2/s).
- bt_dsct(pdims%i_start:pdims%i_end),                 &
+ bt_dsct(pdims%i_start:pdims%i_end),                                           &
                               ! in Buoyancy parameters at the top of
- btt_dsct(pdims%i_start:pdims%i_end),                &
+ btt_dsct(pdims%i_start:pdims%i_end),                                          &
                               !    the DSC layer (m/s^2/K)
- db_dsct_cld(pdims%i_start:pdims%i_end),             &
+ db_dsct_cld(pdims%i_start:pdims%i_end),                                       &
                               ! in In-cloud buoyancy jump at the
                               !    top of the DSC (m/s^2).
- chi_s_dsct(pdims%i_start:pdims%i_end),              &
+ chi_s_dsct(pdims%i_start:pdims%i_end),                                        &
                               ! in Mixing fraction of just saturated
                               !    mixture at top of the DSC
- zeta_r_dsc(pdims%i_start:pdims%i_end),              &
+ zeta_r_dsc(pdims%i_start:pdims%i_end),                                        &
                               ! in Non-cloudy fraction of DSC
                               !    for cloud top radiative
                               !    cooling entrainment term.
- br_fback(pdims%i_start:pdims%i_end),                &
- br_fback_dsc(pdims%i_start:pdims%i_end),            &
+ br_fback(pdims%i_start:pdims%i_end),                                          &
+ br_fback_dsc(pdims%i_start:pdims%i_end),                                      &
                               ! in Weights for degree of buoyancy
                               !    reversal feedback
- dqw_sml(pdims%i_start:pdims%i_end),                 &
+ dqw_sml(pdims%i_start:pdims%i_end),                                           &
                               ! in QW change across SML disc inv
- dsl_sml(pdims%i_start:pdims%i_end),                 &
+ dsl_sml(pdims%i_start:pdims%i_end),                                           &
                               ! in SL change across SML disc inv
- dqw_dsc(pdims%i_start:pdims%i_end),                 &
+ dqw_dsc(pdims%i_start:pdims%i_end),                                           &
                               ! in QW change across DSC disc inv
- dsl_dsc(pdims%i_start:pdims%i_end),                 &
+ dsl_dsc(pdims%i_start:pdims%i_end),                                           &
                               ! in SL change across DSC disc inv
- cf_sml(pdims%i_start:pdims%i_end),                  &
+ cf_sml(pdims%i_start:pdims%i_end),                                            &
                               ! in cloud fraction of SML
  cf_dsc(pdims%i_start:pdims%i_end)
                               ! in cloud fraction of DSC layer
@@ -233,75 +233,75 @@ real(kind=r_bl) , intent(in out) ::                                            &
                               ! in Fractional svl decoupling difference
 
 real(kind=r_bl) , intent(in) ::                                                &
- db_ga_dry(pdims%i_start:pdims%i_end,                &
+ db_ga_dry(pdims%i_start:pdims%i_end,                                          &
                 2:bl_levels),                                                  &
                               ! in Cloudy and cloud-free buoyancy
- db_noga_dry(pdims%i_start:pdims%i_end,              &
+ db_noga_dry(pdims%i_start:pdims%i_end,                                        &
                 2:bl_levels),                                                  &
                               !    jumps for flux integral
- db_ga_cld(pdims%i_start:pdims%i_end,                &
+ db_ga_cld(pdims%i_start:pdims%i_end,                                          &
                 2:bl_levels),                                                  &
                               !    calculation (m/s2):
- db_noga_cld(pdims%i_start:pdims%i_end,              &
+ db_noga_cld(pdims%i_start:pdims%i_end,                                        &
                 2:bl_levels)
 
 real(kind=r_bl), intent(in) ::                                                 &
- ft_nt(pdims%i_start:pdims%i_end,                    &
+ ft_nt(pdims%i_start:pdims%i_end,                                              &
                 bl_levels+1),                                                  &
                               ! in Non-turbulent heat (rho*Km/s) and
- fq_nt(pdims%i_start:pdims%i_end,                    &
+ fq_nt(pdims%i_start:pdims%i_end,                                              &
                 bl_levels+1),                                                  &
                               !      moisture (rho*m/s) fluxes
- sl(pdims%i_start:pdims%i_end,bl_levels),            &
+ sl(pdims%i_start:pdims%i_end,bl_levels),                                      &
                               ! TL + G*Z/CP (K)
  qw(pdims%i_start:pdims%i_end,bl_levels)
                               ! Total water content (kg per kg air).
 
 ! INOUT fields
 logical, intent(in out) ::                                                     &
- coupled(pdims%i_start:pdims%i_end),                 &
+ coupled(pdims%i_start:pdims%i_end),                                           &
                               ! INOUT Flag to indicate Sc layer
                               !       weakly decoupled
- cumulus(pdims%i_start:pdims%i_end),                 &
+ cumulus(pdims%i_start:pdims%i_end),                                           &
                               ! INOUT Flag for cumulus
  dsc(pdims%i_start:pdims%i_end)
                               ! INOUT Flag set if decoupled stratocu
                               !       layer found.
 
 integer, intent(in out) ::                                                     &
- ntml(pdims%i_start:pdims%i_end),                    &
+ ntml(pdims%i_start:pdims%i_end),                                              &
                               ! INOUT  Number of turbulently mixed
                               !        layers.
- ntdsc(pdims%i_start:pdims%i_end),                   &
+ ntdsc(pdims%i_start:pdims%i_end),                                             &
                               ! INOUT  Top level of any decoupled
                               !        turbulently mixed Sc layer
  dsc_removed(pdims%i_start:pdims%i_end)
                               ! INOUT  Flag to indicate why dsc layer removed
 
 real(kind=r_bl), intent(in out) ::                                             &
- zc(pdims%i_start:pdims%i_end),                      &
+ zc(pdims%i_start:pdims%i_end),                                                &
                               ! INOUT Cloud depth (not cloud fraction
                               !    weighted) (m).
- zc_dsc(pdims%i_start:pdims%i_end),                  &
+ zc_dsc(pdims%i_start:pdims%i_end),                                            &
                               ! INOUT Cloud depth (not cloud fraction
                               !    weighted) (m).
- zhsc(pdims%i_start:pdims%i_end),                    &
+ zhsc(pdims%i_start:pdims%i_end),                                              &
                               ! INOUT Cloud-layer height (m)
- zh(pdims%i_start:pdims%i_end),                      &
+ zh(pdims%i_start:pdims%i_end),                                                &
                               ! INOUT Boundary layer height (m)
- dzh(pdims%i_start:pdims%i_end),                     &
+ dzh(pdims%i_start:pdims%i_end),                                               &
                               ! INOUT Inversion thickness (m)
- dscdepth(pdims%i_start:pdims%i_end),                &
+ dscdepth(pdims%i_start:pdims%i_end),                                          &
                               ! INOUT Decoupled cloud-layer depth (m)
- ft_nt_zh(pdims%i_start:pdims%i_end),                &
+ ft_nt_zh(pdims%i_start:pdims%i_end),                                          &
                               ! INOUT Non-turbulent heat (rho*Km/s)
- ft_nt_zhsc(pdims%i_start:pdims%i_end),              &
+ ft_nt_zhsc(pdims%i_start:pdims%i_end),                                        &
                               !        and moisture (rho*m/s) fluxes
- fq_nt_zh(pdims%i_start:pdims%i_end),                &
+ fq_nt_zh(pdims%i_start:pdims%i_end),                                          &
                               !        evaluated at the SML and DSC
- fq_nt_zhsc (pdims%i_start:pdims%i_end),             &
+ fq_nt_zhsc (pdims%i_start:pdims%i_end),                                       &
                               !        inversions
- fq_nt_zh_wtrac(pdims%i_start:pdims%i_end,n_wtrac),  &
+ fq_nt_zh_wtrac(pdims%i_start:pdims%i_end,n_wtrac),                            &
                               !        Water tracer fq_nt_zh
  fq_nt_zhsc_wtrac(pdims%i_start:pdims%i_end,n_wtrac)
                               !        Water tracer fq_nt_zhsc
@@ -312,28 +312,28 @@ integer, intent(out) ::                                                        &
        ! out Bottom level of any decoupled turbulently mixed Sc layer.
 
 real(kind=r_bl), intent(out) ::                                                &
- rhokm(pdims%i_start:pdims%i_end,                    &
+ rhokm(pdims%i_start:pdims%i_end,                                              &
                 2:bl_levels),                                                  &
                               ! out Layer k-1 - to - layer k
                               !     turbulent mixing coefficient
                               !     for momentum (kg/m/s).
- rhokh(pdims%i_start:pdims%i_end,                    &
+ rhokh(pdims%i_start:pdims%i_end,                                              &
                 2:bl_levels),                                                  &
                               ! out Layer k-1 - to - layer k
                               !     turbulent mixing coefficient
                               !     for heat and moisture (kg/m/s).
- rhokm_top(pdims%i_start:pdims%i_end,                &
+ rhokm_top(pdims%i_start:pdims%i_end,                                          &
                 2:bl_levels),                                                  &
                               ! out exchange coefficient for
                               !     momentum due to top-down mixing
- rhokh_top(pdims%i_start:pdims%i_end,                &
+ rhokh_top(pdims%i_start:pdims%i_end,                                          &
                 2:bl_levels),                                                  &
                               ! out exchange coefficient for
                               !     heat and moisture due to top-down
                               !     mixing
- rhof2(pdims%i_start:pdims%i_end,                    &
+ rhof2(pdims%i_start:pdims%i_end,                                              &
                 2:bl_levels),                                                  &
- rhofsc(pdims%i_start:pdims%i_end,                   &
+ rhofsc(pdims%i_start:pdims%i_end,                                             &
                 2:bl_levels),                                                  &
                               ! out f2 and fsc term shape profiles
                               !     multiplied by rho
@@ -341,16 +341,16 @@ real(kind=r_bl), intent(out) ::                                                &
                               ! out Non-local TKE diag, currently times rho
 
 real(kind=r_bl), intent(out) ::                                                &
- f_ngstress(pdims_s%i_start:pdims_s%i_end,       &
+ f_ngstress(pdims_s%i_start:pdims_s%i_end,                                     &
             2:bl_levels)      ! out dimensionless function for
                               !     non-gradient stresses
 
 real(kind=r_bl), intent(out) ::                                                &
- zdsc_base(pdims%i_start:pdims%i_end),               &
+ zdsc_base(pdims%i_start:pdims%i_end),                                         &
                               ! out Height of base of K_top in DSC
- rhokh_surf_ent(pdims%i_start:pdims%i_end),          &
+ rhokh_surf_ent(pdims%i_start:pdims%i_end),                                    &
                               ! out SML surface-driven entrainment KH
- rhokh_top_ent(pdims%i_start:pdims%i_end),           &
+ rhokh_top_ent(pdims%i_start:pdims%i_end),                                     &
                               ! out SML top-driven entrainment KH
  rhokh_dsct_ent(pdims%i_start:pdims%i_end)
                               ! out DSC top-driven entrainment KH
@@ -395,12 +395,12 @@ logical ::                                                                     &
  ng_stress_calculate           ! Flag to do ng stress calculation
 
 logical ::                                                                     &
- scbase(pdims%i_start:pdims%i_end),                  &
+ scbase(pdims%i_start:pdims%i_end),                                            &
                               ! Flag to signal base of CML reached
- test_well_mixed(pdims%i_start:pdims%i_end),         &
+ test_well_mixed(pdims%i_start:pdims%i_end),                                   &
                               ! Flag to test wb integration
                               ! for a well-mixed layer
- ksurf_iterate(pdims%i_start:pdims%i_end),           &
+ ksurf_iterate(pdims%i_start:pdims%i_end),                                     &
                               ! Flag to perform iteration to
                               ! find top of Ksurf
  ktop_iterate(pdims%i_start:pdims%i_end)
@@ -425,111 +425,111 @@ real(kind=r_bl) ::                                                             &
                               ! WB*DZ for sml if ksurf_iterate
 
 real(kind=r_bl)::                                                              &
-       w_m_top(pdims%i_start:pdims%i_end),           &
+       w_m_top(pdims%i_start:pdims%i_end),                                     &
                     ! Turbulent velocity scale for momentum
                     !   evaluated at the top of the b.l.
-       w_h_top(pdims%i_start:pdims%i_end),           &
+       w_h_top(pdims%i_start:pdims%i_end),                                     &
                     ! Turbulent velocity scale for scalars
                     !   evaluated at the top of the b.l.
-       prandtl_top(pdims%i_start:pdims%i_end),       &
+       prandtl_top(pdims%i_start:pdims%i_end),                                 &
                     ! Turbulent Prandtl number
                     !   evaluated at the top of the b.l.
-       rhokm_surf_ent(pdims%i_start:pdims%i_end),    &
+       rhokm_surf_ent(pdims%i_start:pdims%i_end),                              &
                     ! SML surface-driven entrainment Km
-       rhokm_top_ent(pdims%i_start:pdims%i_end),     &
+       rhokm_top_ent(pdims%i_start:pdims%i_end),                               &
                     ! SML top-driven entrainment Km
-       rhokm_dsct_ent(pdims%i_start:pdims%i_end),    &
+       rhokm_dsct_ent(pdims%i_start:pdims%i_end),                              &
                     ! DSC top-driven entrainment Km
-       rhokm_dsct_top_ent(pdims%i_start:pdims%i_end),&
+       rhokm_dsct_top_ent(pdims%i_start:pdims%i_end),                          &
                     ! DSC only top-driven entrainment Km
-       kh_top_factor(pdims%i_start:pdims%i_end),     &
+       kh_top_factor(pdims%i_start:pdims%i_end),                               &
                     ! Factors to ensure K_H and K_M profiles are
-       km_top_factor(pdims%i_start:pdims%i_end),     &
+       km_top_factor(pdims%i_start:pdims%i_end),                               &
                     !   continuous at ZH and ZHSC
-       kh_sct_factor(pdims%i_start:pdims%i_end),     &
+       kh_sct_factor(pdims%i_start:pdims%i_end),                               &
                     !               "
-       km_sct_factor(pdims%i_start:pdims%i_end),     &
+       km_sct_factor(pdims%i_start:pdims%i_end),                               &
                     !               "
-       kh_dsct_factor(pdims%i_start:pdims%i_end),    &
+       kh_dsct_factor(pdims%i_start:pdims%i_end),                              &
                     !               "
-       km_dsct_factor(pdims%i_start:pdims%i_end),    &
+       km_dsct_factor(pdims%i_start:pdims%i_end),                              &
                     !               "
-       km_dsct_factor_top(pdims%i_start:pdims%i_end),&
+       km_dsct_factor_top(pdims%i_start:pdims%i_end),                          &
                     !               "
-       v_top(pdims%i_start:pdims%i_end),             &
+       v_top(pdims%i_start:pdims%i_end),                                       &
                     ! Velocity scale for top-down convection
-       v_top_dsc(pdims%i_start:pdims%i_end),         &
+       v_top_dsc(pdims%i_start:pdims%i_end),                                   &
 
-       v_sum(pdims%i_start:pdims%i_end),             &
+       v_sum(pdims%i_start:pdims%i_end),                                       &
                     ! total velocity scale
-       v_sum_dsc(pdims%i_start:pdims%i_end),         &
+       v_sum_dsc(pdims%i_start:pdims%i_end),                                   &
 
-       zsml_top(pdims%i_start:pdims%i_end),          &
+       zsml_top(pdims%i_start:pdims%i_end),                                    &
                     ! Height of top of surf-driven K in SML
-       zsml_base(pdims%i_start:pdims%i_end),         &
+       zsml_base(pdims%i_start:pdims%i_end),                                   &
                     ! Height of base of top-driven K in SML
-       rhokh_lcl(pdims%i_start:pdims%i_end),         &
+       rhokh_lcl(pdims%i_start:pdims%i_end),                                   &
                     ! rho*KH at the LCL in cumulus
-       cu_depth_scale(pdims%i_start:pdims%i_end),    &
+       cu_depth_scale(pdims%i_start:pdims%i_end),                              &
                     ! Depth scale for decay of K profile
                     ! above LCL in cumulus (in m)
-       scdepth(pdims%i_start:pdims%i_end),           &
+       scdepth(pdims%i_start:pdims%i_end),                                     &
                     ! Depth of top-driven mixing in SML
-       z_inv(pdims%i_start:pdims%i_end),             &
+       z_inv(pdims%i_start:pdims%i_end),                                       &
                     ! inversion height (top of K profiles)
-       wb_surf_int(pdims%i_start:pdims%i_end),       &
+       wb_surf_int(pdims%i_start:pdims%i_end),                                 &
                     ! Estimate of wb integrated over surface layer
-       wb_dzrad_int(pdims%i_start:pdims%i_end),      &
+       wb_dzrad_int(pdims%i_start:pdims%i_end),                                &
                     ! Estimate of wb integrated over cloud-top region
-       dzrad(pdims%i_start:pdims%i_end),             &
+       dzrad(pdims%i_start:pdims%i_end),                                       &
                     ! Depth of cloud-top (radiatively cooled) region
-       v_ktop(pdims%i_start:pdims%i_end),            &
+       v_ktop(pdims%i_start:pdims%i_end),                                      &
                     ! velocity scale for K_top profile
-       v_ksum(pdims%i_start:pdims%i_end),            &
+       v_ksum(pdims%i_start:pdims%i_end),                                      &
                     ! total velocity scale
-       z_cbase(pdims%i_start:pdims%i_end),           &
+       z_cbase(pdims%i_start:pdims%i_end),                                     &
                     ! cloud base height
-       wb_ratio(pdims%i_start:pdims%i_end),          &
+       wb_ratio(pdims%i_start:pdims%i_end),                                    &
                     ! WBN_INT/WBP_INT
-       dec_thres(pdims%i_start:pdims%i_end),         &
+       dec_thres(pdims%i_start:pdims%i_end),                                   &
                     ! Local decoupling threshold
-       wbp_int(pdims%i_start:pdims%i_end),           &
+       wbp_int(pdims%i_start:pdims%i_end),                                     &
                     ! Positive part of buoyancy flux integral
-       wbn_int(pdims%i_start:pdims%i_end),           &
+       wbn_int(pdims%i_start:pdims%i_end),                                     &
                     ! Negative part of buoyancy flux integral
-       zinv_pr(pdims%i_start:pdims%i_end),           &
+       zinv_pr(pdims%i_start:pdims%i_end),                                     &
                     ! Height of layer top above surface
-       khtop(pdims%i_start:pdims%i_end),             &
+       khtop(pdims%i_start:pdims%i_end),                                       &
                     ! temporary KH_top in wb integration
-       khsurf(pdims%i_start:pdims%i_end),            &
+       khsurf(pdims%i_start:pdims%i_end),                                      &
                     ! temporary KH_surf in wb integration
-       zwb0(pdims%i_start:pdims%i_end),              &
+       zwb0(pdims%i_start:pdims%i_end),                                        &
                     ! height at which wb assumed to go to zero
-       z_top_lim(pdims%i_start:pdims%i_end),         &
+       z_top_lim(pdims%i_start:pdims%i_end),                                   &
                     ! upper height limit on K profile
-       z_bot_lim(pdims%i_start:pdims%i_end),         &
+       z_bot_lim(pdims%i_start:pdims%i_end),                                   &
                     ! lower height limit on K profile
-       z_inc(pdims%i_start:pdims%i_end),             &
+       z_inc(pdims%i_start:pdims%i_end),                                       &
                     ! Step size (m)
-       rho_we(pdims%i_start:pdims%i_end),            &
+       rho_we(pdims%i_start:pdims%i_end),                                      &
                     ! rho*param.d entrainment rates...
-       rho_we_sml(pdims%i_start:pdims%i_end),        &
+       rho_we_sml(pdims%i_start:pdims%i_end),                                  &
                     !  ...for surf and DSC layers (kg/m2/s)
-       rho_we_dsc(pdims%i_start:pdims%i_end),        &
+       rho_we_dsc(pdims%i_start:pdims%i_end),                                  &
 
-       cf_ml(pdims%i_start:pdims%i_end),             &
+       cf_ml(pdims%i_start:pdims%i_end),                                       &
                     ! Mixed layer cloud fraction
-       df_ctop(pdims%i_start:pdims%i_end),           &
+       df_ctop(pdims%i_start:pdims%i_end),                                     &
                     ! Cloud-top radiative flux divergence
-       dqw(pdims%i_start:pdims%i_end),               &
+       dqw(pdims%i_start:pdims%i_end),                                         &
                     ! QW jump across inversion
-       dsl(pdims%i_start:pdims%i_end),               &
+       dsl(pdims%i_start:pdims%i_end),                                         &
                     ! SL jump across inversion
-       ft_nt_dscb(pdims%i_start:pdims%i_end),        &
+       ft_nt_dscb(pdims%i_start:pdims%i_end),                                  &
                     ! Non-turbulent heat flux at DSC base
-       fq_nt_dscb(pdims%i_start:pdims%i_end),        &
+       fq_nt_dscb(pdims%i_start:pdims%i_end),                                  &
                     ! Non-turbulent moisture flux at DSC base
-       tothf_zi(pdims%i_start:pdims%i_end),          &
+       tothf_zi(pdims%i_start:pdims%i_end),                                    &
                     ! Total heat and moisture fluxes at
        totqf_zi(pdims%i_start:pdims%i_end)
                     !   the inversion height, Zi
@@ -672,9 +672,9 @@ integer ::                                                                     &
 
 integer, parameter :: j = 1 ! Loop counter, horizontal - LFRic Parameter
 
-integer :: ntop(pdims%i_start:pdims%i_end),          &
+integer :: ntop(pdims%i_start:pdims%i_end),                                    &
                    ! top level of surf-driven K profile
-           ntml_new(pdims%i_start:pdims%i_end),      &
+           ntml_new(pdims%i_start:pdims%i_end),                                &
                    ! temporary in NTML calculation
            kwb0(pdims%i_start:pdims%i_end)
                    ! level at which wb assumed to go to zero
@@ -774,7 +774,7 @@ end if
 !$OMP  rhokh_ent, frac_top, zh_pr, factor, rhokm_dsct,                         &
 !$OMP  wsl_dzrad_int, wqw_dzrad_int, db_ratio, zb_ktop, f2, fsc,               &
 !$OMP  z_ratio, z_pr, wslng, wqwng, wb_scld, wb_cld, cld_frac, l,              &
-!$OMP  i1, ic,  w_m_hb_3, zk_uv, zk_tq, Prandtl, w_h_uv, w_h_tq,           &
+!$OMP  i1, ic,  w_m_hb_3, zk_uv, zk_tq, Prandtl, w_h_uv, w_h_tq,               &
 !$OMP  w_m_uv, w_m_tq, w_s_cubed_tq, w_s_cubed_uv, gamma_wbs, c_tke,           &
 !$OMP  n_sweep, ns, lcl_fac, ng_stress_calculate, l_apply_surf_ent, interp,    &
 !$OMP  rho_we_dsc_no_surf, k_inv)
@@ -812,7 +812,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
       if (coupled(i)) then
         if ( entr_smooth_dec == entr_taper_zh ) then
-          wstar3 = (      svl_diff_frac(i)  * zhsc(i)                      &
+          wstar3 = (      svl_diff_frac(i)  * zhsc(i)                          &
                     + (one-svl_diff_frac(i)) * zh(i)   )* fb_surf(i)
         else
           wstar3 = zhsc(i) * fb_surf(i)
@@ -826,29 +826,29 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
           ! Turbulent velocity scale for momentum
 
         c_ws = 0.25_r_bl
-        w_m_top(i) = (v_s(i)*v_s(i)*v_s(i) +                           &
+        w_m_top(i) = (v_s(i)*v_s(i)*v_s(i) +                                   &
                         c_ws*wstar3)**one_third
 
           ! Turbulent Prandtl number and velocity scale for scalars
           ! gives 0.375<Pr<0.75 for convective to neutral conditions
-        prandtl_top(i) = 0.75_r_bl *                                         &
-                      ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +  &
-                          (one/25.0_r_bl)*wstar3*w_m_top(i) ) /              &
-                      ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +  &
+        prandtl_top(i) = 0.75_r_bl *                                           &
+                      ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
+                          (one/25.0_r_bl)*wstar3*w_m_top(i) ) /                &
+                      ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
                           (2.0_r_bl/25.0_r_bl)*wstar3*w_m_top(i) )
         w_h_top(i) = w_m_top(i) / prandtl_top(i)
       else if (flux_grad  ==  HoltBov1993) then
         c_ws = 0.6_r_bl
-        w_m_top(i) = (v_s(i)*v_s(i)*v_s(i) +                           &
+        w_m_top(i) = (v_s(i)*v_s(i)*v_s(i) +                                   &
                         c_ws*wstar3)**one_third
           ! Using Lock et al interpolation but with
           ! HB93 range of 0.6<Pr<1
         pr_neut = one
         pr_conv = 0.6_r_bl
-        prandtl_top(i) = pr_neut *                                           &
-              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
-                                (one/25.0_r_bl)*wstar3*w_m_top(i) ) /        &
-              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
+        prandtl_top(i) = pr_neut *                                             &
+              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                  &
+                                (one/25.0_r_bl)*wstar3*w_m_top(i) ) /          &
+              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                  &
                   (pr_neut/(25.0_r_bl*pr_conv))*wstar3*w_m_top(i) )
         w_h_top(i) = w_m_top(i) / prandtl_top(i)
       else if (flux_grad  ==  LockWhelan2006) then
@@ -858,14 +858,14 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
           ! Slightly contrived notation since really we know W_H_TOP
           ! and Prandtl range but this makes similarity to
           ! Lock et al clearer (possibly!)
-        w_m_neut = ( v_s(i)*v_s(i)*v_s(i) +                              &
+        w_m_neut = ( v_s(i)*v_s(i)*v_s(i) +                                    &
                       c_ws*wstar3 )**one_third
         w_h_top(i) = w_m_neut / pr_neut
 
-        prandtl_top(i) = pr_neut *                                           &
-              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
+        prandtl_top(i) = pr_neut *                                             &
+              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                  &
                   (one/25.0_r_bl)*wstar3*w_m_neut ) /                          &
-              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
+              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                  &
                   (pr_neut/(25.0_r_bl*pr_conv))*wstar3*w_m_neut )
 
         w_m_top(i) = w_h_top(i) * prandtl_top(i)
@@ -920,28 +920,28 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
           !-----------------------------------------------------------
       zeta_s_fac = (one - zeta_s(i)) * (one - zeta_s(i))
       sf_term = a_ent_1 * max ( zero ,                                         &
-                          ( (one - zeta_s_fac) * bflux_surf(i)               &
+                          ( (one - zeta_s_fac) * bflux_surf(i)                 &
                             + zeta_s_fac * bflux_surf_sat(i) ) )
           !-----------------------------------------------------------
           ! Calculate the surface shear term
           !-----------------------------------------------------------
-      sf_shear_term =  a_ent_shr * v_s(i) * v_s(i) * v_s(i)              &
+      sf_shear_term =  a_ent_shr * v_s(i) * v_s(i) * v_s(i)                    &
                       * rho_mix(i,k)  / zh(i)
           !-----------------------------------------------------------
           ! Calculate the indirect radiative term
           !-----------------------------------------------------------
       zeta_r_sq = zeta_r(i)*zeta_r(i)
-      ir_term = ( bt_top(i)*zeta_r_sq +                                      &
-                  btt_top(i)*(one-zeta_r_sq) )                               &
+      ir_term = ( bt_top(i)*zeta_r_sq +                                        &
+                  btt_top(i)*(one-zeta_r_sq) )                                 &
                 * a_ent_1 * df_top_over_cp(i)
           !-----------------------------------------------------------
           ! Calculate the evaporative term
           !-----------------------------------------------------------
       if ( db_top(i)  >   zero) then
         zr = sqrt( zc(i) / zh(i) )
-        evap_term = a_ent_2 * rho_mix(i,k)                                   &
-                  * chi_s_top(i) * chi_s_top(i)                            &
-                  * zr * zr * zr * db_top_cld(i)                             &
+        evap_term = a_ent_2 * rho_mix(i,k)                                     &
+                  * chi_s_top(i) * chi_s_top(i)                                &
+                  * zr * zr * zr * db_top_cld(i)                               &
                   * sqrt( zh(i) * db_top(i) )
       else
         evap_term = zero
@@ -950,10 +950,10 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
           ! Combine forcing terms to calculate the representative
           ! velocity scales
           !-----------------------------------------------------------
-      v_sum(i) = ( (sf_term + sf_shear_term +                                &
+      v_sum(i) = ( (sf_term + sf_shear_term +                                  &
                       ir_term + evap_term)                                     &
                     * zh(i) /(a_ent_1*rho_mix(i,k)) )**one_third
-      v_top(i) = ( (ir_term+evap_term) * zh(i)                             &
+      v_top(i) = ( (ir_term+evap_term) * zh(i)                                 &
                             / (a_ent_1*rho_mix(i,k)) )**one_third
           !-----------------------------------------------------------
           ! Calculate the direct radiative term
@@ -974,7 +974,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
                             ir_term + evap_term) /                             &
                     (rho_mix(i,k) * sqrt(zh(i))) )**two_thirds
 
-        rho_we_sml(i) = (sf_term + sf_shear_term                             &
+        rho_we_sml(i) = (sf_term + sf_shear_term                               &
                     +      ir_term + evap_term + dr_term)                      &
                         / ( db_top(i) + zil_corr )
 
@@ -998,13 +998,13 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         if ( l_apply_surf_ent ) then
           ! max to avoid rounding errors giving small negative numbers
           rhokh_surf_ent(i) = max(rhokh_ent * ( one - frac_top ), zero)
-          rhokm_surf_ent(i) = prandtl_top(i) * rhokh_surf_ent(i)         &
-                              * rdz(i,k) * (z_uv(i,k)-z_uv(i,k-1))       &
+          rhokm_surf_ent(i) = prandtl_top(i) * rhokh_surf_ent(i)               &
+                              * rdz(i,k) * (z_uv(i,k)-z_uv(i,k-1))             &
                               * rho_wet_tq(i,k-1) / rho_mix(i,k)
         end if
         rhokh_top_ent(i) = rhokh_ent * frac_top
-        rhokm_top_ent(i) = 0.75_r_bl * rhokh_top_ent(i)                    &
-                              * rdz(i,k) * (z_uv(i,k)-z_uv(i,k-1))       &
+        rhokm_top_ent(i) = 0.75_r_bl * rhokh_top_ent(i)                        &
+                              * rdz(i,k) * (z_uv(i,k)-z_uv(i,k-1))             &
                               * rho_wet_tq(i,k-1) / rho_mix(i,k)
         if (.not. l_use_var_fixes) then
           rhokm(i,k) = rhokm_surf_ent(i)
@@ -1024,13 +1024,13 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
             !--------------------------------------------------------
         zeta_s_fac = (one - zeta_s(i)) * (one - zeta_s(i))
         sf_term = a_ent_1 * max ( zero ,                                       &
-                          ( (one - zeta_s_fac) * bflux_surf(i)               &
+                          ( (one - zeta_s_fac) * bflux_surf(i)                 &
                             + zeta_s_fac * bflux_surf_sat(i) ) )
             !--------------------------------------------------------
             ! Calculate the surface shear term
             !--------------------------------------------------------
         if (fb_surf(i)  >=  zero) then
-          sf_shear_term = a_ent_shr * v_s(i)*v_s(i)*v_s(i)               &
+          sf_shear_term = a_ent_shr * v_s(i)*v_s(i)*v_s(i)                     &
                           * rho_mix(i,k)  / zhsc(i)
         else
           sf_shear_term = zero
@@ -1048,17 +1048,17 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         ! Calculate the indirect radiative term
         !-----------------------------------------------------------
       zeta_r_sq = zeta_r_dsc(i)*zeta_r_dsc(i)
-      ir_term = ( bt_dsct(i)*zeta_r_sq +                                     &
-                    btt_dsct(i)*(one-zeta_r_sq) )                            &
+      ir_term = ( bt_dsct(i)*zeta_r_sq +                                       &
+                    btt_dsct(i)*(one-zeta_r_sq) )                              &
                     * a_ent_1 * df_dsct_over_cp(i)
         !-----------------------------------------------------------
         ! Calculate the evaporative term
         !-----------------------------------------------------------
       if (db_dsct(i)  >   zero) then
         zr = sqrt( zc_dsc(i) / dscdepth(i) )
-        evap_term = a_ent_2 * rho_mix(i,k)                                   &
-                  * chi_s_dsct(i) * chi_s_dsct(i)                          &
-                  * zr * zr * zr * db_dsct_cld(i)                            &
+        evap_term = a_ent_2 * rho_mix(i,k)                                     &
+                  * chi_s_dsct(i) * chi_s_dsct(i)                              &
+                  * zr * zr * zr * db_dsct_cld(i)                              &
                   * sqrt( dscdepth(i) * db_dsct(i) )
       else
         evap_term = zero
@@ -1067,16 +1067,16 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         ! Combine forcing terms to calculate the representative
         ! velocity scales
         !-----------------------------------------------------------
-      v_sum_dsc(i) = ( (sf_term + sf_shear_term +                            &
+      v_sum_dsc(i) = ( (sf_term + sf_shear_term +                              &
                             ir_term + evap_term)                               &
                 * dscdepth(i) / (a_ent_1*rho_mix(i,k)) )**one_third
-      v_top_dsc(i) =( (ir_term + evap_term) * dscdepth(i) /                &
+      v_top_dsc(i) =( (ir_term + evap_term) * dscdepth(i) /                    &
                             (a_ent_1*rho_mix(i,k)) )**one_third
         !-----------------------------------------------------------
         ! Calculate the direct radiative term
         !-----------------------------------------------------------
       if (db_dsct(i)  >   zero) then
-        dz_inv  = min( v_sum_dsc(i)*v_sum_dsc(i)/db_dsct(i),             &
+        dz_inv  = min( v_sum_dsc(i)*v_sum_dsc(i)/db_dsct(i),                   &
                         100.0_r_bl )
         l_rad   = 15.0_r_bl * max( one, 200.0_r_bl/(zc_dsc(i)+one) )
         alpha_t = one - exp(-one_half*dz_inv/l_rad)
@@ -1090,21 +1090,21 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         zil_corr = c_t * ( (sf_term + sf_shear_term +                          &
                             ir_term + evap_term) /                             &
                   (rho_mix(i,k) * sqrt(dscdepth(i))) )**two_thirds
-        rho_we_dsc(i) = ( sf_term + sf_shear_term                            &
+        rho_we_dsc(i) = ( sf_term + sf_shear_term                              &
                 +           ir_term + evap_term + dr_term )                    &
                             / ( db_dsct(i) + zil_corr )
         rhokh_dsct_ent(i) = rho_we_dsc(i)/ rdz(i,k)
-        rhokm_dsct_ent(i) = 0.75_r_bl * rhokh_dsct_ent(i)                  &
-                              * rdz(i,k) * (z_uv(i,k)-z_uv(i,k-1))       &
+        rhokm_dsct_ent(i) = 0.75_r_bl * rhokh_dsct_ent(i)                      &
+                              * rdz(i,k) * (z_uv(i,k)-z_uv(i,k-1))             &
                               * rho_wet_tq(i,k-1) / rho_mix(i,k)
-        if ( improved_tke_diag .and. coupled(i) .and.                        &
+        if ( improved_tke_diag .and. coupled(i) .and.                          &
              rho_we_dsc(i) > zero ) then
           ! Compute value of rhokm_dsct_ent excluding surface terms
           zil_corr = c_t * ( (ir_term + evap_term) /                           &
                    (rho_mix(i,k) * sqrt(dscdepth(i))) )**two_thirds
           rho_we_dsc_no_surf = ( ir_term + evap_term + dr_term )               &
                            / ( db_dsct(i) + zil_corr )
-          rhokm_dsct_top_ent(i) = rhokm_dsct_ent(i)                        &
+          rhokm_dsct_top_ent(i) = rhokm_dsct_ent(i)                            &
                                 * ( rho_we_dsc_no_surf / rho_we_dsc(i) )
         end if
         if (.not. l_use_var_fixes) rhokm_top(i,k) = rhokm_dsct_ent(i)
@@ -1241,7 +1241,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         ntop(i)   = ntdsc(i)
           ! assuming wb goes to zero by the lowest of ZH
           ! or cloud-base, but above surface layer
-      else if ( .not. dsc(i) .and. .not. cumulus(i) .and.                  &
+      else if ( .not. dsc(i) .and. .not. cumulus(i) .and.                      &
                 ntml(i)  >   2) then
           ! well-resolved SML
           ! ...test for decoupling
@@ -1295,9 +1295,9 @@ if ( l_converge_ga ) then
     do i = pdims%i_start, pdims%i_end
       ! Updated gradient-adjusted db is non-adjusted value + ga_fac times
       ! the original adjustment.
-      db_ga_dry_n(i,k) = db_noga_dry(i,k)                                  &
+      db_ga_dry_n(i,k) = db_noga_dry(i,k)                                      &
         + ( db_ga_dry(i,k) - db_noga_dry(i,k) ) * ga_fac(i)
-      db_ga_cld_n(i,k) = db_noga_cld(i,k)                                  &
+      db_ga_cld_n(i,k) = db_noga_cld(i,k)                                      &
         + ( db_ga_cld(i,k) - db_noga_cld(i,k) ) * ga_fac(i)
     end do
   end do
@@ -1321,7 +1321,7 @@ do ii = pdims%j_start, pdims%i_end, bl_segment_size
   do k = 2, bl_levels
     do i = ii, min(ii+bl_segment_size-1, pdims%i_end)
       if (kstatus(i)) then
-        if ( (db_ga_dry_n(i,k) <=  zero) .or.                                &
+        if ( (db_ga_dry_n(i,k) <=  zero) .or.                                  &
               (k >= ntml(i)) ) then
           kstatus(i)=.false.
           kwb0(i)=k
@@ -1360,7 +1360,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
         ntop(i) = ntop(i) - 1
         if ( ntop(i)  >   2 ) then
-          inner_loop1: do while ( z_tq(i,ntop(i))  >  z_inv(i)-dzrad(i)&
+          inner_loop1: do while ( z_tq(i,ntop(i))  >  z_inv(i)-dzrad(i)        &
                 .and. z_tq(i,ntop(i)-1)  >   z_inv(i)-z_cbase(i))
             ntop(i) = ntop(i) - 1
             if (ntop(i) == 2 ) then
@@ -1382,14 +1382,14 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         ! Find smoothly-varying height 1.5 model-levels below z_inv
         k_inv = ntop(i)
         if ( z_inv(i) < z_tq(i,k_inv+1) ) then
-          interp = ( z_inv(i)        - z_uv(i,k_inv+1) )                   &
+          interp = ( z_inv(i)        - z_uv(i,k_inv+1) )                       &
                   / ( z_tq(i,k_inv+1) - z_uv(i,k_inv+1) )
-          z_pr = (one-interp) * z_tq(i,k_inv-1)                              &
+          z_pr = (one-interp) * z_tq(i,k_inv-1)                                &
                 +      interp  * z_uv(i,k_inv)
         else
-          interp = ( z_inv(i)        - z_tq(i,k_inv+1) )                   &
+          interp = ( z_inv(i)        - z_tq(i,k_inv+1) )                       &
                   / ( z_uv(i,k_inv+2) - z_tq(i,k_inv+1) )
-          z_pr = (one-interp) * z_uv(i,k_inv)                                &
+          z_pr = (one-interp) * z_uv(i,k_inv)                                  &
                 +      interp  * z_tq(i,k_inv)
         end if
         ! Go down to 100m below z_inv (or cloud-base) if that is lower,
@@ -1404,26 +1404,26 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         dzrad(i) = z_inv(i) - z_pr
 
         ! Fraction of rho-level ntop below the dzrad layer
-        interp = ( z_pr                - z_tq(i,ntop(i)-1) )               &
+        interp = ( z_pr                - z_tq(i,ntop(i)-1) )                   &
                 / ( z_tq(i,ntop(i)) - z_tq(i,ntop(i)-1) )
         ! Add on SL and qw differences between the discontinuous inversion base
         ! and the base of the dzrad layer
-        dsl(i) = dsl(i) + sl(i,k_inv) - (one-interp)*sl(i,ntop(i)-1) &
+        dsl(i) = dsl(i) + sl(i,k_inv) - (one-interp)*sl(i,ntop(i)-1)           &
                                             -      interp *sl(i,ntop(i))
-        dqw(i) = dqw(i) + qw(i,k_inv) - (one-interp)*qw(i,ntop(i)-1) &
+        dqw(i) = dqw(i) + qw(i,k_inv) - (one-interp)*qw(i,ntop(i)-1)           &
                                             -      interp *qw(i,ntop(i))
 
       end if  ! ( dzrad_disc_opt )
 
-      wsl_dzrad_int = dzrad(i) *                                             &
+      wsl_dzrad_int = dzrad(i) *                                               &
                       ( 0.66_r_bl*df_ctop(i) - rho_we(i)*dsl(i) )
       wqw_dzrad_int = - dzrad(i) * rho_we(i) * dqw(i)
 
-      wb_dzrad_int(i) = wsl_dzrad_int * (                                    &
-                            (one-cf_ml(i))*btm(i,ntop(i)+1) +            &
-                              cf_ml(i)*btm_cld(i,ntop(i)+1) )            &
+      wb_dzrad_int(i) = wsl_dzrad_int * (                                      &
+                            (one-cf_ml(i))*btm(i,ntop(i)+1) +                  &
+                              cf_ml(i)*btm_cld(i,ntop(i)+1) )                  &
                         + wqw_dzrad_int * (                                    &
-                            (one-cf_ml(i))*bqm(i,ntop(i)+1) +            &
+                            (one-cf_ml(i))*bqm(i,ntop(i)+1) +                  &
                               cf_ml(i)*bqm_cld(i,ntop(i)+1) )
       wb_dzrad_int(i) = g * wb_dzrad_int(i)
       wb_dzrad_int(i) = max( zero, wb_dzrad_int(i) )
@@ -1482,13 +1482,13 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         k=kwb0(i)
           ! now DB_GA_DRY(K) le 0 and DB_GA_DRY(K-1) gt 0
           ! so interpolate:
-        db_ratio = db_ga_dry_n(i,k-1)                                        &
+        db_ratio = db_ga_dry_n(i,k-1)                                          &
                 / ( db_ga_dry_n(i,k-1) - db_ga_dry_n(i,k) )
         db_ratio = max( zero, db_ratio )  ! trap for rounding error
-        zwb0(i)=z_uv(i,k-1) +                                              &
+        zwb0(i)=z_uv(i,k-1) +                                                  &
                   db_ratio * (z_uv(i,k)-z_uv(i,k-1))
       end if
-      wb_surf_int(i) = bflux_surf(i) * z_tq(i,ksurf(i)) *              &
+      wb_surf_int(i) = bflux_surf(i) * z_tq(i,ksurf(i)) *                      &
                     ( one - z_tq(i,ksurf(i))/(2.0_r_bl*zwb0(i)))
       wb_surf_int(i) = max( rbl_eps, wb_surf_int(i) )
     else
@@ -1543,18 +1543,18 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
             z_ratio = z_pr/zinv_pr(i)
 
             if (flux_grad  ==  LockWhelan2006) then
-              khtop(i) = 3.6_r_bl * vkman * rho_mix(i,k) *v_ktop(i)      &
-                                * zinv_pr(i) * (z_ratio**3)                  &
+              khtop(i) = 3.6_r_bl * vkman * rho_mix(i,k) *v_ktop(i)            &
+                                * zinv_pr(i) * (z_ratio**3)                    &
                                 * ( (one-z_ratio)*(one-z_ratio) )
-              f2 = rho_mix(i,k) * one_half * z_ratio                         &
+              f2 = rho_mix(i,k) * one_half * z_ratio                           &
                                         * 2.0_r_bl**( z_ratio**4 )
               if ( v_ksum(i)  >   zero ) then
-                fsc = rho_mix(i,k) * 3.5_r_bl*(v_ktop(i)/v_ksum(i))      &
+                fsc = rho_mix(i,k) * 3.5_r_bl*(v_ktop(i)/v_ksum(i))            &
                       * (z_ratio**3) * (one-z_ratio)
               end if
             else
               ! max to avoid rounding errors giving small negative numbers
-              khtop(i) = g1 * vkman * rho_mix(i,k) * v_ktop(i)           &
+              khtop(i) = g1 * vkman * rho_mix(i,k) * v_ktop(i)                 &
                               * ((max(one - z_ratio,zero))**0.8_r_bl)          &
                               * z_pr * z_ratio
             end if
@@ -1565,8 +1565,8 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
             !--------------------------------
             ! include surface-driven profile
             !--------------------------------
-            khsurf(i) = vkman * rho_mix(i,k) *                             &
-                      w_h_top(i)*z_pr*( one - z_pr/z_inv(i) )              &
+            khsurf(i) = vkman * rho_mix(i,k) *                                 &
+                      w_h_top(i)*z_pr*( one - z_pr/z_inv(i) )                  &
                                        *( one - z_pr/z_inv(i) )
           end if
 
@@ -1577,42 +1577,42 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
           if ( z_tq(i,k)  <=  z_cbase(i) ) then
             ! Completely below cloud-base so use cloud-free formula
-            wb_scld = khsurf(i) * db_ga_dry_n(i,k) +                       &
+            wb_scld = khsurf(i) * db_ga_dry_n(i,k) +                           &
                       khtop(i) * db_noga_dry(i,k)
             if (flux_grad  ==  LockWhelan2006) then
-              wb_scld = wb_scld + ( g/rdz(i,k) ) *                           &
+              wb_scld = wb_scld + ( g/rdz(i,k) ) *                             &
                 ( btm(i,k-1)*wslng + bqm(i,k-1)*wqwng )
             end if
             wb_cld  = zero
           else if (z_tq(i,k-1)  >=  z_cbase(i)) then
             ! Completely above cloud-base so use cloudy formula
-            wb_cld = ( khsurf(i) * db_ga_cld_n(i,k) +                      &
+            wb_cld = ( khsurf(i) * db_ga_cld_n(i,k) +                          &
                         khtop(i)  * db_noga_cld(i,k) )
             if (flux_grad  ==  LockWhelan2006) then
-              wb_cld = wb_cld + ( g/rdz(i,k) ) * (                           &
-                        ( btm(i,k-1)*(one-cf_ml(i)) +                      &
-                          btm_cld(i,k-1)*cf_ml(i) )*wslng +                &
-                        ( bqm(i,k-1)*(one-cf_ml(i)) +                      &
+              wb_cld = wb_cld + ( g/rdz(i,k) ) * (                             &
+                        ( btm(i,k-1)*(one-cf_ml(i)) +                          &
+                          btm_cld(i,k-1)*cf_ml(i) )*wslng +                    &
+                        ( bqm(i,k-1)*(one-cf_ml(i)) +                          &
                           bqm_cld(i,k-1)*cf_ml(i) )*wqwng )
             end if
             wb_scld = zero
           else
             ! cloud-base within this integration range
             ! so treat cloud and sub-cloud layer wb separately
-            wb_scld = khsurf(i) * db_ga_dry_n(i,k) +                       &
+            wb_scld = khsurf(i) * db_ga_dry_n(i,k) +                           &
                       khtop(i) * db_noga_dry(i,k)
-            wb_cld = ( khsurf(i) * db_ga_cld_n(i,k) +                      &
+            wb_cld = ( khsurf(i) * db_ga_cld_n(i,k) +                          &
                         khtop(i)  * db_noga_cld(i,k) )
             if (flux_grad  ==  LockWhelan2006) then
-              wb_scld = wb_scld + ( g/rdz(i,k) ) *                           &
+              wb_scld = wb_scld + ( g/rdz(i,k) ) *                             &
                 ( btm(i,k-1)*wslng + bqm(i,k-1)*wqwng )
-              wb_cld = wb_cld + ( g/rdz(i,k) ) * (                           &
-                        ( btm(i,k-1)*(one-cf_ml(i)) +                      &
-                          btm_cld(i,k-1)*cf_ml(i) )*wslng +                &
-                        ( bqm(i,k-1)*(one-cf_ml(i)) +                      &
+              wb_cld = wb_cld + ( g/rdz(i,k) ) * (                             &
+                        ( btm(i,k-1)*(one-cf_ml(i)) +                          &
+                          btm_cld(i,k-1)*cf_ml(i) )*wslng +                    &
+                        ( bqm(i,k-1)*(one-cf_ml(i)) +                          &
                           bqm_cld(i,k-1)*cf_ml(i) )*wqwng )
             end if
-            cld_frac = (z_tq(i,k)-z_cbase(i))                              &
+            cld_frac = (z_tq(i,k)-z_cbase(i))                                  &
                       /(z_tq(i,k)-z_tq(i,k-1))
             wb_cld  = cld_frac * wb_cld
             wb_scld = (one-cld_frac) * wb_scld
@@ -1621,7 +1621,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
           if ( dzrad_disc_opt == dzrad_1p5dz .and. k == ntop(i) ) then
             ! At top of Sc layer, only include the part of the integral
             ! that is below the radiatively-cooled cloud-top layer.
-            interp = ( z_inv(i) - dzrad(i) - z_tq(i,k-1) )               &
+            interp = ( z_inv(i) - dzrad(i) - z_tq(i,k-1) )                     &
                     / ( z_tq(i,k) - z_tq(i,k-1) )
             wb_cld  = wb_cld  * interp
             wb_scld = wb_scld * interp
@@ -1677,15 +1677,15 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
           ! RHOKH(z_i) = rho * w_e * DZL and w_e ~ 1/DB_TOP, so:
           if ( db_top(i) >  zero .and. db_dsct(i) >  0.01_r_bl ) then
                                         ! can't calc Zil. term
-            rhokh_surf_ent(i) = rhokh_surf_ent(i) *                        &
-                    ( rho_mix(i,ntdsc(i)+1) * db_top(i) *                &
-                      rdz(i,ntml(i)+1) ) /                                 &
-                    ( rho_mix(i,ntml(i)+1) * db_dsct(i) *                &
+            rhokh_surf_ent(i) = rhokh_surf_ent(i) *                            &
+                    ( rho_mix(i,ntdsc(i)+1) * db_top(i) *                      &
+                      rdz(i,ntml(i)+1) ) /                                     &
+                    ( rho_mix(i,ntml(i)+1) * db_dsct(i) *                      &
                                         rdz(i,ntdsc(i)+1) )
-            rhokm_surf_ent(i) = rhokm_surf_ent(i) *                        &
-                    ( rho_wet_tq(i,ntdsc(i)) * db_top(i) *               &
-                      rdz(i,ntml(i)+1) ) /                                 &
-                    ( rho_wet_tq(i,ntml(i)) * db_dsct(i) *               &
+            rhokm_surf_ent(i) = rhokm_surf_ent(i) *                            &
+                    ( rho_wet_tq(i,ntdsc(i)) * db_top(i) *                     &
+                      rdz(i,ntml(i)+1) ) /                                     &
+                    ( rho_wet_tq(i,ntml(i)) * db_dsct(i) *                     &
                                       rdz(i,ntdsc(i)+1) )
             if (.not. l_use_var_fixes)                                         &
                   rhokm(i,ntdsc(i)+1) = rhokm_surf_ent(i)
@@ -1729,7 +1729,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
           if ( dsc(i) ) then
             ! Existing DSC layer confirmed not to be merged with the SML.
-            if ( cumulus(i) .and. ( kprof_cu == buoy_integ .or.              &
+            if ( cumulus(i) .and. ( kprof_cu == buoy_integ .or.                &
                                       kprof_cu == buoy_integ_low ) ) then
               ! Cumulus layer under the DSC; only turn on ksurf_iterate if
               ! using appropriate kprof_cu option.
@@ -1740,7 +1740,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
             ! No existing DSC so we're splitting a new DSC off the SML;
             ! turn on ktop_iterate to find the new DSC's base
             ktop_iterate(i)  = .true.
-            if ( (.not. cumulus(i)) .or. kprof_cu == buoy_integ .or.         &
+            if ( (.not. cumulus(i)) .or. kprof_cu == buoy_integ .or.           &
                                             kprof_cu == buoy_integ_low ) then
               ! Switch to using b-flux integration to find new lower SML-top,
               ! but not in Cu layers unless using appropriate kprof_cu option.
@@ -1759,10 +1759,10 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
           !---------------------------------
           ! Extent of mixing must be reduced
           !---------------------------------
-          if ( .not. cumulus(i) .or. kprof_cu == buoy_integ .or.             &
+          if ( .not. cumulus(i) .or. kprof_cu == buoy_integ .or.               &
                                         kprof_cu == buoy_integ_low)            &
                   ksurf_iterate(i) = .true.
-          if ( cumulus(i) .and. ( kprof_cu == buoy_integ .or.                &
+          if ( cumulus(i) .and. ( kprof_cu == buoy_integ .or.                  &
                                     kprof_cu == buoy_integ_low) )              &
                   dec_thres(i) = dec_thres_cu
           ktop_iterate(i)  = .true.
@@ -1797,7 +1797,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
             fq_nt_zhsc(i) = fq_nt_zh(i)
             if (l_wtrac) iset_wtrac(i) = 2
             ! put all entrainment into RHOKH_TOP
-            rhokh_dsct_ent(i) = rhokh_top_ent(i)                           &
+            rhokh_dsct_ent(i) = rhokh_top_ent(i)                               &
                                 + rhokh_surf_ent(i)
             rhokh_top_ent(i) = zero
             rhokh_surf_ent(i) = zero
@@ -1805,12 +1805,12 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
               ! Save entrainment coef excluding enhancement by surf contrib.
               rhokm_dsct_top_ent(i) = rhokm_top_ent(i)
             end if
-            rhokm_dsct_ent(i) = rhokm_top_ent(i)                           &
+            rhokm_dsct_ent(i) = rhokm_top_ent(i)                               &
                                 + rhokm_surf_ent(i)
             rhokm_top_ent(i) = zero
             rhokm_surf_ent(i) = zero
             if (.not. l_use_var_fixes) then
-              rhokm_top(i,ntml(i)+1) = rhokm_top(i,ntml(i)+1)          &
+              rhokm_top(i,ntml(i)+1) = rhokm_top(i,ntml(i)+1)                  &
                                           + rhokm(i,ntml(i)+1)
               rhokm(i,ntml(i)+1) = zero
             end if
@@ -1862,13 +1862,13 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
     ! (not clear precisely how to define this here: for now use
     !  KSURF calculated from ZH)
     !-----------------------------------------------------------
-    z_bot_lim(i)=z_uv(i,ksurf(i)+1)                                      &
+    z_bot_lim(i)=z_uv(i,ksurf(i)+1)                                            &
             + 0.1_r_bl * (z_uv(i,ksurf(i)+2)-z_uv(i,ksurf(i)+1))
     if ( l_converge_ga ) then
       ! Allow K-surf to go up to the Sc-top (increasing zsml_top within
       ! the cloud-top layer can still make the buoyancy fluxes below more
       ! negative because this reduces the gradient adjustment)
-      z_top_lim(i)=max( z_top_lim(i),                                      &
+      z_top_lim(i)=max( z_top_lim(i),                                          &
                           max( z_bot_lim(i), zhsc(i) ) )
       ! ksurf_iterate currently only true if test_well_mixed was true and
       ! decoupling was diagnosed
@@ -1885,7 +1885,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
     else  ! ( .not. l_converge_ga )
       ! limit K-surf to below cloud-top radiatively cooled layer
       ! or original zh (held in z_top_lim) if no top-driven turbulence
-      z_top_lim(i)=max( z_top_lim(i),                                      &
+      z_top_lim(i)=max( z_top_lim(i),                                          &
                           max( z_bot_lim(i), zhsc(i) - dzrad(i) ) )
       ! Always use saturated wb above decoupled-layer cloud-base
       z_cbase(i) = zhsc(i) - zc_dsc(i)
@@ -1916,7 +1916,7 @@ if (kprof_cu == buoy_integ .or. kprof_cu == buoy_integ_low) then
 !$OMP do SCHEDULE(DYNAMIC)
 do ii = pdims%i_start, pdims%i_end, bl_segment_size
   do i = ii, min(ii+bl_segment_size-1, pdims%i_end)
-    if ( cumulus(i) .and. .not. dsc(i) .and.                               &
+    if ( cumulus(i) .and. .not. dsc(i) .and.                                   &
                             .not. ksurf_iterate(i)) then
       ! pure cumulus layer and necessary parameters not already set up
       ksurf_iterate(i)  = .true.
@@ -1925,7 +1925,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       z_bot_lim(i) = lcl_fac*z_lcl(i)  ! ...a fraction of the LCL and...
       z_top_lim(i) = z_lcl(i) + 1000.0_r_bl ! ...1km above the LCL
       ntop(i)=ntml(i)
-      do while ( z_uv(i,ntop(i)+1) <= z_top_lim(i) .and.                 &
+      do while ( z_uv(i,ntop(i)+1) <= z_top_lim(i) .and.                       &
                   ntop(i)+1 < bl_levels-2 )
         ntop(i) = ntop(i) + 1  ! z_uv(ntop+1) > z_top_lim
       end do
@@ -1936,7 +1936,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       ! up depth of layer within which it is allowed:
       ! Start with ZSML_TOP at lower limit and work upwards
       !-----------------------------------------------------
-      z_inc(i)=(z_top_lim(i)-z_bot_lim(i))                               &
+      z_inc(i)=(z_top_lim(i)-z_bot_lim(i))                                     &
                     / real(n_steps, r_bl)
       zsml_top(i) = z_bot_lim(i)
       wb_ratio(i) = dec_thres(i) - one ! to be < DEC_THRES
@@ -2008,9 +2008,9 @@ do n_sweep = 1, num_sweeps_bflux
       ga_fac(i1) = zh_prev(i1) / zsml_top(i1)
 
           ! assume wb goes to zero at ZSML_TOP
-      wb_surf_int(i1) =                                                     &
-           bflux_surf(i1) * z_tq(i1,ksurf(i1)) *                      &
-           ( one - z_tq(i1,ksurf(i1))/                                   &
+      wb_surf_int(i1) =                                                        &
+           bflux_surf(i1) * z_tq(i1,ksurf(i1)) *                               &
+           ( one - z_tq(i1,ksurf(i1))/                                         &
                                       (2.0_r_bl*zsml_top(i1)) )
       wb_surf_int(i1) = max(rbl_eps,wb_surf_int(i1))
 
@@ -2037,15 +2037,15 @@ do n_sweep = 1, num_sweeps_bflux
         do ic = jj, min(jj+bl_segment_size-1, c_len_i)
           i1=ind_todo_i(ic)
 
-          if ( k  >=  ksurf(i1)+1 .and.                                     &
+          if ( k  >=  ksurf(i1)+1 .and.                                        &
                k  <=  ntop(i1) ) then
 
             if ( l_converge_ga ) then
               ! Updated gradient-adjusted db is non-adjusted value + ga_fac
               ! times the original adjustment.
-              db_ga_dry_n(i1,k) = db_noga_dry(i1,k)                      &
+              db_ga_dry_n(i1,k) = db_noga_dry(i1,k)                            &
                 + ( db_ga_dry(i1,k) - db_noga_dry(i1,k) ) * ga_fac(i1)
-              db_ga_cld_n(i1,k) = db_noga_cld(i1,k)                      &
+              db_ga_cld_n(i1,k) = db_noga_cld(i1,k)                            &
                 + ( db_ga_cld(i1,k) - db_noga_cld(i1,k) ) * ga_fac(i1)
             end if
 
@@ -2054,8 +2054,8 @@ do n_sweep = 1, num_sweeps_bflux
               if ( l_use_sml_dsc_fixes ) then
                 ! Include factors vkman * rho_mix, to be consistent with
                 ! the test_well_mixed code.
-                kh_surf(i1,k) = vkman * rho_mix(i1,k) * w_h_top(i1)   &
-                                    *z_pr*(one-z_pr/z_inv(i1) )             &
+                kh_surf(i1,k) = vkman * rho_mix(i1,k) * w_h_top(i1)            &
+                                    *z_pr*(one-z_pr/z_inv(i1) )                &
                                          *(one-z_pr/z_inv(i1) )
               else
                 ! Original version is missing the factors vkman * rho_mix,
@@ -2065,8 +2065,8 @@ do n_sweep = 1, num_sweeps_bflux
                 ! overlap in the vertical, as what is stored in kh_surf
                 ! gets added onto the DSC kh in the ktop iteration code
                 ! (and DSC kh does include these factors).
-                kh_surf(i1,k) = w_h_top(i1)                              &
-                                    *z_pr*(one-z_pr/z_inv(i1) )             &
+                kh_surf(i1,k) = w_h_top(i1)                                    &
+                                    *z_pr*(one-z_pr/z_inv(i1) )                &
                                          *(one-z_pr/z_inv(i1) )
               end if
             else
@@ -2087,7 +2087,7 @@ do n_sweep = 1, num_sweeps_bflux
             else
                 ! cloud-base within this integration range
                 ! so treat cloud and sub-cloud layer wb separately
-              cld_frac = (z_tq(i1,k)-z_cbase(i1))                        &
+              cld_frac = (z_tq(i1,k)-z_cbase(i1))                              &
                         /(z_tq(i1,k)-z_tq(i1,k-1))
               wb_cld  = cld_frac                                               &
                          * kh_surf(i1,k)*db_ga_cld_n(i1,k)
@@ -2134,7 +2134,7 @@ do n_sweep = 1, num_sweeps_bflux
     !..as there is no need to calculate WB for ZSML_TOP at a current Z_INC
     z_inc(i1)= z_inc(i1)/real(n_steps+1, r_bl)
 
-    if ((up(l) == 1 .and. wb_ratio(i1) >= dec_thres(i1)) .or.            &
+    if ((up(l) == 1 .and. wb_ratio(i1) >= dec_thres(i1)) .or.                  &
                ! hit thres while working up
         (up(l) == 0 .and. wb_ratio(i1) <= dec_thres(i1))) then
                ! hit thres while working down
@@ -2285,7 +2285,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
         ntop(i) = ntop(i) - 1
         if ( ntop(i)  >   1 ) then
-          inner_loop2: do while ( z_tq(i,ntop(i))  >  z_inv(i)-dzrad(i)&
+          inner_loop2: do while ( z_tq(i,ntop(i))  >  z_inv(i)-dzrad(i)        &
                 .and. z_tq(i,ntop(i)-1)  >   z_inv(i)-z_cbase(i))
             ntop(i) = ntop(i) - 1
             if (ntop(i) == 1 ) then
@@ -2307,14 +2307,14 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         ! Find smoothly-varying height 1.5 model-levels below z_inv
         k_inv = ntop(i)
         if ( z_inv(i) < z_tq(i,k_inv+1) ) then
-          interp = ( z_inv(i)        - z_uv(i,k_inv+1) )                   &
+          interp = ( z_inv(i)        - z_uv(i,k_inv+1) )                       &
                   / ( z_tq(i,k_inv+1) - z_uv(i,k_inv+1) )
-          z_pr = (one-interp) * z_tq(i,k_inv-1)                              &
+          z_pr = (one-interp) * z_tq(i,k_inv-1)                                &
                 +      interp  * z_uv(i,k_inv)
         else
-          interp = ( z_inv(i)        - z_tq(i,k_inv+1) )                   &
+          interp = ( z_inv(i)        - z_tq(i,k_inv+1) )                       &
                   / ( z_uv(i,k_inv+2) - z_tq(i,k_inv+1) )
-          z_pr = (one-interp) * z_uv(i,k_inv)                                &
+          z_pr = (one-interp) * z_uv(i,k_inv)                                  &
                 +      interp  * z_tq(i,k_inv)
         end if
         ! Go down to 100m below z_inv (or cloud-base) if that is lower,
@@ -2329,26 +2329,26 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
         dzrad(i) = z_inv(i) - z_pr
 
         ! Fraction of rho-level ntop below the dzrad layer
-        interp = ( z_pr                - z_tq(i,ntop(i)-1) )               &
+        interp = ( z_pr                - z_tq(i,ntop(i)-1) )                   &
                 / ( z_tq(i,ntop(i)) - z_tq(i,ntop(i)-1) )
         ! Add on SL and qw differences between the discontinuous inversion base
         ! and the base of the dzrad layer
-        dsl(i) = dsl(i) + sl(i,k_inv) - (one-interp)*sl(i,ntop(i)-1) &
+        dsl(i) = dsl(i) + sl(i,k_inv) - (one-interp)*sl(i,ntop(i)-1)           &
                                             -      interp *sl(i,ntop(i))
-        dqw(i) = dqw(i) + qw(i,k_inv) - (one-interp)*qw(i,ntop(i)-1) &
+        dqw(i) = dqw(i) + qw(i,k_inv) - (one-interp)*qw(i,ntop(i)-1)           &
                                             -      interp *qw(i,ntop(i))
 
       end if  ! ( dzrad_disc_opt )
 
-      wsl_dzrad_int = dzrad(i) *                                             &
+      wsl_dzrad_int = dzrad(i) *                                               &
                       ( 0.66_r_bl*df_ctop(i) - rho_we(i)*dsl(i) )
       wqw_dzrad_int = - dzrad(i) * rho_we(i) * dqw(i)
 
-      wb_dzrad_int(i) = wsl_dzrad_int * (                                    &
-                            (one-cf_ml(i))*btm(i,ntop(i)+1) +            &
-                              cf_ml(i)*btm_cld(i,ntop(i)+1) )            &
+      wb_dzrad_int(i) = wsl_dzrad_int * (                                      &
+                            (one-cf_ml(i))*btm(i,ntop(i)+1) +                  &
+                              cf_ml(i)*btm_cld(i,ntop(i)+1) )                  &
                         + wqw_dzrad_int * (                                    &
-                            (one-cf_ml(i))*bqm(i,ntop(i)+1) +            &
+                            (one-cf_ml(i))*bqm(i,ntop(i)+1) +                  &
                               cf_ml(i)*bqm_cld(i,ntop(i)+1) )
       wb_dzrad_int(i) = g * wb_dzrad_int(i)
       wb_dzrad_int(i) = max( zero, wb_dzrad_int(i) )
@@ -2430,7 +2430,7 @@ do n_sweep = 1, num_sweeps_bflux
         wbend(i1,ksurf(i1)) = zero
       end if
 
-      if ( ksurf_iterate(i1) .and.                                          &
+      if ( ksurf_iterate(i1) .and.                                             &
            zdsc_base(i1)  <   zsml_top(i1) ) then
             ! only include surface flux if K_SURF is included
             ! in the wb calculation and K profiles overlap
@@ -2471,31 +2471,31 @@ do n_sweep = 1, num_sweeps_bflux
 
               if (.not. scbase(i1) ) then
                 scbase(i1) = .true.
-                z_ratio = (zdsc_base(i1)-z_uv(i1,k-1))                   &
+                z_ratio = (zdsc_base(i1)-z_uv(i1,k-1))                         &
                          /(z_uv(i1,k)-z_uv(i1,k-1))
-                ft_nt_dscb(i1) = ft_nt(i1,k-1) +                         &
+                ft_nt_dscb(i1) = ft_nt(i1,k-1) +                               &
                       (ft_nt(i1,k)-ft_nt(i1,k-1))*z_ratio
-                fq_nt_dscb(i1) = fq_nt(i1,k-1) +                         &
+                fq_nt_dscb(i1) = fq_nt(i1,k-1) +                               &
                       (fq_nt(i1,k)-fq_nt(i1,k-1))*z_ratio
               end if
 
               z_ratio = z_pr/zinv_pr(i1)
 
               if (flux_grad  ==  LockWhelan2006) then
-                khtop(i1) = 3.6_r_bl * vkman * rho_mix(i1,k)             &
-                             * v_top_dsc(i1) * zinv_pr(i1)               &
+                khtop(i1) = 3.6_r_bl * vkman * rho_mix(i1,k)                   &
+                             * v_top_dsc(i1) * zinv_pr(i1)                     &
                   * (z_ratio**3) * ( (one-z_ratio)*(one-z_ratio) )
-                f2 = rho_mix(i1,k) * one_half * z_ratio                     &
+                f2 = rho_mix(i1,k) * one_half * z_ratio                        &
                                      * 2.0_r_bl**( z_ratio**4 )
                 if ( v_sum_dsc(i1)  >   zero ) then
-                  fsc = 3.5_r_bl * rho_mix(i1,k)                            &
-                           * (v_top_dsc(i1)/v_sum_dsc(i1))               &
+                  fsc = 3.5_r_bl * rho_mix(i1,k)                               &
+                           * (v_top_dsc(i1)/v_sum_dsc(i1))                     &
                            * (z_ratio**3) * (one-z_ratio)
                 end if
               else
                 ! max to avoid rounding errors giving small negative numbers
-                khtop(i1) = g1 * vkman * rho_mix(i1,k)                   &
-                    * v_top_dsc(i1) * ((max(one - z_ratio,zero))**0.8_r_bl) &
+                khtop(i1) = g1 * vkman * rho_mix(i1,k)                         &
+                    * v_top_dsc(i1) * ((max(one - z_ratio,zero))**0.8_r_bl)    &
                        * z_pr * z_ratio
               end if
 
@@ -2509,50 +2509,50 @@ do n_sweep = 1, num_sweeps_bflux
             end if
 
             if (flux_grad  ==  LockWhelan2006) then
-              wslng = (f2+fsc)*(tothf_zi(i1)-ft_nt_dscb(i1))             &
+              wslng = (f2+fsc)*(tothf_zi(i1)-ft_nt_dscb(i1))                   &
                           - ( ft_nt(i1,k)-ft_nt_dscb(i1) )
-              wqwng = (f2+fsc)*(totqf_zi(i1)-fq_nt_dscb(i1))             &
+              wqwng = (f2+fsc)*(totqf_zi(i1)-fq_nt_dscb(i1))                   &
                           - ( fq_nt(i1,k)-fq_nt_dscb(i1) )
             end if
 
             if ( z_tq(i1,k)  <=  z_cbase(i1) ) then
                 ! Completely below cloud-base so use cloud-free form
-              wb_scld = khsurf(i1)* db_ga_dry_n(i1,k) +                  &
+              wb_scld = khsurf(i1)* db_ga_dry_n(i1,k) +                        &
                         khtop(i1) * db_noga_dry(i1,k)
               if (flux_grad  ==  LockWhelan2006) then
-                wb_scld = wb_scld + ( g/rdz(i1,k) ) *                       &
+                wb_scld = wb_scld + ( g/rdz(i1,k) ) *                          &
                    ( btm(i1,k-1)*wslng + bqm(i1,k-1)*wqwng )
               end if
               wb_cld  = zero
             else if (z_tq(i1,k-1)  >=  z_cbase(i1)) then
                 ! Completely above cloud-base so use cloudy formula
-              wb_cld = ( khsurf(i1) * db_ga_cld_n(i1,k) +                &
+              wb_cld = ( khsurf(i1) * db_ga_cld_n(i1,k) +                      &
                          khtop(i1)  * db_noga_cld(i1,k) )
               if (flux_grad  ==  LockWhelan2006) then
-                wb_cld = wb_cld + ( g/rdz(i1,k) ) * (                       &
-                     ( btm(i1,k-1)*(one-cf_ml(i1)) +                     &
-                       btm_cld(i1,k-1)*cf_ml(i1) )*wslng +               &
-                     ( bqm(i1,k-1)*(one-cf_ml(i1)) +                     &
+                wb_cld = wb_cld + ( g/rdz(i1,k) ) * (                          &
+                     ( btm(i1,k-1)*(one-cf_ml(i1)) +                           &
+                       btm_cld(i1,k-1)*cf_ml(i1) )*wslng +                     &
+                     ( bqm(i1,k-1)*(one-cf_ml(i1)) +                           &
                        bqm_cld(i1,k-1)*cf_ml(i1) )*wqwng )
               end if
               wb_scld = zero
             else
                 ! cloud-base within this integration range
                 ! so treat cloud and sub-cloud layer wb separately
-              wb_scld = khsurf(i1) * db_ga_dry_n(i1,k) +                 &
+              wb_scld = khsurf(i1) * db_ga_dry_n(i1,k) +                       &
                         khtop(i1) * db_noga_dry(i1,k)
-              wb_cld = ( khsurf(i1) * db_ga_cld_n(i1,k) +                &
+              wb_cld = ( khsurf(i1) * db_ga_cld_n(i1,k) +                      &
                          khtop(i1)  * db_noga_cld(i1,k) )
               if (flux_grad  ==  LockWhelan2006) then
-                wb_scld = wb_scld + ( g/rdz(i1,k) ) *                       &
+                wb_scld = wb_scld + ( g/rdz(i1,k) ) *                          &
                    ( btm(i1,k-1)*wslng + bqm(i1,k-1)*wqwng )
-                wb_cld = wb_cld + ( g/rdz(i1,k) ) * (                       &
-                     ( btm(i1,k-1)*(one-cf_ml(i1)) +                     &
-                       btm_cld(i1,k-1)*cf_ml(i1) )*wslng +               &
-                     ( bqm(i1,k-1)*(one-cf_ml(i1)) +                     &
+                wb_cld = wb_cld + ( g/rdz(i1,k) ) * (                          &
+                     ( btm(i1,k-1)*(one-cf_ml(i1)) +                           &
+                       btm_cld(i1,k-1)*cf_ml(i1) )*wslng +                     &
+                     ( bqm(i1,k-1)*(one-cf_ml(i1)) +                           &
                        bqm_cld(i1,k-1)*cf_ml(i1) )*wqwng )
               end if
-              cld_frac = (z_tq(i1,k)-z_cbase(i1))                        &
+              cld_frac = (z_tq(i1,k)-z_cbase(i1))                              &
                         /(z_tq(i1,k)-z_tq(i1,k-1))
               wb_cld  = cld_frac * wb_cld
               wb_scld = (one-cld_frac) * wb_scld
@@ -2561,7 +2561,7 @@ do n_sweep = 1, num_sweeps_bflux
             if ( dzrad_disc_opt == dzrad_1p5dz .and. k == ntop(i1) ) then
               ! At top of Sc layer, only include the part of the integral
               ! that is below the radiatively-cooled cloud-top layer.
-              interp = ( zhsc(i1) - dzrad(i1) - z_tq(i1,k-1) )        &
+              interp = ( zhsc(i1) - dzrad(i1) - z_tq(i1,k-1) )                 &
                      / ( z_tq(i1,k) - z_tq(i1,k-1) )
               wb_cld  = wb_cld  * interp
               wb_scld = wb_scld * interp
@@ -2608,7 +2608,7 @@ do n_sweep = 1, num_sweeps_bflux
     z_inc(i1)= z_inc(i1)/real(n_steps+1, r_bl)
 
     if (                                                                       &
-       (up(l) == 1 .and. wb_ratio(i1) <= dec_thres(i1)) .or.             &
+       (up(l) == 1 .and. wb_ratio(i1) <= dec_thres(i1)) .or.                   &
               ! hit thres while working up
        (up(l) == 0 .and. wb_ratio(i1) >= dec_thres(i1))) then
               ! hit thres while working down
@@ -2631,7 +2631,7 @@ do n_sweep = 1, num_sweeps_bflux
         end if
       else  ! ( .not. l_use_sml_dsc_fixes )
         ! Original code leaves base height close to but not at limit
-        if (  zdsc_base(i1) >= z_top_lim(i1)-one .or.                    &
+        if (  zdsc_base(i1) >= z_top_lim(i1)-one .or.                          &
               zdsc_base(i1) <=  z_bot_lim(i1)+one ) then
           ! hit height limits (give-or-take 1m) without
           ! reaching threshold
@@ -2675,11 +2675,11 @@ if (model_type == mt_single_column) then
       ! convert to m2/s-3
       if ( k <= ntop(i) ) then
         if ( k <= ksurf(i) ) then
-          gamma_wbs = ( (wbmix(i,ksurf(i))/z_tq(i,ksurf(i)))           &
+          gamma_wbs = ( (wbmix(i,ksurf(i))/z_tq(i,ksurf(i)))                   &
                     - bflux_surf(i)  )*2.0_r_bl/z_tq(i,ksurf(i))
           wbmix(i,k) = bflux_surf(i) + gamma_wbs*z_uv(i,k)
 
-          gamma_wbs = ( (wbend(i,ksurf(i))/z_tq(i,ksurf(i)))           &
+          gamma_wbs = ( (wbend(i,ksurf(i))/z_tq(i,ksurf(i)))                   &
                     - bflux_surf(i)  )*2.0_r_bl/z_tq(i,ksurf(i))
           wbend(i,k) =  bflux_surf(i) + gamma_wbs*z_uv(i,k)
         else
@@ -2719,7 +2719,7 @@ if ( entr_smooth_dec == on .or. entr_smooth_dec == entr_taper_zh ) then
   !cdir collapse
 !$OMP do SCHEDULE(STATIC)
   do i = pdims%i_start, pdims%i_end
-    if ( cumulus(i) .or.                                                     &
+    if ( cumulus(i) .or.                                                       &
           ( dsc(i) .and. zdsc_base(i) < zh(i) ) ) then
       ! ignore SML `cloud-top' driven mixing
       zsml_base(i) = zh(i)
@@ -2751,7 +2751,7 @@ end if  ! test on entr_smooth_dec
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
   zsml_top(i) = zh(i)
-  if (bl_res_inv /= off .and. dzh(i) > zero)                                 &
+  if (bl_res_inv /= off .and. dzh(i) > zero)                                   &
                               zsml_top(i) = zh(i)+dzh(i)
 end do  ! loop over i
 !$OMP end do
@@ -2791,14 +2791,14 @@ end if  ! test on kprof_cu
 do ii = pdims%i_start, pdims%i_end, bl_segment_size
   do i = ii, min(ii+bl_segment_size-1, pdims%i_end)
     k=ntml(i)+1
-    kh_top_factor(i) = max( 0.7_r_bl , one - sqrt(                           &
-              rhokh_surf_ent(i) /                                            &
+    kh_top_factor(i) = max( 0.7_r_bl , one - sqrt(                             &
+              rhokh_surf_ent(i) /                                              &
                     ( rho_mix(i,k)*w_h_top(i)*vkman*zh(i) ) ) )
     if (l_use_var_fixes) then
-      km_top_factor(i) = max( 0.7_r_bl, one-sqrt( rhokm_surf_ent(i) /      &
+      km_top_factor(i) = max( 0.7_r_bl, one-sqrt( rhokm_surf_ent(i) /          &
                 ( rho_wet_tq(i,k-1)*w_m_top(i)*vkman*zh(i) ) ) )
     else
-      km_top_factor(i) = max( 0.7_r_bl , one - sqrt( rhokm(i,k) /          &
+      km_top_factor(i) = max( 0.7_r_bl , one - sqrt( rhokm(i,k) /              &
                 ( rho_wet_tq(i,k-1)*w_m_top(i)*vkman*zh(i) ) ) )
     end if
     scdepth(i) = zh(i) - zsml_base(i)
@@ -2809,15 +2809,15 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
     else
       kh_sct_factor(i) = one
     end if
-    factor = g1 * rho_wet_tq(i,k-1) * v_top(i) *                           &
+    factor = g1 * rho_wet_tq(i,k-1) * v_top(i) *                               &
                     vkman * scdepth(i) * 0.75_r_bl
     if ( factor  >   zero) then
       if (l_use_var_fixes) then
-        km_sct_factor(i) = one -                                             &
+        km_sct_factor(i) = one -                                               &
               ( rhokm_top_ent(i) / factor )**1.25_r_bl
                                                         ! 1.25=1/0.8
       else
-        km_sct_factor(i) = one -                                             &
+        km_sct_factor(i) = one -                                               &
               ( rhokm_top(i,k) / factor )**1.25_r_bl
       end if
     else
@@ -2836,22 +2836,22 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       dscdepth(i) = zhsc(i) - zdsc_base(i)
       factor = g1*rho_mix(i,k)*v_top_dsc(i)*vkman*dscdepth(i)
       if ( factor  >   zero) then
-        kh_dsct_factor(i) = one -                                            &
+        kh_dsct_factor(i) = one -                                              &
                             ( rhokh_dsct_ent(i) / factor )**1.25_r_bl
                                                         ! 1.25=1/0.8
       else
         kh_dsct_factor(i) = one
       end if
 
-      factor = 0.75_r_bl * g1 * rho_wet_tq(i,k-1) * v_top_dsc(i) *         &
+      factor = 0.75_r_bl * g1 * rho_wet_tq(i,k-1) * v_top_dsc(i) *             &
                             vkman * dscdepth(i)
       if ( factor  >   zero) then
         if (l_use_var_fixes) then
-          km_dsct_factor(i) = one -                                          &
+          km_dsct_factor(i) = one -                                            &
                 ( rhokm_dsct_ent(i) / factor )**1.25_r_bl
                                                         ! 1.25=1/0.8
         else
-          km_dsct_factor(i) = one -                                          &
+          km_dsct_factor(i) = one -                                            &
                 ( rhokm_top(i,k) / factor )**1.25_r_bl
         end if
       else
@@ -2861,7 +2861,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       if ( improved_tke_diag .and. coupled(i) ) then
         ! Compute value km_dsct_factor would have excluding surf contribution
         if ( factor > zero ) then
-          km_dsct_factor_top(i) =                                            &
+          km_dsct_factor_top(i) =                                              &
                          one - ( rhokm_dsct_top_ent(i) / factor )**1.25_r_bl
         else
           km_dsct_factor_top(i) = one
@@ -2916,31 +2916,31 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
       zk_tq = z_tq(i,k-1)
 
-      if ( zk_uv  <   zh(i) .and.                                            &
+      if ( zk_uv  <   zh(i) .and.                                              &
             zk_uv  >   zsml_base(i) ) then
         z_pr  = zk_uv - zsml_base(i)
         zh_pr = zh(i) - zsml_base(i)
         z_ratio = z_pr/zh_pr
         if (flux_grad  ==  LockWhelan2006) then
 
-          rhokh_top(i,k) = 3.6_r_bl*vkman * rho_mix(i,k) * v_top(i)      &
+          rhokh_top(i,k) = 3.6_r_bl*vkman * rho_mix(i,k) * v_top(i)            &
                               * zh_pr * (z_ratio**3)                           &
                               * (( one - z_ratio )**2)
 
           if ( .not. coupled(i) ) then
-            rhof2(i,k)  = rho_mix(i,k) * one_half * z_ratio                &
+            rhof2(i,k)  = rho_mix(i,k) * one_half * z_ratio                    &
                                         * 2.0_r_bl**( z_ratio**4 )
             if ( v_sum(i)  >   zero ) then
-              rhofsc(i,k) = 3.5_r_bl * rho_mix(i,k)                        &
-                              * (v_top(i)/v_sum(i))                        &
+              rhofsc(i,k) = 3.5_r_bl * rho_mix(i,k)                            &
+                              * (v_top(i)/v_sum(i))                            &
                               * (z_ratio**3) * (one-z_ratio)
             end if
           end if
 
         else  ! Not LockWhelan2006
           ! max to avoid rounding errors giving small negative numbers
-          rhokh_top(i,k) = rho_mix(i,k) * v_top(i) * g1 *                &
-            vkman * ((max(one - kh_sct_factor(i)*z_ratio,zero))**0.8_r_bl )  &
+          rhokh_top(i,k) = rho_mix(i,k) * v_top(i) * g1 *                      &
+            vkman * ((max(one - kh_sct_factor(i)*z_ratio,zero))**0.8_r_bl )    &
                                             * z_pr * z_ratio
         end if
 
@@ -2951,13 +2951,13 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       !   grounds that the change in shape arises with the
       !   inclusion of the other non-gradient terms.
       !-------------------------------------------------------
-      if ( zk_tq  <   zh(i) .and.                                            &
+      if ( zk_tq  <   zh(i) .and.                                              &
             zk_tq  >   zsml_base(i) ) then
         z_pr = zk_tq - zsml_base(i)
         zh_pr = zh(i) - zsml_base(i)
-        rhokm_top(i,k) = 0.75_r_bl * rho_wet_tq(i,k-1) * v_top(i) *      &
+        rhokm_top(i,k) = 0.75_r_bl * rho_wet_tq(i,k-1) * v_top(i) *            &
               g1 * vkman *                                                     &
-              ( (max(one - km_sct_factor(i)*z_pr/zh_pr, zero))**0.8_r_bl )   &
+              ( (max(one - km_sct_factor(i)*z_pr/zh_pr, zero))**0.8_r_bl )     &
                                           * z_pr * z_pr / zh_pr
                                                   ! PRANDTL=0.75
         if (BL_diag%l_tke) then
@@ -2970,7 +2970,7 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
       ! profiles for decoupled stratocumulus layers when
       ! one exists
       !-------------------------------------------------------------
-      if ( zk_uv  <   zhsc(i) .and.                                          &
+      if ( zk_uv  <   zhsc(i) .and.                                            &
               zk_uv  >   zdsc_base(i) ) then
         if (.not. scbase(i) ) then
           scbase(i) = .true.
@@ -2992,37 +2992,37 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
 
         if (flux_grad  ==  LockWhelan2006) then
 
-          rhokh_top(i,k) = 3.6_r_bl*vkman * rho_mix(i,k)                   &
-                            * v_top_dsc(i) * zh_pr * (z_ratio**3)            &
+          rhokh_top(i,k) = 3.6_r_bl*vkman * rho_mix(i,k)                       &
+                            * v_top_dsc(i) * zh_pr * (z_ratio**3)              &
                             * (( one - z_ratio )**2)
 
-          rhof2(i,k)  = rho_mix(i,k) * one_half * z_ratio                  &
+          rhof2(i,k)  = rho_mix(i,k) * one_half * z_ratio                      &
                                         * 2.0_r_bl**( z_ratio**4 )
           if ( v_sum_dsc(i)  >   zero ) then
-            rhofsc(i,k) = 3.5_r_bl * rho_mix(i,k)                          &
-                              * (v_top_dsc(i)/v_sum_dsc(i))                &
+            rhofsc(i,k) = 3.5_r_bl * rho_mix(i,k)                              &
+                              * (v_top_dsc(i)/v_sum_dsc(i))                    &
                               * (z_ratio**3) * (one-z_ratio)
           end if
 
         else  ! Not LockWhelan2006
           ! max to avoid rounding errors giving small negative numbers
-          rhokh_top(i,k) = rhokh_top(i,k) +                                &
-              rho_mix(i,k)*v_top_dsc(i)*g1*vkman*                          &
-                ( (max(one - kh_dsct_factor(i)*z_ratio,zero))**0.8_r_bl )    &
+          rhokh_top(i,k) = rhokh_top(i,k) +                                    &
+              rho_mix(i,k)*v_top_dsc(i)*g1*vkman*                              &
+                ( (max(one - kh_dsct_factor(i)*z_ratio,zero))**0.8_r_bl )      &
                                             * z_pr * z_ratio
         end if
       end if
       !-------------------------------------------------------------
       ! Now momentum
       !-------------------------------------------------------------
-      if ( zk_tq  <   zhsc(i) .and.                                          &
+      if ( zk_tq  <   zhsc(i) .and.                                            &
             zk_tq  >   zdsc_base(i) ) then
         z_pr = zk_tq - zdsc_base(i)
         zh_pr = zhsc(i) - zdsc_base(i)
         ! max to avoid rounding errors giving small negative numbers
         rhokm_dsct =                                                           &
-            0.75_r_bl*rho_wet_tq(i,k-1)*v_top_dsc(i)*g1*vkman*             &
-              ( (max(one - km_dsct_factor(i)*z_pr/zh_pr,zero))**0.8_r_bl )   &
+            0.75_r_bl*rho_wet_tq(i,k-1)*v_top_dsc(i)*g1*vkman*                 &
+              ( (max(one - km_dsct_factor(i)*z_pr/zh_pr,zero))**0.8_r_bl )     &
                                       * z_pr * z_pr / zh_pr
         if (BL_diag%l_tke) then
           ! save Km/timescale for TKE diag, completed in bdy_expl2
@@ -3035,13 +3035,13 @@ do ii = pdims%i_start, pdims%i_end, bl_segment_size
             ! scale it up by the ratio of Km over the value it would have
             ! had without the surface-driven contribution.
             ! Include max(,0 and rbl_eps) in case of rounding error.
-            factor = ( max( one-km_dsct_factor(i)*z_pr/zh_pr, zero ) /       &
-                       max( one-km_dsct_factor_top(i)*z_pr/zh_pr, rbl_eps )  &
+            factor = ( max( one-km_dsct_factor(i)*z_pr/zh_pr, zero ) /         &
+                       max( one-km_dsct_factor_top(i)*z_pr/zh_pr, rbl_eps )    &
                       )**0.8_r_bl
           else
             factor = one
           end if
-          tke_nl(i,k) = tke_nl(i,k) +                                      &
+          tke_nl(i,k) = tke_nl(i,k) +                                          &
                     factor*rhokm_dsct*c_tke*v_top_dsc(i)/dscdepth(i)
         end if
         rhokm_top(i,k) = rhokm_top(i,k) + rhokm_dsct
@@ -3079,7 +3079,7 @@ if (flux_grad  ==  LockWhelan2006) then
 
           if (coupled(i)) then  !  coupled
             if ( entr_smooth_dec == entr_taper_zh ) then
-              wstar3 = (      svl_diff_frac(i)  * zhsc(i)                  &
+              wstar3 = (      svl_diff_frac(i)  * zhsc(i)                      &
                         + (one-svl_diff_frac(i)) * zh(i)   ) *fb_surf(i)
             else
               wstar3 = zhsc(i) * fb_surf(i)
@@ -3106,12 +3106,12 @@ if (flux_grad  ==  LockWhelan2006) then
 
           !           Turbulent velocity scale for scalars
 
-          w_m_neut = ( v_s(i)*v_s(i)*v_s(i) + w_s_cubed_uv )             &
+          w_m_neut = ( v_s(i)*v_s(i)*v_s(i) + w_s_cubed_uv )                   &
                                   **one_third
           w_h_uv = w_m_neut/pr_neut
 
           ! Also calc on TQ levels for W_M_TQ
-          w_m_neut = ( v_s(i)*v_s(i)*v_s(i) + w_s_cubed_tq )             &
+          w_m_neut = ( v_s(i)*v_s(i)*v_s(i) + w_s_cubed_tq )                   &
                                   **one_third
           w_h_tq = w_m_neut/pr_neut
 
@@ -3125,9 +3125,9 @@ if (flux_grad  ==  LockWhelan2006) then
           ! Turbulent Prandtl number and velocity scale for scalars
 
           Prandtl = pr_neut*                                                   &
-          ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +              &
+          ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                      &
             (one/(c_ws*25.0_r_bl))*w_s_cubed_tq*w_m_neut ) /                   &
-          ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +              &
+          ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                      &
             (one/(c_ws*25.0_r_bl))*(pr_neut/pr_conv)*w_s_cubed_tq*             &
             w_m_neut )
 
@@ -3138,8 +3138,8 @@ if (flux_grad  ==  LockWhelan2006) then
             ! Calculate RHOKH(w_h,z/z_h)
             !---------------------------------------------------------
 
-            rhokh(i,k) = rho_mix(i,k) * w_h_uv * vkman * zk_uv *           &
-                                  ( one - ( zk_uv / zh(i) ) ) *              &
+            rhokh(i,k) = rho_mix(i,k) * w_h_uv * vkman * zk_uv *               &
+                                  ( one - ( zk_uv / zh(i) ) ) *                &
                                   ( one - ( zk_uv / zh(i) ) )
 
           end if
@@ -3148,13 +3148,13 @@ if (flux_grad  ==  LockWhelan2006) then
             ! Calculate RHOKM(w_m,z/z_h)
             !---------------------------------------------------------
 
-            rhokm(i,k) = rho_wet_tq(i,k-1)*w_m_tq*vkman*zk_tq *            &
-                                  ( one - ( zk_tq / zh(i) ) ) *              &
+            rhokm(i,k) = rho_wet_tq(i,k-1)*w_m_tq*vkman*zk_tq *                &
+                                  ( one - ( zk_tq / zh(i) ) ) *                &
                                   ( one - ( zk_tq / zh(i) ) )
 
             if (BL_diag%l_tke) then
               ! save Km/timescale for TKE diag, completed in bdy_expl2
-              tke_nl(i,k) = tke_nl(i,k) +                                  &
+              tke_nl(i,k) = tke_nl(i,k) +                                      &
                                   rhokm(i,k)*c_tke*w_m_tq/zh(i)
             end if
           end if
@@ -3210,7 +3210,7 @@ else
             if (coupled(i)) then  !  coupled and cloudy
               if ( entr_smooth_dec == entr_taper_zh ) then
                 w_s_cubed_uv = c_ws                                            &
-                    * (      svl_diff_frac(i)  * zhsc(i)                   &
+                    * (      svl_diff_frac(i)  * zhsc(i)                       &
                       + (one-svl_diff_frac(i)) * zh(i)   ) * fb_surf(i)
               else
                 w_s_cubed_uv = c_ws * zhsc(i) * fb_surf(i)
@@ -3232,7 +3232,7 @@ else
             if (coupled(i)) then  !  coupled and cloudy
               if ( entr_smooth_dec == entr_taper_zh ) then
                 w_s_cubed_tq = c_ws                                            &
-                    * (      svl_diff_frac(i)  * zhsc(i)                   &
+                    * (      svl_diff_frac(i)  * zhsc(i)                       &
                       + (one-svl_diff_frac(i)) * zh(i)   ) * fb_surf(i)
               else
                 w_s_cubed_tq = c_ws * zhsc(i) * fb_surf(i)
@@ -3244,10 +3244,10 @@ else
 
           !           Turbulent velocity scale for momentum
 
-          w_m_uv = (v_s(i)*v_s(i)*v_s(i) + w_s_cubed_uv)                 &
+          w_m_uv = (v_s(i)*v_s(i)*v_s(i) + w_s_cubed_uv)                       &
                                   **one_third
 
-          w_m_tq = (v_s(i)*v_s(i)*v_s(i) + w_s_cubed_tq)                 &
+          w_m_tq = (v_s(i)*v_s(i)*v_s(i) + w_s_cubed_tq)                       &
                                   **one_third
 
           ! The calculations below involve v_s**4. In very rare circumstances
@@ -3260,9 +3260,9 @@ else
           !           Turbulent Prandtl number and velocity scale for scalars
 
           Prandtl = pr_neut*                                                   &
-              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
+              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                  &
               (one/(c_ws*25.0_r_bl))*w_s_cubed_uv*w_m_uv ) /                   &
-              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +          &
+              ( v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i)*v_s_dbl(i) +                  &
               (one/(c_ws*25.0_r_bl))*(pr_neut/pr_conv)*w_s_cubed_uv*           &
               w_m_uv )
           w_h_uv = w_m_uv / Prandtl
@@ -3272,15 +3272,15 @@ else
             ! Calculate RHOKH(w_h,z/z_h)
             !---------------------------------------------------------
 
-            rhokh(i,k) = rho_mix(i,k) * w_h_uv * vkman * zk_uv *           &
-                ( one - kh_top_factor(i) * ( zk_uv / zh(i) ) ) *           &
+            rhokh(i,k) = rho_mix(i,k) * w_h_uv * vkman * zk_uv *               &
+                ( one - kh_top_factor(i) * ( zk_uv / zh(i) ) ) *               &
                 ( one - kh_top_factor(i) * ( zk_uv / zh(i) ) )
           else if ( kprof_cu == klcl_entr .and. cumulus(i) ) then
             if ( zk_uv < zsml_top(i) ) then
               ! Exponential decay from ZH but tends to zero
               !  at zsml_top
-              rhokh(i,k) = rhokh_lcl(i) *                                  &
-                      exp(-(zk_uv-zh(i))/cu_depth_scale(i)) *              &
+              rhokh(i,k) = rhokh_lcl(i) *                                      &
+                      exp(-(zk_uv-zh(i))/cu_depth_scale(i)) *                  &
                       (one-(zk_uv-zh(i))/(zsml_top(i)-zh(i)))
             end if
           end if
@@ -3289,25 +3289,25 @@ else
             ! Calculate RHOKM(w_m,z/z_h)
             !---------------------------------------------------------
 
-            rhokm(i,k) = rho_wet_tq(i,k-1)*w_m_tq*vkman* zk_tq *           &
-                ( one - km_top_factor(i) * ( zk_tq / zh(i) ) ) *           &
+            rhokm(i,k) = rho_wet_tq(i,k-1)*w_m_tq*vkman* zk_tq *               &
+                ( one - km_top_factor(i) * ( zk_tq / zh(i) ) ) *               &
                 ( one - km_top_factor(i) * ( zk_tq / zh(i) ) )
 
             if (BL_diag%l_tke) then
               ! save Km/timescale for TKE diag, completed in bdy_expl2
-              tke_nl(i,k) = tke_nl(i,k) +                                  &
+              tke_nl(i,k) = tke_nl(i,k) +                                      &
                                   rhokm(i,k)*c_tke*w_m_tq/zh(i)
             end if
           else if ( kprof_cu == klcl_entr .and. cumulus(i) ) then
             if ( zk_tq < zsml_top(i) ) then
               ! Exponential decay from ZH but tends to zero
               !  at zsml_top
-              rhokm(i,k) = prandtl_top(i) * rhokh_lcl(i) *               &
-                      exp(-(zk_tq-zh(i))/cu_depth_scale(i)) *              &
+              rhokm(i,k) = prandtl_top(i) * rhokh_lcl(i) *                     &
+                      exp(-(zk_tq-zh(i))/cu_depth_scale(i)) *                  &
                       (one-(zk_tq-zh(i))/(zsml_top(i)-zh(i)))
               if (BL_diag%l_tke) then
                 ! save Km/timescale for TKE diag, completed in bdy_expl2
-                tke_nl(i,k) = tke_nl(i,k) +                              &
+                tke_nl(i,k) = tke_nl(i,k) +                                    &
                                     rhokm(i,k)*c_tke*w_m_tq/zh(i)
               end if
             end if
@@ -3358,7 +3358,7 @@ if ( ng_stress  ==  BrownGrant97 .or.                                          &
             ! Outer layer calculation
             if (coupled(i)) then  !  coupled and cloudy
               if ( entr_smooth_dec == entr_taper_zh ) then
-                wstar3 = (      svl_diff_frac(i)  * zhsc(i)                &
+                wstar3 = (      svl_diff_frac(i)  * zhsc(i)                    &
                           + (one-svl_diff_frac(i)) * zh(i) ) *fb_surf(i)
               else
                 wstar3 = zhsc(i) * fb_surf(i)
@@ -3370,7 +3370,7 @@ if ( ng_stress  ==  BrownGrant97 .or.                                          &
             ! Use the Holtslag and Boville velocity scale for
             ! non-gradient stress stability dependence, as in BG97
             w_m_hb_3 = v_s(i)*v_s(i)*v_s(i) + 0.6_r_bl*wstar3
-            f_ngstress(i,k) =(rho_wet_tq(i,k-1)/rhostar_gb(i))           &
+            f_ngstress(i,k) =(rho_wet_tq(i,k-1)/rhostar_gb(i))                 &
               * s_m * ( a_ngs * wstar3 / w_m_hb_3 )                            &
                   * ( z_pr / zh_pr ) * ( one -  ( z_pr / zh_pr ) ) *           &
                                       ( one -  ( z_pr / zh_pr ) )

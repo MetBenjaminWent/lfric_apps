@@ -6,12 +6,12 @@
 !> @brief Turbulent mixing of a tracer
 module tracer_mix_kernel_mod
 
-  use argument_mod,           only : arg_type,                   &
-                                     GH_FIELD, GH_REAL,          &
-                                     GH_INTEGER,                 &
-                                     GH_READ,                    &
-                                     GH_READWRITE, DOMAIN,       &
-                                     ANY_DISCONTINUOUS_SPACE_1,  &
+  use argument_mod,           only : arg_type,                                 &
+                                     GH_FIELD, GH_REAL,                        &
+                                     GH_INTEGER,                               &
+                                     GH_READ,                                  &
+                                     GH_READWRITE, DOMAIN,                     &
+                                     ANY_DISCONTINUOUS_SPACE_1,                &
                                      ANY_DISCONTINUOUS_SPACE_2
   use constants_mod,          only : i_def, i_um, r_def, r_um
   use fs_continuity_mod,      only : W3, Wtheta
@@ -28,23 +28,23 @@ module tracer_mix_kernel_mod
   !>
   type, public, extends(kernel_type) :: tracer_mix_kernel_type
     private
-    type(arg_type) :: meta_args(16) = (/                                    &
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, WTHETA),                 &! tracer
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   W3),                       &! height_w3
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   WTHETA),                   &! height_wth
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   W3),                       &! rdz_w3
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   W3),                       &! rhokh_bl
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   WTHETA),                   &! dtrdz_tq_bl
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_1),&! zh_nonloc
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_1),&! zhsc_2d
-         arg_type(GH_FIELD, GH_INTEGER, GH_READ, ANY_DISCONTINUOUS_SPACE_1),&! level_ent
-         arg_type(GH_FIELD, GH_INTEGER, GH_READ, ANY_DISCONTINUOUS_SPACE_1),&! level_ent_dsc
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),&! ent_we_lim
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),&! ent_t_frac
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),&! ent_zrzi
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),&! ent_we_lim_dsc
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),&! ent_t_frac_dsc
-         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2) &! ent_zrzi_dsc
+    type(arg_type) :: meta_args(16) = (/                                       &
+         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, WTHETA),                    &! tracer
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   W3),                          &! height_w3
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   WTHETA),                      &! height_wth
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   W3),                          &! rdz_w3
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   W3),                          &! rhokh_bl
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   WTHETA),                      &! dtrdz_tq_bl
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_1),   &! zh_nonloc
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_1),   &! zhsc_2d
+         arg_type(GH_FIELD, GH_INTEGER, GH_READ, ANY_DISCONTINUOUS_SPACE_1),   &! level_ent
+         arg_type(GH_FIELD, GH_INTEGER, GH_READ, ANY_DISCONTINUOUS_SPACE_1),   &! level_ent_dsc
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),   &! ent_we_lim
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),   &! ent_t_frac
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),   &! ent_zrzi
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),   &! ent_we_lim_dsc
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2),   &! ent_t_frac_dsc
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,   ANY_DISCONTINUOUS_SPACE_2)    &! ent_zrzi_dsc
          /)
     integer :: operates_on = DOMAIN
   contains
@@ -86,26 +86,26 @@ contains
   !> @param[in]     ndf_ent                Number of DOFs per cell for entrainment levels
   !> @param[in]     undf_ent               Number of total DOFs for entrainment levels
   !> @param[in]     map_ent                Dofmap for cell for entrainment levels
-  subroutine tracer_mix_code(nlayers, seg_len,                      &
-                             tracer,                                &
-                             height_w3,                             &
-                             height_wth,                            &
-                             rdz_w3,                                &
-                             rhokh_bl,                              &
-                             dtrdz_tq_bl,                           &
-                             zh_nonloc,                             &
-                             zhsc_2d,                               &
-                             level_ent,                             &
-                             level_ent_dsc,                         &
-                             ent_we_lim,                            &
-                             ent_t_frac,                            &
-                             ent_zrzi,                              &
-                             ent_we_lim_dsc,                        &
-                             ent_t_frac_dsc,                        &
-                             ent_zrzi_dsc,                          &
-                             ndf_wth, undf_wth, map_wth,            &
-                             ndf_w3, undf_w3, map_w3,               &
-                             ndf_2d, undf_2d, map_2d,               &
+  subroutine tracer_mix_code(nlayers, seg_len,                                 &
+                             tracer,                                           &
+                             height_w3,                                        &
+                             height_wth,                                       &
+                             rdz_w3,                                           &
+                             rhokh_bl,                                         &
+                             dtrdz_tq_bl,                                      &
+                             zh_nonloc,                                        &
+                             zhsc_2d,                                          &
+                             level_ent,                                        &
+                             level_ent_dsc,                                    &
+                             ent_we_lim,                                       &
+                             ent_t_frac,                                       &
+                             ent_zrzi,                                         &
+                             ent_we_lim_dsc,                                   &
+                             ent_t_frac_dsc,                                   &
+                             ent_zrzi_dsc,                                     &
+                             ndf_wth, undf_wth, map_wth,                       &
+                             ndf_w3, undf_w3, map_w3,                          &
+                             ndf_2d, undf_2d, map_2d,                          &
                              ndf_ent, undf_ent, map_ent)
 
     !---------------------------------------
@@ -157,7 +157,7 @@ contains
     real(r_um), dimension(seg_len,nlayers) :: z_rho, r_rho_levels
 
     ! profile field on boundary layer levels
-    real(r_um), dimension(seg_len,bl_levels) :: dtrdz_charney_grid, &
+    real(r_um), dimension(seg_len,bl_levels) :: dtrdz_charney_grid,            &
          tracer_mixed, tracer_flux
 
     ! profile fields from level 2 upwards
@@ -167,10 +167,10 @@ contains
     real(r_um), dimension(seg_len,0:nlayers) :: r_theta_levels
 
     ! single level real fields
-    real(r_um), dimension(seg_len) :: zhnl, zhsc, surf_dep_flux, zeroes, &
+    real(r_um), dimension(seg_len) :: zhnl, zhsc, surf_dep_flux, zeroes,       &
          rhokh_mix_surf
 
-    real(r_um), dimension(seg_len,3) :: t_frac, t_frac_dsc, we_lim, &
+    real(r_um), dimension(seg_len,3) :: t_frac, t_frac_dsc, we_lim,            &
          we_lim_dsc, zrzi, zrzi_dsc
 
     ! single level integer fields
@@ -230,15 +230,15 @@ contains
       end do
     end do
 
-    call tr_mix (                                                           &
+      call tr_mix (                                                            &
          ! IN fields
-         r_theta_levels, r_rho_levels, pdims, bl_levels, alpha_tr,           &
-         rhokh_mix_bl, rhokh_mix_surf, dtrdz_charney_grid, zeroes, zeroes,   &
-         kent, we_lim, t_frac, zrzi,                                         &
-         kent_dsc, we_lim_dsc, t_frac_dsc, zrzi_dsc,                         &
-         zhnl, zhsc, z_rho,                                                  &
+         r_theta_levels, r_rho_levels, pdims, bl_levels, alpha_tr,             &
+         rhokh_mix_bl, rhokh_mix_surf, dtrdz_charney_grid, zeroes, zeroes,     &
+           kent, we_lim, t_frac, zrzi,                                         &
+           kent_dsc, we_lim_dsc, t_frac_dsc, zrzi_dsc,                         &
+           zhnl, zhsc, z_rho,                                                  &
          ! INOUT / OUT fields
-         tracer_mixed, tracer_flux, surf_dep_flux                            &
+           tracer_mixed, tracer_flux, surf_dep_flux                            &
          )
 
     ! copy back mixed variable, and update 0th level

@@ -420,7 +420,7 @@ if (BL_diag%l_rhogamu) then
   allocate(BL_diag%rhogamu(pdims%i_start:pdims%i_end,                          &
                            bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -436,7 +436,7 @@ if (BL_diag%l_rhogamv) then
   allocate(BL_diag%rhogamv(pdims%i_start:pdims%i_end,                          &
                            bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -452,7 +452,7 @@ if (BL_diag%l_rhogamt) then
   allocate(BL_diag%rhogamt(pdims%i_start:pdims%i_end,                          &
                            bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -468,7 +468,7 @@ if (BL_diag%l_rhogamq) then
   allocate(BL_diag%rhogamq(pdims%i_start:pdims%i_end,                          &
                           bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -484,7 +484,7 @@ if (BL_diag%l_elm) then
   allocate(BL_diag%elm(pdims%i_start:pdims%i_end,                              &
                        bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -500,7 +500,7 @@ if (BL_diag%l_tke_shr_prod) then
   allocate(BL_diag%tke_shr_prod(pdims%i_start:pdims%i_end,                     &
                                 bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -516,7 +516,7 @@ if (BL_diag%l_tke_boy_prod) then
   allocate(BL_diag%tke_boy_prod(pdims%i_start:pdims%i_end,                     &
                                 bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -532,7 +532,7 @@ if (BL_diag%l_tke_dissp) then
   allocate(BL_diag%tke_dissp(pdims%i_start:pdims%i_end,                        &
                              bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -548,7 +548,7 @@ if (BL_diag%l_sm) then
   allocate(BL_diag%sm(pdims%i_start:pdims%i_end,                               &
                       bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -564,7 +564,7 @@ if (BL_diag%l_sh) then
   allocate(BL_diag%sh(pdims%i_start:pdims%i_end,                               &
                       bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -580,7 +580,7 @@ if (BL_diag%l_wb_ng) then
   allocate(BL_diag%wb_ng(pdims%i_start:pdims%i_end,                            &
                          bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -596,7 +596,7 @@ if (BL_diag%l_cf_trb) then
   allocate(BL_diag%cf_trb(pdims%i_start:pdims%i_end,                           &
                           bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -612,7 +612,7 @@ if (BL_diag%l_ql_trb) then
   allocate(BL_diag%ql_trb(pdims%i_start:pdims%i_end,                           &
                           bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -628,7 +628,7 @@ if (BL_diag%l_sgm_trb) then
   allocate(BL_diag%sgm_trb(pdims%i_start:pdims%i_end,                          &
                            bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -730,7 +730,7 @@ if (BL_diag%l_dbdz) then
   allocate(BL_diag%dbdz(pdims%i_start:pdims%i_end,                             &
                         bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -745,7 +745,7 @@ if (BL_diag%l_dvdzm) then
   allocate(BL_diag%dvdzm(pdims%i_start:pdims%i_end,                            &
                          bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -784,7 +784,7 @@ if (BL_diag%l_elh3d) then
   allocate(BL_diag%elh3d(pdims%i_start:pdims%i_end,                            &
                          bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -811,7 +811,7 @@ if (BL_diag%l_rhokmsurf) then
   allocate(BL_diag%rhokmsurf(pdims%i_start:pdims%i_end,                        &
                              bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -826,7 +826,7 @@ if (BL_diag%l_rhokhsurf) then
   allocate(BL_diag%rhokhsurf(pdims%i_start:pdims%i_end,                        &
                              bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -841,7 +841,7 @@ if (BL_diag%l_rhokmsc) then
   allocate(BL_diag%rhokmsc(pdims%i_start:pdims%i_end,                          &
                            bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -856,7 +856,7 @@ if (BL_diag%l_rhokhsc) then
   allocate(BL_diag%rhokhsc(pdims%i_start:pdims%i_end,                          &
                            bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -871,7 +871,7 @@ if (BL_diag%l_fh) then
   allocate(BL_diag%fh(pdims%i_start:pdims%i_end,                               &
                       bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -886,7 +886,7 @@ if (BL_diag%l_fm) then
   allocate(BL_diag%fm(pdims%i_start:pdims%i_end,                               &
                       bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -907,7 +907,7 @@ if (BL_diag%l_dissip) then
   allocate(BL_diag%dissip(pdims%i_start:pdims%i_end,                           &
                           bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -922,7 +922,7 @@ if (BL_diag%l_slvar) then
   allocate(BL_diag%slvar(pdims%i_start:pdims%i_end,                            &
                          bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -937,7 +937,7 @@ if (BL_diag%l_qwvar) then
   allocate(BL_diag%qwvar(pdims%i_start:pdims%i_end,                            &
                          bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -952,7 +952,7 @@ if (BL_diag%l_slqw) then
   allocate(BL_diag%slqw(pdims%i_start:pdims%i_end,                             &
                         bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -979,7 +979,7 @@ if (BL_diag%l_grad_ftl) then
   allocate(BL_diag%grad_ftl(pdims%i_start:pdims%i_end,                         &
                             bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -994,7 +994,7 @@ if (BL_diag%l_non_grad_ftl) then
   allocate(BL_diag%non_grad_ftl(pdims%i_start:pdims%i_end,                     &
                                 bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -1009,7 +1009,7 @@ if (BL_diag%l_ftl_e) then
   allocate(BL_diag%ftl_e(pdims%i_start:pdims%i_end,                            &
                          bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -1024,7 +1024,7 @@ if (BL_diag%l_rhokhz_ex) then
   allocate(BL_diag%rhokhz_ex(pdims%i_start:pdims%i_end,                        &
                             bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
@@ -1038,7 +1038,7 @@ end if
 if (BL_diag%l_grad_t_adj) then
   allocate(BL_diag%grad_t_adj(pdims%i_start:pdims%i_end))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i)                                                             &
+!$OMP private(i)                                                               &
 !$OMP SHARED(BL_diag,pdims)
   do i = pdims%i_start,pdims%i_end
       BL_diag%grad_t_adj(i) = zero
@@ -1162,7 +1162,7 @@ if (BL_diag%l_dtfric) then
   allocate(BL_diag%dTfric(pdims%i_start:pdims%i_end,                           &
                           bl_levels))
 !$OMP PARALLEL do SCHEDULE(STATIC) DEFAULT(none)                               &
-!$OMP private(i,k)                                                           &
+!$OMP private(i,k)                                                             &
 !$OMP SHARED(BL_diag,bl_levels,pdims)
   do k = 1, bl_levels
     do i = pdims%i_start,pdims%i_end
