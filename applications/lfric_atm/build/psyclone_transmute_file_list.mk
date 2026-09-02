@@ -52,9 +52,11 @@ export PSYCLONE_PHYSICS_FILES = \
                                 ukca_chemistry_ctl_full_mod \
                                 ukca_main1-ukca_main1
 
-# Causing build slow downs CCE  conv_comorph_kernel_mod \
-                                aerosol_ukca_kernel_mod \
-# The Psyclone Issue to fix this is #3418
+# These files are causing build slow downs with the CCE compiler
+# due to a compiler bug, this has been reported to HPE by HPC Opt:
+#   conv_comorph_kernel_mod
+#   aerosol_ukca_kernel_mod
+# See apps issue # 657 for information regarding the investigation 
 
 
 ##### TRANSMUTE_INCLUDE_METHOD specify_include #####
