@@ -956,7 +956,7 @@ contains
       if (fullstress) then
         do k = 1, bl_levels
           do i = 1, seg_len
-            rhokm_mix(i,1,k) = 2.0 * rhokm_mix(i,1,k)
+            rhokm_mix(i,k) = 2.0 * rhokm_mix(i,k)
           end do
         end do
       end if

@@ -43,7 +43,7 @@ export PSYCLONE_PHYSICS_FILES = \
                                 sw_rad_tile_kernel_mod \
                                 jules_imp_kernel_mod \
                                 jules_exp_kernel_mod \
-                                jules_extra_kernel_mod
+                                jules_extra_kernel_mod \
                                 ukca_main1-ukca_main1
 
 # These files are causing build slow downs with the CCE compiler
