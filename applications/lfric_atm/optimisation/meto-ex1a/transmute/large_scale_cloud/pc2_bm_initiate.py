@@ -98,11 +98,11 @@ def trans(psyir):
     try:
         OMP_PARALLEL_REGION_TRANS.validate(outer_loops[2:3])
         OMP_PARALLEL_REGION_TRANS.apply(
-            [outer_loops[2]], 
+            [outer_loops[2]],
             force_private=private_variable_par_sec)
     except (TransformationError, IndexError) as err:
-                logging.warning(
-                    f"{fortran_file_name}: Transformation failed as: {err}")
+        logging.warning(
+            f"{fortran_file_name}: Transformation failed as: {err}")
 
     # Insert before OpenMP directives to avoid PSyclone errors
     if get_compiler() == "cce":
