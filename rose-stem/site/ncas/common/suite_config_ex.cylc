@@ -52,10 +52,10 @@
              COMPILER = 'cce'
 
     [[EX_BUILD_GNU]]
-        inherit = EX_SLURM, EX_BUILD, EX_GNU
+        inherit = EX_SLURM, EX_GNU
 
     [[EX_BUILD_CCE]]
-        inherit = EX_SLURM, EX_BUILD, EX_CCE
+        inherit = EX_SLURM, EX_CCE
 
     [[EX_RUN]]
         [[[environment]]]
