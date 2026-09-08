@@ -26,8 +26,6 @@ from transmute_psytrans.transmute_functions import (
     get_outer_loops,
     get_compiler,
     first_priv_red_init,
-    match_lhs_assignments,
-    match_call_args,
     OMP_PARALLEL_REGION_TRANS,
     OMP_DO_LOOP_TRANS_STATIC
 )
