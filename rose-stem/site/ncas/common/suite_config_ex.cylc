@@ -29,10 +29,6 @@
             --account={{ HPC_ACCOUNT }}
             --chdir=/work/n02/n02/{{ HPC_USERNAME }}
 
-    [[EX_BUILD]]
-        [[[environment]]]
-            PSYCLONE_TRANSFORMATION="meto-ex1a"
-
     [[EX_GNU]]
         pre-script = """
                      umask 0022
