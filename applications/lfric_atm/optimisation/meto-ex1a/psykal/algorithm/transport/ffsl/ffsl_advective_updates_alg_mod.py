@@ -44,12 +44,23 @@ can be applied via the -s option in the psyclone script.
 
 '''
 from __future__ import absolute_import, print_function
+from psyclone.psyir.nodes import (
+    Directive,
+    FileContainer,
+)
+try:
+    from psyclone.psyir.transformations import OMPParallelTrans
+except ImportError:
+    # Support for psyclone < 3.3
+    from psyclone.transformations import OMPParallelTrans
 from psyclone.domain.lfric.transformations import LFRicLoopFuseTrans
 from psyclone.psyGen import InvokeSchedule
-from psyclone.transformations import TransformationError
+from psyclone.transformations import (
+    LFRicOMPLoopTrans,
+    TransformationError)
 from psyclone_tools import (redundant_computation_setval, colour_loops,
+                            openmp_parallelise_loops,
                             view_transformed_schedule)
-
 
 def fuse_loops(psyir):
     '''
@@ -91,6 +102,32 @@ def fuse_loops(psyir):
     print(f"Fused {total_fused} loops")
 
 
+def openmp_parallelise_loops(psyir: FileContainer):
+    """
+    Applies OpenMP Loop transformation to each applicable loop.
+
+    :param psyir: the PSyIR of the PSy-layer.
+    :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
+
+    """
+    otrans = LFRicOMPLoopTrans()
+    oregtrans = OMPParallelTrans()
+
+    # Loop over all the InvokeSchedule in the PSyIR object
+    for subroutine in psyir.walk(InvokeSchedule):
+        # Add OpenMP to loops unless they are over colours, are null,
+        # or if an outer loop is already parallelised (OpenMP is applied
+        # to loop over tiles instead of cells if tiling is enabled)
+        # ffsl_advective_increment_kernel_type - doesn't work
+        if "swift_outer_update_code" in subroutine.name:
+            print(f"Only adding OMP to: {subroutine.name}")
+            for loop in subroutine.loops():
+                if loop.loop_type not in ["colours", "null"] and \
+                not loop.ancestor(Directive):
+                    oregtrans.apply(loop)
+                    otrans.apply(loop, options={"reprod": True})
+
+
 def trans(psyir):
     '''
     :param psyir: the PSyIR of the PSy-layer.
@@ -101,4 +138,5 @@ def trans(psyir):
     redundant_computation_setval(psyir)
     fuse_loops(psyir)
     colour_loops(psyir)
+    openmp_parallelise_loops(psyir)
     view_transformed_schedule(psyir)
