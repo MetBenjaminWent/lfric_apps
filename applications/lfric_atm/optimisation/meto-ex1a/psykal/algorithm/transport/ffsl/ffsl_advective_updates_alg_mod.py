@@ -43,6 +43,7 @@ fuse loops that are lower in the schedule e.g. coloured loops. This
 can be applied via the -s option in the psyclone script.
 
 '''
+from __future__ import absolute_import, print_function
 from psyclone.domain.lfric.transformations import LFRicLoopFuseTrans
 from psyclone.psyGen import InvokeSchedule
 from psyclone.transformations import TransformationError
