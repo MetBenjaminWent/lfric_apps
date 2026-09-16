@@ -22,6 +22,16 @@ export PSYCLONE_PHYSICS_FILES = \
                                 bl_exp_kernel_mod \
                                 bl_imp_kernel_mod \
                                 bl_imp2_kernel_mod \
+                                btq_int \
+                                conv_gr_kernel_mod \
+                                ex_flux_tq \
+                                ex_flux_uv \
+                                fm_drag \
+                                gw_ussp_mod \
+                                imp_mix \
+                                jules_exp_kernel_mod \
+                                jules_extra_kernel_mod \
+                                jules_imp_kernel_mod \
                                 kmkh \
                                 kmkhz_9c_wtrac \
                                 lw_kernel_mod \
@@ -40,11 +50,6 @@ export PSYCLONE_PHYSICS_FILES = \
                                 ukca_aero_ctl \
                                 ukca_abdulrazzak_ghan \
                                 ukca_chemistry_ctl_full_mod \
-                                ukca_main1-ukca_main1 \
-                                sw_rad_tile_kernel_mod \
-                                jules_imp_kernel_mod \
-                                jules_exp_kernel_mod \
-                                jules_extra_kernel_mod \
                                 ukca_main1-ukca_main1
 
 # These files are causing build slow downs with the CCE compiler

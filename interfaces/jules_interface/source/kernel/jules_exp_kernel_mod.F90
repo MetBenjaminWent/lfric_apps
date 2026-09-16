@@ -46,7 +46,7 @@ module jules_exp_kernel_mod
   !>
   type, public, extends(kernel_type) :: jules_exp_kernel_type
     private
-    type(arg_type) :: meta_args(108) = (/                                      &
+    type(arg_type) :: meta_args(109) = (/                                      &
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      WTHETA),                   &! theta_in_wth
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      WTHETA),                   &! exner_in_wth
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      W3, STENCIL(REGION)),      &! u_in_w3
@@ -154,6 +154,7 @@ module jules_exp_kernel_mod
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! q1_sd
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! diag__gross_prim_prod
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! diag__z0h_eff
+         arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! diag__chr10m
          arg_type(GH_FIELD, GH_INTEGER, GH_READ,    ANY_DISCONTINUOUS_SPACE_1) &! ocn_cpl_point
          /)
     integer :: operates_on = DOMAIN
@@ -276,7 +277,8 @@ contains
   !> @param[in,out] q1_sd_2d               StDev of level 1 humidity
   !> @param[in,out] gross_prim_prod        Diagnostic: Gross Primary Productivity
   !> @param[in,out] z0h_eff                Diagnostic: Gridbox mean effective roughness length for scalars
-  !> @param[in,out] ocn_cpl_point          Diagnostic: Coupling point mask
+  !> @param[in,out] chr10m                 Diagnostic: 10m transfer coefficient
+  !> @param[in,out] ocn_cpl_point          Coupling point mask
   !> @param[in]     ndf_wth                Number of DOFs per cell for potential temperature space
   !> @param[in]     undf_wth               Number of unique DOFs for potential temperature space
   !> @param[in]     map_wth                Dofmap for the cell at the base of the column for potential temperature space
@@ -313,131 +315,132 @@ contains
   !> @param[in]     ndf_dust               Number of DOFs per cell for dust divisions
   !> @param[in]     undf_dust              Number of total DOFs for dust divisions
   !> @param[in]     map_dust               Dofmap for cell for dust divisions
-  subroutine jules_exp_code(nlayers, seg_len, seg_len_halo,                    &
-                           theta_in_wth,                                       &
-                           exner_in_wth,                                       &
-                           u_in_w3,                                            &
-                           u_w3_stencil_size, u_w3_stencil,                    &
-                           v_in_w3,                                            &
-                           v_w3_stencil_size, v_w3_stencil,                    &
-                           m_v_n,                                              &
-                           m_cl_n,                                             &
-                           m_cf_n,                                             &
-                           height_w3,                                          &
-                           height_wth,                                         &
-                           zh_2d,                                              &
-                           z0msea_2d,                                          &
-                           z0m_2d,                                             &
-                           tile_fraction,                                      &
-                           tile_stencil_size, tile_stencil,                    &
-                           leaf_area_index,                                    &
-                           canopy_height,                                      &
-                           peak_to_trough_orog,                                &
-                           silhouette_area_orog,                               &
-                           soil_albedo,                                        &
-                           soil_roughness,                                     &
-                           soil_moist_wilt,                                    &
-                           soil_moist_crit,                                    &
-                           soil_moist_sat,                                     &
-                           soil_thermal_cond,                                  &
-                           soil_suction_sat,                                   &
-                           clapp_horn_b,                                       &
-                           soil_respiration,                                   &
-                           thermal_cond_wet_soil,                              &
-                           sea_u_current, sea_u_w3_stencil_size,               &
-                           sea_u_w3_stencil,                                   &
-                           sea_v_current, sea_v_w3_stencil_size,               &
-                           sea_v_w3_stencil,                                   &
-                           sea_ice_temperature,                                &
-                           sea_ice_conductivity,                               &
-                           sea_ice_pensolar,                                   &
-                           sea_ice_pensolar_frac_direct,                       &
-                           sea_ice_pensolar_frac_diffuse,                      &
-                           tile_temperature,                                   &
-                           tile_snow_mass,                                     &
-                           n_snow_layers,                                      &
-                           snow_depth,                                         &
-                           snow_layer_thickness,                               &
-                           snow_layer_ice_mass,                                &
-                           snow_layer_liq_mass,                                &
-                           snow_layer_temp,                                    &
-                           surface_conductance,                                &
-                           canopy_water,                                       &
-                           soil_temperature,                                   &
-                           soil_moisture,                                      &
-                           unfrozen_soil_moisture,                             &
-                           frozen_soil_moisture,                               &
-                           tile_heat_flux,                                     &
-                           tile_moisture_flux,                                 &
-                           net_prim_prod,                                      &
-                           cos_zen_angle,                                      &
-                           skyview,                                            &
-                           sw_up_tile,                                         &
-                           tile_lw_grey_albedo,                                &
-                           sw_down_surf,                                       &
-                           lw_down_surf,                                       &
-                           sw_down_blue_surf,                                  &
-                           sw_direct_blue_surf,                                &
-                           dd_mf_cb,                                           &
-                           ozone,                                              &
-                           cf_bulk,                                            &
-                           cf_liquid,                                          &
-                           rhokm_bl,                                           &
-                           surf_interp,                                        &
-                           rhokh_bl,                                           &
-                           moist_flux_bl,                                      &
-                           heat_flux_bl,                                       &
-                           gradrinr,                                           &
-                           alpha1_tile,                                        &
-                           ashtf_prime_tile,                                   &
-                           dtstar_tile,                                        &
-                           fracaero_t_tile,                                    &
-                           fracaero_s_tile,                                    &
-                           z0h_tile,                                           &
-                           z0m_tile,                                           &
-                           rhokh_tile,                                         &
-                           chr1p5m_tile,                                       &
-                           resfs_tile,                                         &
-                           gc_tile,                                            &
-                           canhc_tile,                                         &
-                           tile_water_extract,                                 &
-                           blend_height_tq,                                    &
-                           z0m_eff,                                            &
-                           ustar,                                              &
-                           soil_moist_avail,                                   &
-                           snow_unload_rate,                                   &
-                           albedo_obs_scaling,                                 &
-                           soil_clay_2d,                                       &
-                           soil_sand_2d,                                       &
-                           dust_div_mrel,                                      &
-                           dust_div_flux,                                      &
-                           day_of_year,                                        &
-                           second_of_day,                                      &
-                           flux_e,                                             &
-                           flux_h,                                             &
-                           urbwrr,                                             &
-                           urbhwr,                                             &
-                           urbhgt,                                             &
-                           urbztm,                                             &
-                           urbdisp,                                            &
-                           rhostar_2d,                                         &
-                           recip_l_mo_sea_2d,                                  &
-                           t1_sd_2d,                                           &
-                           q1_sd_2d,                                           &
-                           gross_prim_prod,                                    &
-                           z0h_eff,                                            &
-                           ocn_cpl_point,                                      &
-                           ndf_wth, undf_wth, map_wth,                         &
-                           ndf_w3, undf_w3, map_w3,                            &
-                           ndf_2d, undf_2d, map_2d,                            &
-                           ndf_tile, undf_tile, map_tile,                      &
-                           ndf_pft, undf_pft, map_pft,                         &
-                           ndf_sice, undf_sice, map_sice,                      &
-                           ndf_snow, undf_snow, map_snow,                      &
-                           ndf_soil, undf_soil, map_soil,                      &
-                           ndf_surf, undf_surf, map_surf,                      &
-                           ndf_smtile, undf_smtile, map_smtile,                &
-                           ndf_scal, undf_scal, map_scal,                      &
+  subroutine jules_exp_code(nlayers, seg_len, seg_len_halo,       &
+                           theta_in_wth,                          &
+                           exner_in_wth,                          &
+                           u_in_w3,                               &
+                           u_w3_stencil_size, u_w3_stencil,       &
+                           v_in_w3,                               &
+                           v_w3_stencil_size, v_w3_stencil,       &
+                           m_v_n,                                 &
+                           m_cl_n,                                &
+                           m_cf_n,                                &
+                           height_w3,                             &
+                           height_wth,                            &
+                           zh_2d,                                 &
+                           z0msea_2d,                             &
+                           z0m_2d,                                &
+                           tile_fraction,                         &
+                           tile_stencil_size, tile_stencil,       &
+                           leaf_area_index,                       &
+                           canopy_height,                         &
+                           peak_to_trough_orog,                   &
+                           silhouette_area_orog,                  &
+                           soil_albedo,                           &
+                           soil_roughness,                        &
+                           soil_moist_wilt,                       &
+                           soil_moist_crit,                       &
+                           soil_moist_sat,                        &
+                           soil_thermal_cond,                     &
+                           soil_suction_sat,                      &
+                           clapp_horn_b,                          &
+                           soil_respiration,                      &
+                           thermal_cond_wet_soil,                 &
+                           sea_u_current, sea_u_w3_stencil_size,  &
+                           sea_u_w3_stencil,                      &
+                           sea_v_current, sea_v_w3_stencil_size,  &
+                           sea_v_w3_stencil,                      &
+                           sea_ice_temperature,                   &
+                           sea_ice_conductivity,                  &
+                           sea_ice_pensolar,                      &
+                           sea_ice_pensolar_frac_direct,          &
+                           sea_ice_pensolar_frac_diffuse,         &
+                           tile_temperature,                      &
+                           tile_snow_mass,                        &
+                           n_snow_layers,                         &
+                           snow_depth,                            &
+                           snow_layer_thickness,                  &
+                           snow_layer_ice_mass,                   &
+                           snow_layer_liq_mass,                   &
+                           snow_layer_temp,                       &
+                           surface_conductance,                   &
+                           canopy_water,                          &
+                           soil_temperature,                      &
+                           soil_moisture,                         &
+                           unfrozen_soil_moisture,                &
+                           frozen_soil_moisture,                  &
+                           tile_heat_flux,                        &
+                           tile_moisture_flux,                    &
+                           net_prim_prod,                         &
+                           cos_zen_angle,                         &
+                           skyview,                               &
+                           sw_up_tile,                            &
+                           tile_lw_grey_albedo,                   &
+                           sw_down_surf,                          &
+                           lw_down_surf,                          &
+                           sw_down_blue_surf,                     &
+                           sw_direct_blue_surf,                   &
+                           dd_mf_cb,                              &
+                           ozone,                                 &
+                           cf_bulk,                               &
+                           cf_liquid,                             &
+                           rhokm_bl,                              &
+                           surf_interp,                           &
+                           rhokh_bl,                              &
+                           moist_flux_bl,                         &
+                           heat_flux_bl,                          &
+                           gradrinr,                              &
+                           alpha1_tile,                           &
+                           ashtf_prime_tile,                      &
+                           dtstar_tile,                           &
+                           fracaero_t_tile,                       &
+                           fracaero_s_tile,                       &
+                           z0h_tile,                              &
+                           z0m_tile,                              &
+                           rhokh_tile,                            &
+                           chr1p5m_tile,                          &
+                           resfs_tile,                            &
+                           gc_tile,                               &
+                           canhc_tile,                            &
+                           tile_water_extract,                    &
+                           blend_height_tq,                       &
+                           z0m_eff,                               &
+                           ustar,                                 &
+                           soil_moist_avail,                      &
+                           snow_unload_rate,                      &
+                           albedo_obs_scaling,                    &
+                           soil_clay_2d,                          &
+                           soil_sand_2d,                          &
+                           dust_div_mrel,                         &
+                           dust_div_flux,                         &
+                           day_of_year,                           &
+                           second_of_day,                         &
+                           flux_e,                                &
+                           flux_h,                                &
+                           urbwrr,                                &
+                           urbhwr,                                &
+                           urbhgt,                                &
+                           urbztm,                                &
+                           urbdisp,                               &
+                           rhostar_2d,                            &
+                           recip_l_mo_sea_2d,                     &
+                           t1_sd_2d,                              &
+                           q1_sd_2d,                              &
+                           gross_prim_prod,                       &
+                           z0h_eff,                               &
+                           chr10m,                                &
+                           ocn_cpl_point,                         &
+                           ndf_wth, undf_wth, map_wth,            &
+                           ndf_w3, undf_w3, map_w3,               &
+                           ndf_2d, undf_2d, map_2d,               &
+                           ndf_tile, undf_tile, map_tile,         &
+                           ndf_pft, undf_pft, map_pft,            &
+                           ndf_sice, undf_sice, map_sice,         &
+                           ndf_snow, undf_snow, map_snow,         &
+                           ndf_soil, undf_soil, map_soil,         &
+                           ndf_surf, undf_surf, map_surf,         &
+                           ndf_smtile, undf_smtile, map_smtile,   &
+                           ndf_scal, undf_scal, map_scal,         &
                            ndf_dust, undf_dust, map_dust )
 
     !---------------------------------------
@@ -696,6 +699,7 @@ contains
     real(kind=r_def), dimension(undf_dust), intent(inout)  :: dust_div_flux
 
     real(kind=r_def), pointer, intent(inout) :: z0h_eff(:), gross_prim_prod(:)
+    real(kind=r_def), pointer, intent(inout) :: chr10m(:)
     real(kind=r_def), intent(in) :: flux_h
     real(kind=r_def), intent(in) :: flux_e
 
@@ -1405,6 +1409,8 @@ contains
     ! needed to ensure z0h_eff is saved if wanted
     sf_diag%l_z0h_eff_gb = .not. associated(z0h_eff, empty_real_data)
     sf_diag%l_z0m_gb = .true.
+    sf_diag%l_t10m = .not. associated(chr10m, empty_real_data)
+    sf_diag%l_q10m = .not. associated(chr10m, empty_real_data)
     call alloc_sf_expl(sf_diag, .true., land_field)
 
     !-----------------------------------------------------------------------
@@ -1896,6 +1902,11 @@ contains
     if (.not. associated(z0h_eff, empty_real_data) ) then
       do i = 1, seg_len
         z0h_eff(map_2d(1,i)) = sf_diag%z0h_eff_gb(i,1)
+      end do
+    end if
+    if (.not. associated(chr10m, empty_real_data) ) then
+      do i = 1, seg_len
+        chr10m(map_2d(1,i)) = sf_diag%chr10m(i,1)
       end do
     end if
 
