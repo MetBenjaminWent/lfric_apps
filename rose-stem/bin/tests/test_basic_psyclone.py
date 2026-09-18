@@ -11,12 +11,23 @@ with warnings.catch_warnings():
 
 
 def test_omplooptrans_force_private():
-    ''' Test applying the OMPLoopTrans in cases where a firstprivate
-    clause is needed to generate code that is functionally equivalent to the
-    original, serial version.'''
-
+    ''' 
+    Test to assist with catching common errors with applying Transmute to
+    physics source. Passing 'force_private' and 'ignore_dependencies_for' to
+    a transformation is a common pattern and fail point.
+    Apply OMPParallelLoopTrans and OMPLoopTrans on a nested loop structure,
+    which contains a LHS RHS assignment and a single dimension array on the
+    inner loop.
+    The LHS RHS assignment, PSyclone will fail safely on assuming it is unsafe
+    in a parallel section. 
+    The single dimension array, psyclone will assume it's shared currently,
+    however as its only for the inner loop, and parallelised around the outer,
+    it needs to be private.
+    '''
     fread = FortranReader()
-    # Example with a conditional write and a OMPParallelDoDirective
+    # Example of looping structure with LHS RHS which PSyclone may perceive as
+    # a false dependency, and an array which has a single dimension on the,
+    # inner loop
     psyir = fread.psyir_from_source('''
         module my_mod
             contains
