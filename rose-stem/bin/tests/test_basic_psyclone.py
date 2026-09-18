@@ -61,6 +61,4 @@ def test_omplooptrans_force_private():
 
     fwrite = FortranWriter()
     gen = fwrite(psyir)
-    print(gen)
-    print(expected)
     assert expected in gen
