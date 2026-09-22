@@ -358,8 +358,8 @@ def add_parallel_do_over_meta_segments(
       scheduling is **dynamic** regardless of the default static policy.
     """
     logging.info(
-        f"Processing Routine for meta_segments loop: '{routine.name}'"
-        )
+        f"{fortran_file_name}: Processing Routine for meta_segments loop: \
+        '{routine.name}'")
 
     # Locate the target loop: do i = 1, <container_name>%<member_name>
     target = None

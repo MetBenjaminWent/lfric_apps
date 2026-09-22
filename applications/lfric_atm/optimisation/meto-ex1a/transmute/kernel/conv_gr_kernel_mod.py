@@ -117,10 +117,7 @@ def trans(psyir: Routine):
     :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
     """
 
-    :param psyir: the PSyIR of the provided file.
-    :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
-    """
-
+    fortran_file_name = str(psyir.root.name)
     # Identify extra parallel regions (loops inside callnumber loop, up to numseg)
     numseg_loop = None
     try:

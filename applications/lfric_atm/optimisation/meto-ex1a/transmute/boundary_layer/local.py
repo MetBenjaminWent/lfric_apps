@@ -32,7 +32,6 @@ from psyclone.psyir.transformations import (
 )
 from psyclone.psyir.nodes import (
     Assignment,
-    Directive,
     Loop,
     Routine,
     OMPDoDirective,
@@ -104,7 +103,6 @@ def trans(psyir):
     for loop in psyir.walk(Loop):
         if loop.ancestor(OMPDoDirective) is not None:
             continue
-        #if not loop.ancestor(Directive):
         if loop.variable.name in ['i', 'ii', 'l']:
             try:
                 loop_trans.apply(
