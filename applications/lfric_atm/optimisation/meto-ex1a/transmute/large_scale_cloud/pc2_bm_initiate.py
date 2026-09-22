@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# (C) 2025 Crown copyright Met Office. All rights reserved.
+# (C) Crown copyright Met Office. All rights reserved.
 # The file LICENCE, distributed with this code, contains details of the terms
 # under which the code may be used.
 # -----------------------------------------------------------------------------
@@ -26,8 +26,6 @@ from transmute_psytrans.transmute_functions import (
     get_outer_loops,
     get_compiler,
     first_priv_red_init,
-    match_lhs_assignments,
-    match_call_args,
     OMP_PARALLEL_REGION_TRANS,
     OMP_DO_LOOP_TRANS_STATIC
 )
@@ -98,11 +96,11 @@ def trans(psyir):
     try:
         OMP_PARALLEL_REGION_TRANS.validate(outer_loops[2:3])
         OMP_PARALLEL_REGION_TRANS.apply(
-            [outer_loops[2]], 
+            [outer_loops[2]],
             force_private=private_variable_par_sec)
     except (TransformationError, IndexError) as err:
-                logging.warning(
-                    f"{fortran_file_name}: Transformation failed as: {err}")
+        logging.warning(
+            f"{fortran_file_name}: Transformation failed as: {err}")
 
     # Insert before OpenMP directives to avoid PSyclone errors
     if get_compiler() == "cce":
