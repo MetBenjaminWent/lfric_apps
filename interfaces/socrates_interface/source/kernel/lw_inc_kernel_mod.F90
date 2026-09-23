@@ -19,7 +19,7 @@ use argument_mod,        only : arg_type, &
 use fs_continuity_mod,   only : Wtheta
 use constants_mod,       only : r_def, i_def, l_def
 use kernel_mod,          only : kernel_type
-use tuning_segments_mod, only : lw_seg_limit_size
+use tuning_segments_mod, only : lw_inc_seg_limit_size
 
 implicit none
 
@@ -353,10 +353,10 @@ subroutine lw_inc_code(nlayers, n_profile,                                     &
     if (n_profile_list > 0) then
 
       ! Compute the number of columns per LW segment for each thread.
-      ! The maximum segment size is limited by lw_seg_limit_size to prevent
+      ! The maximum segment size is limited by lw_inc_seg_limit_size to prevent
       ! overly large blocks. This ensures better load balancing across threads.
       ncols_per_thread = ceiling(real(n_profile_list) / real(max_threads))
-      nblocks = ceiling(real(ncols_per_thread) / real(lw_seg_limit_size)) &
+      nblocks = ceiling(real(ncols_per_thread) / real(lw_inc_seg_limit_size)) &
                 * max_threads
       soc_lw_inc_block = ceiling(real(n_profile_list) / real(nblocks))
 
