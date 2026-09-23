@@ -16,6 +16,9 @@
 
 export PSYCLONE_PHYSICS_FILES = \
                                 aerosol_ukca_kernel_mod \
+                                bdy_expl2 \
+                                bdy_impl3 \
+                                bdy_impl4 \
                                 bl_lsp \
                                 bm_kernel_mod \
                                 bm_tau_kernel_mod \
