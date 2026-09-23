@@ -47,7 +47,7 @@ contains
     use physics_config_mod,  only : ls_ppn_segment, gw_segment,                &
                                     bl_segment, ussp_segment,                  &
                                     configure_segments, conv_gr_segment,       &
-                                    sw_segment_limit, sw_inc_segment_limit     &
+                                    sw_segment_limit, sw_inc_segment_limit,    &
                                     lw_segment_limit, lw_inc_segment_limit
     use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_ERROR
 
