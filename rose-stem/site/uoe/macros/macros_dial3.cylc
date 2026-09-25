@@ -34,14 +34,4 @@
             --mem={{value}}{{unit[:1]}}
 {% endmacro %}
 
-
-{% macro set_timer_flag(task_value_vernier) %}
-{# Check Vernier is in the task name #}
-{% if task_value_vernier %}
-    USE_VERNIER=true
-{% else %}
-    USE_LEGACY_TIMER=true
-{% endif %}
-{% endmacro %}
-
 {% do LOG.debug("Finished in site/uoe/macros/macros_dial3.cylc") %}
