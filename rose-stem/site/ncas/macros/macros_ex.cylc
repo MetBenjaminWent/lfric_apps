@@ -88,4 +88,14 @@
             --mem={{value}}{{unit}}
 {% endmacro %}
 
+
+{% macro set_timer_flag(task_value_vernier) %}
+{# Check Vernier is in the task name #}
+{% if task_value_vernier is true %}
+    USE_VERNIER=true
+{% else %}
+    USE_LEGACY_TIMER=true
+{% endif %}
+{% endmacro %}
+
 {% do LOG.debug("Finished in site/meto/macros/macros_ex.cylc") %}
