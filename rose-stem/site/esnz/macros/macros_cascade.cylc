@@ -41,7 +41,7 @@
 
 {% macro set_timer_flag(task_value_vernier) %}
 {# Check Vernier is in the task name #}
-{% if task_value_vernier is true %}
+{% if task_value_vernier %}
     USE_VERNIER=true
 {% else %}
     USE_LEGACY_TIMER=true

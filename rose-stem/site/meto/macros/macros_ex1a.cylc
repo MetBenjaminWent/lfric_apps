@@ -192,7 +192,7 @@
 
 {% macro set_timer_flag(task_value_vernier) %}
 {# Check if Vernier has been enabled as a boolean flag and the value is present #}
-{% if task_value_vernier is true %}
+{% if task_value_vernier %}
     USE_VERNIER=true
 {% else %}
     USE_LEGACY_TIMER=true
