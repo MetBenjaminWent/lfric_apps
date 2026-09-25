@@ -53,8 +53,6 @@
     [[AZSPICE_BUILD_GNU]]
         inherit=AZSPICE_BASE,AZSPICE_BUILD,AZSPICE_GNU
         {{ generate_script("pre-script", [azspice_base, azspice_compiler_gnu]) }}
-        [[[environment]]]
-            USE_LEGACY_TIMER=true
 
     [[AZSPICE_BUILD_COUPLED_GNU]]
         inherit=AZSPICE_BASE,AZSPICE_BUILD,AZSPICE_GNU
@@ -65,10 +63,12 @@
     [[AZSPICE_BUILD_VERNIER-GNU]]
         inherit=AZSPICE_BASE,AZSPICE_BUILD,AZSPICE_GNU
         {{ generate_script("pre-script", [azspice_base, azspice_compiler_gnu]) }}
-        [[[environment]]]
-            USE_VERNIER=true
 
     [[AZSPICE_RUN_GNU]]
+        inherit=AZSPICE_BASE,AZSPICE_RUN,AZSPICE_GNU
+        {{ generate_script("pre-script", [azspice_base, azspice_compiler_gnu, azspice_run]) }}
+
+    [[AZSPICE_RUN_VERNIER-GNU]]
         inherit=AZSPICE_BASE,AZSPICE_RUN,AZSPICE_GNU
         {{ generate_script("pre-script", [azspice_base, azspice_compiler_gnu, azspice_run]) }}
 
