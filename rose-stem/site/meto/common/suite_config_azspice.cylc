@@ -63,8 +63,8 @@
                                           azspice_coupled_gnu]) }}
 
     [[AZSPICE_BUILD_VERNIER-GNU]]
-        inherit=EX1A_BASE,EX1A_BUILD,EX1A_GNU
-        {{ generate_script("pre-script", [ex1a_base, ex1a_compiler_gnu]) }}
+        inherit=AZSPICE_BASE,AZSPICE_BUILD,AZSPICE_GNU
+        {{ generate_script("pre-script", [azspice_base, azspice_compiler_gnu]) }}
         [[[environment]]]
             USE_VERNIER=true
 
