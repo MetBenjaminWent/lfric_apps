@@ -85,14 +85,10 @@
     [[EX1A_BUILD_GNU]]
         inherit=EX1A_BASE,EX1A_BUILD,EX1A_GNU
         {{ generate_script("pre-script", [ex1a_base, ex1a_compiler_gnu]) }}
-        [[[environment]]]
-            USE_LEGACY_TIMER=true
 
     [[EX1A_BUILD_CCE]]
         inherit=EX1A_BASE,EX1A_BUILD,EX1A_CCE
         {{ generate_script("pre-script", [ex1a_base, ex1a_compiler_cce]) }}
-        [[[environment]]]
-            USE_LEGACY_TIMER=true
 
     [[EX1A_BUILD_COUPLED_CCE]]
         inherit=EX1A_BASE,EX1A_BUILD,EX1A_CCE
