@@ -717,9 +717,7 @@ contains
     real(r_def) :: sw_diffuse_blue_surf
 
     ! profile fields from level 0 upwards
-    real(r_um), dimension(seg_len,1,0:1) :: p_theta_levels, q, qcl, qcf
-    real(r_um), dimension(seg_len,0:1)   :: p_theta_levels_2d, q_2d, qcf_2d,   &
-                                            qcl_2d
+    real(r_um), dimension(seg_len,0:1) :: p_theta_levels, q, qcl, qcf
 
     real(r_um), dimension(co2_dim_len,co2_dim_row) :: co2
 
@@ -1369,20 +1367,20 @@ contains
       ! thermodynamic variables
       temperature(i,1) = theta_in_wth(map_wth(1,i)+k_blend_tq(i,1)) *          &
                          exner_in_wth(map_wth(1,i)+k_blend_tq(i,1))
-      q(i,1,1) = m_v_n(map_wth(1,i)+k_blend_tq(i,1))
-      qcl(i,1,1) = m_cl_n(map_wth(1,i)+k_blend_tq(i,1))
+      q(i,1) = m_v_n(map_wth(1,i)+k_blend_tq(i,1))
+      qcl(i,1) = m_cl_n(map_wth(1,i)+k_blend_tq(i,1))
       if (l_noice_in_turb) then
-        qcf(i,1,1) = 0.0_r_um
+        qcf(i,1) = 0.0_r_um
         bulk_cloud_fraction(i,1) = cf_liquid(map_wth(1,i)+k_blend_tq(i,1))
       else
-        qcf(i,1,1) = m_cf_n(map_wth(1,i)+k_blend_tq(i,1))
+        qcf(i,1) = m_cf_n(map_wth(1,i)+k_blend_tq(i,1))
         bulk_cloud_fraction(i,1) = cf_bulk(map_wth(1,i)+k_blend_tq(i,1))
       end if
-      forcing%qw_1_ij(i,1) = q(i,1,1) + qcl(i,1,1) + qcf(i,1,1)
-      forcing%tl_1_ij(i,1) = temperature(i,1) - lcrcp*qcl(i,1,1) - lsrcp*qcf(i,1,1)
+      forcing%qw_1_ij(i,1) = q(i,1) + qcl(i,1) + qcf(i,1)
+      forcing%tl_1_ij(i,1) = temperature(i,1) - lcrcp*qcl(i,1) - lsrcp*qcf(i,1)
 
       ! pressure
-      p_theta_levels(i,1,1) = p_zero*(exner_in_wth(map_wth(1,i)+k_blend_tq(i,1)))**(1.0_r_def/kappa)
+      p_theta_levels(i,1) = p_zero*(exner_in_wth(map_wth(1,i)+k_blend_tq(i,1)))**(1.0_r_def/kappa)
       forcing%pstar_ij(i,1) = p_zero*(exner_in_wth(map_wth(1,i) + 0))**(1.0_r_def/kappa)
     end do
 
@@ -1412,20 +1410,12 @@ contains
 
     ! p_theta_levels/q/qcf/qcl are needed on both level 0 (surface) and
     ! level 1, so must be copied for both k values.
-    do k = 0, 1
-      do i = 1, seg_len
-        p_theta_levels_2d(i,k) = p_theta_levels(i,1,k)
-        q_2d(i,k) = q(i,1,k)
-        qcf_2d(i,k) = qcf(i,1,k)
-        qcl_2d(i,k) = qcl(i,1,k)
-      end do
-    end do
     ! temperature and bulk_cloud_fraction only ever hold a single level
     call buoy_tq (                                                             &
        ! IN dimensions/logicals
        1,                                                                      &
        ! IN fields
-       p_theta_levels_2d,temperature,q_2d,qcf_2d,qcl_2d,                       &
+       p_theta_levels,temperature,q,qcf,qcl,                                   &
        bulk_cloud_fraction,                                                    &
        ! OUT fields
        bt,bq,bt_cld,bq_cld,bt_blend,bq_blend,                                  &
@@ -1591,10 +1581,10 @@ contains
           dqsdt_star = repsilon * lc * qs_star(i,1) /                          &
                        ( r * fluxes%tstar_ij(i,1) * fluxes%tstar_ij(i,1) )
 
-          theta1 = temperature(i,1) * (p_zero/p_theta_levels(i,1,1))**kappa
+          theta1 = temperature(i,1) * (p_zero/p_theta_levels(i,1))**kappa
 
           wthvbar = theta1 *                                                   &
-                    (1.0_r_um+c_virtual*q(i,1,1)-qcl(i,1,1)-qcf(i,1,1)) *      &
+                    (1.0_r_um+c_virtual*q(i,1)-qcl(i,1)-qcf(i,1)) *            &
                     fb_surf(i,1) / g
 
           ch = rhokh(i,1) / ( vshr(i,1) * rhostar(i,1) )
