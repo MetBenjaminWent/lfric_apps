@@ -19,7 +19,7 @@ The following files have overrides below:
 * fm_drag
 '''
 
-FILE_EXTEN = ".xu90"
+FILE_EXTEN = ".F90"
 
 # Basic initialisation, will be used by the local script
 SCRIPT_OPTIONS_DICT = {}
@@ -41,6 +41,19 @@ SCRIPT_OPTIONS_DICT["bdy_impl4"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
         "dqw", "dtl", "qw", "tl",
         ],
+}
+
+SCRIPT_OPTIONS_DICT["dust_calc_emiss_frac"+str(FILE_EXTEN)] = {
+    "ignore_dependencies_for": [
+        "dust_emiss_frac",
+        ],
+}
+
+SCRIPT_OPTIONS_DICT["dust_srce"+str(FILE_EXTEN)] = {
+    "ignore_dependencies_for": [
+        "dust_flux_tot",
+        ],
+    "opt_order": ['m', 'n', 'l']
 }
 
 SCRIPT_OPTIONS_DICT["ex_flux_tq"+str(FILE_EXTEN)] = {
