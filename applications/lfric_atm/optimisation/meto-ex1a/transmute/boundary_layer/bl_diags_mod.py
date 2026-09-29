@@ -1,1 +1,1 @@
-/home/users/benjamin.went/lfric_apps_wcs/bdylyr_psyclone_further_1/lfric_apps/applications/lfric_atm/optimisation/meto-ex1a/transmute/boundary_layer/local2.py
+local2.py
