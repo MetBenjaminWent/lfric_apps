@@ -429,7 +429,6 @@ contains
          f_buoy_m, dissip_mol, fric_heating_inc, z_blyr
 
     real(r_um), parameter :: qcl_max_factor = 0.1_r_um
-    real(r_def), parameter :: min_rhokh_flux = 1.0e-12_r_def
 
     integer(i_um) :: large_levels
     integer(i_um), parameter :: levels_per_level = 3
