@@ -1593,7 +1593,7 @@ contains
           fluxes%tstar_ij(i,1) = ( theta1 +                                    &
                 wthvbar/(ch*max(0.1_r_um,vshr(i,1))) -                         &
                c_virtual * theta1 *                                            &
-               (qs_star(i,1)-q(i,1,1)-dqsdt_star*fluxes%tstar_ij(i,1)) )       &
+               (qs_star(i,1)-q(i,1)-dqsdt_star*fluxes%tstar_ij(i,1)) )         &
                / ( (p_zero/forcing%pstar_ij(i,1))**kappa +                     &
                c_virtual * theta1 * dqsdt_star )
 
