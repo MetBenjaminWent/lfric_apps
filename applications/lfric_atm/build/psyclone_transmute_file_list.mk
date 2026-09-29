@@ -30,7 +30,6 @@ export PSYCLONE_PHYSICS_FILES = \
                                 conv_gr_kernel_mod \
                                 dust_calc_emiss_frac \
                                 dust_srce \
-                                ex_coef \
                                 ex_flux_tq \
                                 ex_flux_uv \
                                 fm_drag \
