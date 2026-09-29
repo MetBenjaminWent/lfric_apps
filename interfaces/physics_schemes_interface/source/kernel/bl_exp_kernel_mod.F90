@@ -1024,7 +1024,7 @@ contains
           ! to w2 (cell face) vectors. However, they are actually defined in
           ! wtheta (cell top centre) and need mapping to fd1 (cell top edge).
           ! Set wind will therefore work correctly, but the indexing is shifted
-          ! by half a level in the vertical for the input                      & output
+          ! by half a level in the vertical for the input & output
           fd_taux(map_w3(1,i) + k-1) = tau_fd_x(i,k)
           fd_tauy(map_w3(1,i) + k-1) = tau_fd_y(i,k)
         end do

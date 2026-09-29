@@ -1134,10 +1134,6 @@ contains
 
       case(lowest_level_flux)
         do i = 1, seg_len
-          ! AI solution to debug issue
-        !  if (rhokh(i,1) /= rhokh(i,1) .or. rhokh(i,1) < min_rhokh_flux) then
-        !    rhokh(i,1) = max(rhokh(i,2), min_rhokh_flux)
-        !  end if
           dtheta_bl(map_wth(1,i)) =                                            &
                t_latest(i,1) / exner_in_wth(map_wth(1,i) + 1)                  &
                + ftl(i,1) / (cp * rhokh(i,1)) - theta_latest(map_wth(1,i))

@@ -59,7 +59,7 @@ module jules_exp_kernel_mod
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! zh_2d
          arg_type(GH_FIELD, GH_REAL,  GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1),&! z0msea_2d
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! z0m_2d
-  arg_type(GH_FIELD,GH_REAL,GH_READ,ANY_DISCONTINUOUS_SPACE_2,STENCIL(REGION)),&! tile_fraction
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_2,STENCIL(REGION)),&! tile_fraction
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_3),&! leaf_area_index
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_3),&! canopy_height
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! peak_to_trough_orog
@@ -74,8 +74,8 @@ module jules_exp_kernel_mod
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! clapp_horn_b
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! soil_respiration
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! thermal_cond_wet_soil
-  arg_type(GH_FIELD,GH_REAL,GH_READ,ANY_DISCONTINUOUS_SPACE_1,STENCIL(REGION)),&! sea_u_current
-  arg_type(GH_FIELD,GH_REAL,GH_READ,ANY_DISCONTINUOUS_SPACE_1,STENCIL(REGION)),&! sea_v_current
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_1,STENCIL(REGION)),&! sea_u_current
+         arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_1,STENCIL(REGION)),&! sea_v_current
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_temperature
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_conductivity
          arg_type(GH_FIELD, GH_REAL,  GH_READWRITE, ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_pensolar
@@ -720,8 +720,6 @@ contains
     real(r_um), dimension(seg_len,1,0:1) :: p_theta_levels, q, qcl, qcf
     real(r_um), dimension(seg_len,0:1)   :: p_theta_levels_2d, q_2d, qcf_2d,   &
                                             qcl_2d
-    real(r_um), dimension(seg_len,1)     :: temperature_2d,                    &
-                                            bulk_cloud_fraction_2d
 
     real(r_um), dimension(co2_dim_len,co2_dim_row) :: co2
 
@@ -731,9 +729,8 @@ contains
          z0h_specified, z0m_specified, soil_clay, t1_sd, q1_sd, fb_surf,       &
          rib_gb, vshr, ustargbm, photosynth_act_rad, tstar_land, dtstar_sea,   &
          tstar_sice, alpha1_sea, ashtf_prime_sea, chr1p5m_sice, rhokh_sea,     &
-         z0hssi, z0mssi, z1_uv_top, z1_tq_top, rhostar, recip_l_mo_sea, sky
-    real(r_um), dimension(seg_len,1,1) :: temperature, bt_blend, bq_blend,     &
-         bulk_cloud_fraction
+         z0hssi, z0mssi, z1_uv_top, z1_tq_top, rhostar, recip_l_mo_sea, sky,   &
+         temperature, bulk_cloud_fraction, bt_blend, bq_blend
 
     real(r_um), dimension(seg_len_halo,1) ::  flandg,                          &
          flandfac, fseafac, cdr10m, rhokm_land, rhokm_ssi, rhokm
@@ -779,12 +776,8 @@ contains
     integer(i_um) :: asteps_since_triffid, ndry_dep_species,                   &
                      river_row_length_dum, river_rows_dum
 
-    real(r_um), dimension(seg_len,1,1) ::                                      &
+    real(r_um), dimension(seg_len,1) ::                                        &
          bt, bq, bt_cld, bq_cld, a_qs, a_dqsdt, dqsdt
-        real(r_um), dimension(seg_len,1) :: bt_2d, bq_2d, bt_cld_2d,           &
-                                            bq_cld_2d, bt_blend_2d,            &
-                                            bq_blend_2d, a_qs_2d, a_dqsdt_2d,  &
-                                            dqsdt_2d
     real(r_um), dimension(seg_len,1) :: charnock_w
 
     ! This is an idealised fixed value for ustar.
@@ -1374,19 +1367,19 @@ contains
 
     do i = 1, seg_len
       ! thermodynamic variables
-      temperature(i,1,1) = theta_in_wth(map_wth(1,i)+k_blend_tq(i,1)) *        &
+      temperature(i,1) = theta_in_wth(map_wth(1,i)+k_blend_tq(i,1)) *          &
                          exner_in_wth(map_wth(1,i)+k_blend_tq(i,1))
       q(i,1,1) = m_v_n(map_wth(1,i)+k_blend_tq(i,1))
       qcl(i,1,1) = m_cl_n(map_wth(1,i)+k_blend_tq(i,1))
       if (l_noice_in_turb) then
         qcf(i,1,1) = 0.0_r_um
-        bulk_cloud_fraction(i,1,1) = cf_liquid(map_wth(1,i)+k_blend_tq(i,1))
+        bulk_cloud_fraction(i,1) = cf_liquid(map_wth(1,i)+k_blend_tq(i,1))
       else
         qcf(i,1,1) = m_cf_n(map_wth(1,i)+k_blend_tq(i,1))
-        bulk_cloud_fraction(i,1,1) = cf_bulk(map_wth(1,i)+k_blend_tq(i,1))
+        bulk_cloud_fraction(i,1) = cf_bulk(map_wth(1,i)+k_blend_tq(i,1))
       end if
       forcing%qw_1_ij(i,1) = q(i,1,1) + qcl(i,1,1) + qcf(i,1,1)
-      forcing%tl_1_ij(i,1) = temperature(i,1,1) - lcrcp*qcl(i,1,1) - lsrcp*qcf(i,1,1)
+      forcing%tl_1_ij(i,1) = temperature(i,1) - lcrcp*qcl(i,1,1) - lsrcp*qcf(i,1,1)
 
       ! pressure
       p_theta_levels(i,1,1) = p_zero*(exner_in_wth(map_wth(1,i)+k_blend_tq(i,1)))**(1.0_r_def/kappa)
@@ -1417,7 +1410,6 @@ contains
     ! External science code called
     !-----------------------------------------------------------------------
 
-    ! Copy in and out of 3d locally and 2d for the boundary layer
     ! p_theta_levels/q/qcf/qcl are needed on both level 0 (surface) and
     ! level 1, so must be copied for both k values.
     do k = 0, 1
@@ -1429,32 +1421,17 @@ contains
       end do
     end do
     ! temperature and bulk_cloud_fraction only ever hold a single level
-    do i = 1, seg_len
-      temperature_2d(i,1) = temperature(i,1,1)
-      bulk_cloud_fraction_2d(i,1) = bulk_cloud_fraction(i,1,1)
-    end do
     call buoy_tq (                                                             &
        ! IN dimensions/logicals
        1,                                                                      &
        ! IN fields
-       p_theta_levels_2d,temperature_2d,q_2d,qcf_2d,qcl_2d,                    &
-       bulk_cloud_fraction_2d,                                                 &
+       p_theta_levels_2d,temperature,q_2d,qcf_2d,qcl_2d,                       &
+       bulk_cloud_fraction,                                                    &
        ! OUT fields
-       bt_2d,bq_2d,bt_cld_2d,bq_cld_2d,bt_blend_2d,bq_blend_2d,                &
-       a_qs_2d,a_dqsdt_2d,dqsdt_2d                                             &
+       bt,bq,bt_cld,bq_cld,bt_blend,bq_blend,                                  &
+       a_qs,a_dqsdt,dqsdt                                                      &
        )
     ! bt/bq/etc are all single-level outputs (bl_levels=1 was passed above)
-    do i = 1, seg_len
-      bt(i,1,1) = bt_2d(i,1)
-      bq(i,1,1) = bq_2d(i,1)
-      bt_cld(i,1,1) = bt_cld_2d(i,1)
-      bq_cld(i,1,1) = bq_cld_2d(i,1)
-      bt_blend(i,1,1) = bt_blend_2d(i,1)
-      bq_blend(i,1,1) = bq_blend_2d(i,1)
-      a_qs(i,1,1) = a_qs_2d(i,1)
-      a_dqsdt(i,1,1) = a_dqsdt_2d(i,1)
-      dqsdt(i,1,1) = dqsdt_2d(i,1)
-    end do
 
     allocate(hcons_soilt(land_field))
     allocate(emis_soil(land_field))
@@ -1568,8 +1545,8 @@ contains
         fqw(i,1)   = (rhostar(i,1)*flux_e)/(lc*rholem)
         ftl(i,1)   = (rhostar(i,1)*flux_h)/(cp*rholem)
 
-        fb_surf(i,1) = g * ( bt_blend(i,1,1)*ftl(i,1) +                        &
-                             bq_blend(i,1,1)*fqw(i,1) ) /rhostar(i,1)
+        fb_surf(i,1) = g * ( bt_blend(i,1)*ftl(i,1) +                          &
+                             bq_blend(i,1)*fqw(i,1) ) /rhostar(i,1)
         recip_l_mo_sea(i,1) = -vkman * fb_surf(i,1)                            &
                               / ( ustargbm(i,1)*ustargbm(i,1)*ustargbm(i,1) )
         ! Zeroing w_m and tv1_sd required for Psyclone transmute
@@ -1581,8 +1558,8 @@ contains
 
           t1_sd(i,1) = 1.93_r_um * ftl(i,1) / (rhostar(i,1) * w_m)
           q1_sd(i,1) = 1.93_r_um * fqw(i,1) / (rhostar(i,1) * w_m)
-          tv1_sd     = temperature(i,1,1) * ( bt_blend(i,1,1)*t1_sd(i,1) +     &
-                                            bq_blend(i,1,1)*q1_sd(i,1) )
+          tv1_sd     = temperature(i,1) * ( bt_blend(i,1)*t1_sd(i,1) +         &
+                                            bq_blend(i,1)*q1_sd(i,1) )
           t1_sd(i,1) = max ( 0.0_r_um , t1_sd(i,1) )
           q1_sd(i,1) = max ( 0.0_r_um , q1_sd(i,1) )
           if (tv1_sd  <=  0.0_r_um) then
@@ -1607,14 +1584,14 @@ contains
         allocate(qs_star(pdims%i_start:pdims%i_end,pdims%j_start:pdims%j_end))
         do i = 1, seg_len
           ! start with simple extrapolation from level 1
-          fluxes%tstar_ij(i,1) = temperature(i,1,1) + grcp * ainfo%z1_tq_ij(i,1)
+          fluxes%tstar_ij(i,1) = temperature(i,1) + grcp * ainfo%z1_tq_ij(i,1)
 
           call qsat_mix(qs_star,fluxes%tstar_ij,forcing%pstar_ij,pdims%i_len,pdims%j_len)
 
           dqsdt_star = repsilon * lc * qs_star(i,1) /                          &
                        ( r * fluxes%tstar_ij(i,1) * fluxes%tstar_ij(i,1) )
 
-          theta1 = temperature(i,1,1) * (p_zero/p_theta_levels(i,1,1))**kappa
+          theta1 = temperature(i,1) * (p_zero/p_theta_levels(i,1,1))**kappa
 
           wthvbar = theta1 *                                                   &
                     (1.0_r_um+c_virtual*q(i,1,1)-qcl(i,1,1)-qcf(i,1,1)) *      &
