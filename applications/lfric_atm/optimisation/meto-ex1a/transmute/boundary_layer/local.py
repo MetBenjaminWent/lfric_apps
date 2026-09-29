@@ -74,7 +74,6 @@ def trans(psyir):
     max_threads_parse = False
     safe_pure_calls = []
     opt_order = ['outer','i', 'ii', 'l']
-    #avoid_opt = ['j']
 
     # Get the file name to use with the SCRIPT_OPTIONS_DICT
     fortran_file_name = str(psyir.root.name)
