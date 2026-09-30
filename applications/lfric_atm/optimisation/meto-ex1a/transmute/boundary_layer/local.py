@@ -112,7 +112,6 @@ def trans(psyir):
     # Set the calls to 'pure', given the provided override.
     # pure allows PSyclone to parallelise over them with OMP.
     if safe_pure_calls:
-        print("Safe Calls")
         for call in psyir.walk(Call):
             if call.routine.symbol.name in safe_pure_calls:
                 call.routine.symbol.is_pure = True
@@ -139,9 +138,6 @@ def trans(psyir):
                     nowait=True)
             except (TransformationError, IndexError) as err:
                 logging.warning(
-                    f"{fortran_file_name} Could not transform because:\
-                    \n {err}")
-                print(
                     f"{fortran_file_name} Could not transform because:\
                     \n {err}")
 
