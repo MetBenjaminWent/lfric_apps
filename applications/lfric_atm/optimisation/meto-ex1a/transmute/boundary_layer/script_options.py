@@ -97,6 +97,12 @@ SCRIPT_OPTIONS_DICT["kmkhz_9c_wtrac"+str(FILE_EXTEN)] = {
     "opt_order": ['i', 'ii', 'l']
 }
 
+SCRIPT_OPTIONS_DICT["kmkhz_9c"+str(FILE_EXTEN)] = {
+    "ignore_dependencies_for": [
+        ],
+    "safe_pure_calls" : ["qsat", "qsat_wat", "qsat_mix", "qsat_wat_mix"],
+}
+
 SCRIPT_OPTIONS_DICT["tr_mix"+str(FILE_EXTEN)] = {
     "ignore_dependencies_for": [
         "f_field",
