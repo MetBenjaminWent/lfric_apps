@@ -18,7 +18,7 @@ integer, intent(in) ::                                                         &
 
 real(kind=prec), intent(in) ::                                                 &
  p(tdims%i_start:tdims%i_end,                                                  &
-   0:bl_levels+1),                                                             &
+   0:bl_levels),                                                               &
                                     ! in Pressure at pressure points.
  t(tdims%i_start:tdims%i_end,                                                  &
    bl_levels),                                                                 &
