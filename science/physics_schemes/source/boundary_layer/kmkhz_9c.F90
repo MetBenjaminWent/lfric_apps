@@ -827,8 +827,6 @@ integer ::                                                                     &
                  ! limit on levels within which to search for
                  !   the max LW radiative cooling
 
-integer, parameter :: j = 1 ! Loop counter, horizontal - LFRic Parameter
-
 integer :: i_wt   ! Water tracer counter
 
 real(r_bl) :: w_var_inv ! vertical velocity variance at discontinuous inversions
@@ -1232,7 +1230,7 @@ if (l_wtrac) then
       do i = pdims%i_start, pdims%i_end
         rho_dz = rho_mix_tq(i,k) * dzl(i,k)
         dfmic_wtrac(i,k,i_wt)  =                                               &
-                  - wtrac_as(i_wt)%micro_tends(i,j,k) * rho_dz
+                  - wtrac_as(i_wt)%micro_tends(i,1,k) * rho_dz
         dfsubs_wtrac(i,k,i_wt) = - qls_inc_wtrac(i,k,i_wt) * rho_dz
 
         fsubs_wtrac(i,kp,i_wt)=                                                &

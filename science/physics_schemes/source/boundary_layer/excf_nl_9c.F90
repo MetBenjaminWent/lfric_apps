@@ -670,8 +670,6 @@ integer ::                                                                     &
 
 ! 2D arrays for optimisation
 
-integer, parameter :: j = 1 ! Loop counter, horizontal - LFRic Parameter
-
 integer :: ntop(pdims%i_start:pdims%i_end),                                    &
                    ! top level of surf-driven K profile
            ntml_new(pdims%i_start:pdims%i_end),                                &
@@ -1950,7 +1948,7 @@ end if  ! test in kprof_cu
 ! ----------------------------------------------------------------------
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
-  l = i - pdims%i_start + 1 + pdims%i_len * (j - pdims%j_start)
+  l = i - pdims%i_start + 1
   ind_todo(l) = l
   up(l)       = 1
   if (ksurf_iterate(i)) then
@@ -2368,7 +2366,7 @@ end do ! ii
 
 !$OMP do SCHEDULE(STATIC)
 do i = pdims%i_start, pdims%i_end
-  l = i - pdims%i_start + 1 + pdims%i_len * (j - pdims%j_start)
+  l = i - pdims%i_start + 1
   ind_todo(l) = l
   up(l)       = 1
   if (ktop_iterate(i)) then

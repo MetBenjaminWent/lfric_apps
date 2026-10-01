@@ -97,59 +97,56 @@ real(r_um), intent(in) :: dtrdz(row_length, rows, bl_levels)
 real(r_um), intent(in out) :: field(row_length, rows, bl_levels)
   ! tracer mixing ratio (kg/kg)
 
-! Convert to 1D, i, for tr_mix call
-real(r_um) :: r_theta_levels_1D(1:row_length,0:bl_levels)
+! Convert to 1D on the horizonal, only i, for tr_mix call
+real(r_um) :: r_theta_levels_bl(1:row_length,0:bl_levels)
   ! height of theta levels from centre of earth
-real(r_um) :: r_rho_levels_1D(1:row_length,bl_levels)
+real(r_um) :: r_rho_levels_bl(1:row_length,bl_levels)
   ! height of rho levels from centre of earth
-integer :: kent_1D(row_length)
+integer :: kent_bl(row_length)
   ! grid level of surface mixed layer inversion
-integer :: kent_dsc_1D(row_length)
+integer :: kent_dsc_bl(row_length)
   ! grid level of decoupled stratocumulus inversion
-real(r_um) :: surf_em_1D(row_length)
+real(r_um) :: surf_em_bl(row_length)
   ! emission flux into surface level (kg/m^2/s)
-real(r_um) :: zhnl_1D(row_length)
+real(r_um) :: zhnl_bl(row_length)
   ! atmosphere_boundary layer thickness (m) {stashcode:00025}
-real(r_um) :: zhsc_1D(row_length)
+real(r_um) :: zhsc_bl(row_length)
   ! height of top of decoupled stratocumulus layer (m) {stashcode:03073}
-real(r_um) :: we_lim_1D(row_length, nlev_ent_tr_mix)
+real(r_um) :: we_lim_bl(row_length, nlev_ent_tr_mix)
   ! density * entrainment rate implied by placing of subsidence at surface mixed
   ! layer inversion (kg/m^2/s) {stashcode:03066}
-real(r_um) :: t_frac_1D(row_length, nlev_ent_tr_mix)
+real(r_um) :: t_frac_bl(row_length, nlev_ent_tr_mix)
   ! fraction of timestep surface mixed layer inversion is above level
   ! {stashcode:03067}
-real(r_um) :: zrzi_1D(row_length, nlev_ent_tr_mix)
+real(r_um) :: zrzi_bl(row_length, nlev_ent_tr_mix)
   ! level height as fraction of surface mixed layer inversion height above ml
   ! base {stashcode:03068}
-real(r_um) :: we_lim_dsc_1D(row_length, nlev_ent_tr_mix)
+real(r_um) :: we_lim_dsc_bl(row_length, nlev_ent_tr_mix)
   ! density * entrainment rate implied by placing of subsidence at decoupled
   ! stratocumulus inversion (kg/m^2/s) {stashcode:03070}
-real(r_um) :: t_frac_dsc_1D(row_length, nlev_ent_tr_mix)
+real(r_um) :: t_frac_dsc_bl(row_length, nlev_ent_tr_mix)
   ! fraction of timestep decoupled stratocumulus inversion is above level
   ! {stashcode:03071}
-real(r_um) :: zrzi_dsc_1D(row_length, nlev_ent_tr_mix)
+real(r_um) :: zrzi_dsc_bl(row_length, nlev_ent_tr_mix)
   ! level height as fraction of decoupled stratocumulus inversion height above
   ! dsc ml base {stashcode:03072}
-real(r_um) :: z_uv_1D(row_length, bl_levels)
+real(r_um) :: z_uv_bl(row_length, bl_levels)
   ! height at rho levels (m)
-real(r_um) :: rhokh_rdz_1D(row_length, 2:bl_levels)
+real(r_um) :: rhokh_rdz_bl(row_length, 2:bl_levels)
   ! mixing coefficient above surface:
   ! (scalar eddy diffusivity * density) / dz (kg/m^2/s) {stashcode:03060}
-real(r_um) :: dtrdz_1D(row_length, bl_levels)
+real(r_um) :: dtrdz_bl(row_length, bl_levels)
   ! dt/(density*radius*radius*dz) for scalar flux divergence (s/kg)
   ! {stashcode:03064}
-real(r_um) :: field_1D(row_length, bl_levels)
+real(r_um) :: field_bl(row_length, bl_levels)
   ! tracer mixing ratio (kg/kg)
 
 ! local variables
 real(r_um) :: rhokh_1(row_length)                  ! surface exchange coeff.
 real(r_um) :: res_factor(row_length)               ! dry deposition coeff.
-real(r_um) :: f_field(row_length, rows, bl_levels) ! tracer flux from tr_mix
-real(r_um) :: f_field_1D(row_length, bl_levels)    ! tracer flux from tr_mix
-real(r_um) :: surf_dep_flux(row_length, rows)      ! surf. deposition flux from
-                                                   ! tr_mix
-real(r_um) :: surf_dep_flux_1D(row_length)         ! surf. deposition flux from
-                                                   ! tr_mix
+! Local returns from tr_mix - not intent out - are not copied back to 3D
+real(r_um) :: f_field_bl(row_length, bl_levels)    ! tracer flux
+real(r_um) :: surf_dep_flux_bl(row_length)         ! surf. deposition flux
 integer(i_um) :: i, k   ! Local loop indexes
 
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
@@ -161,53 +158,53 @@ do i = 1, row_length
   res_factor(i) = 0.0_r_um
 
 ! Copies to array sizes compatible with routine without j dimension
-  r_theta_levels_1D(i,0) = r_theta_levels(i,1,0)
-  kent_1D(i) = kent(i,1)
-  kent_dsc_1D(i) = kent_dsc(i,1)
-  surf_em_1D(i) = surf_em(i,1)
-  zhnl_1D(i) = zhnl(i,1)
-  zhsc_1D(i) = zhsc(i,1)
+  r_theta_levels_bl(i,0) = r_theta_levels(i,1,0)
+  kent_bl(i) = kent(i,1)
+  kent_dsc_bl(i) = kent_dsc(i,1)
+  surf_em_bl(i) = surf_em(i,1)
+  zhnl_bl(i) = zhnl(i,1)
+  zhsc_bl(i) = zhsc(i,1)
 end do
 !$OMP end do
 !$OMP  do SCHEDULE(STATIC)
 do k = 1, bl_levels
   do i = 1, row_length
-    r_theta_levels_1D(i,k) = r_theta_levels(i,1,k)
-    r_rho_levels_1D(i,k) = r_rho_levels(i,1,k)
-    z_uv_1D(i,k) = z_uv(i,1,k)
-    dtrdz_1D(i,k) = dtrdz(i,1,k)
-    field_1D(i,k) = field(i,1,k)
+    r_theta_levels_bl(i,k) = r_theta_levels(i,1,k)
+    r_rho_levels_bl(i,k) = r_rho_levels(i,1,k)
+    z_uv_bl(i,k) = z_uv(i,1,k)
+    dtrdz_bl(i,k) = dtrdz(i,1,k)
+    field_bl(i,k) = field(i,1,k)
   end do
 end do
 !$OMP end do
 !$OMP  do SCHEDULE(STATIC)
 do k = 2, bl_levels
   do i = 1, row_length
-    rhokh_rdz_1D(i,k) = rhokh_rdz(i,1,k)
+    rhokh_rdz_bl(i,k) = rhokh_rdz(i,1,k)
   end do
 end do
 !$OMP end do
 !$OMP  do SCHEDULE(STATIC)
 do k = 1, nlev_ent_tr_mix
   do i = 1, row_length
-    we_lim_1D(i,k) = we_lim(i,1,k)
-    t_frac_1D(i,k) = t_frac(i,1,k)
-    zrzi_1D(i,k) = zrzi(i,1,k)
-    we_lim_dsc_1D(i,k) = we_lim_dsc(i,1,k)
-    t_frac_dsc_1D(i,k) = t_frac_dsc(i,1,k)
-    zrzi_dsc_1D(i,k) = zrzi_dsc(i,1,k)
+    we_lim_bl(i,k) = we_lim(i,1,k)
+    t_frac_bl(i,k) = t_frac(i,1,k)
+    zrzi_bl(i,k) = zrzi(i,1,k)
+    we_lim_dsc_bl(i,k) = we_lim_dsc(i,1,k)
+    t_frac_dsc_bl(i,k) = t_frac_dsc(i,1,k)
+    zrzi_dsc_bl(i,k) = zrzi_dsc(i,1,k)
   end do
 end do
 !$OMP end do
 !$OMP end PARALLEL
 
-call tr_mix( r_theta_levels_1D, r_rho_levels_1D, pdims, bl_levels,             &
-             alpha_cd, rhokh_rdz_1D, rhokh_1, dtrdz_1D, surf_em_1D,            &
-             res_factor, kent_1D, we_lim_1D, t_frac_1D, zrzi_1D,               &
-             kent_dsc_1D, we_lim_dsc_1D, t_frac_dsc_1D, zrzi_dsc_1D,           &
-             zhnl_1D, zhsc_1D, z_uv_1D,                                        &
+call tr_mix( r_theta_levels_bl, r_rho_levels_bl, pdims, bl_levels,             &
+             alpha_cd, rhokh_rdz_bl, rhokh_1, dtrdz_bl, surf_em_bl,            &
+             res_factor, kent_bl, we_lim_bl, t_frac_bl, zrzi_bl,               &
+             kent_dsc_bl, we_lim_dsc_bl, t_frac_dsc_bl, zrzi_dsc_bl,           &
+             zhnl_bl, zhsc_bl, z_uv_bl,                                        &
              ! Output fields
-             field_1D, f_field_1D, surf_dep_flux_1D)
+             field_bl, f_field_bl, surf_dep_flux_bl)
 
 ! Copy back to 3D for intent out
 !$OMP  PARALLEL DEFAULT(SHARED)                                                &
@@ -215,7 +212,7 @@ call tr_mix( r_theta_levels_1D, r_rho_levels_1D, pdims, bl_levels,             &
 !$OMP  do SCHEDULE(STATIC)
 do k = 1, bl_levels
   do i = 1, row_length
-    field(i,1,k) = field_1D(i,k)
+    field(i,1,k) = field_bl(i,k)
   end do
 end do
 !$OMP end do

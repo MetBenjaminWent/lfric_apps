@@ -786,8 +786,6 @@ integer ::                                                                     &
                 ! Water tracer loop counter
  il             ! LOCAL index for land index loops
 
-integer, parameter :: j = 1 ! Array dimension, LFRic Parameter
-
 integer ::                                                                     &
  ii ! for indexing over open-mp block
 

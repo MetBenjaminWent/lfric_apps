@@ -415,10 +415,6 @@ contains
     real(r_um), dimension(seg_len) :: xx_cos_theta_latitude
 
     integer(i_um), dimension(seg_len) :: lcbase0, ccb0, cct0
-    
-    ! Temporary 3D buffers (j=1) for legacy PC2 routine interface.
-    real(r_um), dimension(seg_len,1,nlayers) :: qcf_latest_pc2,            &
-          qcf_earliest_pc2, cff_earliest_pc2, cff_latest_pc2, cf_latest_pc2
 
     ! parameters for new BL solver
     real(r_bl) :: pnonl,p1,p2
