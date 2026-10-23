@@ -245,6 +245,20 @@
     {% endif %}
 {% endif %}
 
+{# Do we need to run a vernier export? #}
+{% set export_vernier = false %}
+{% if task.startswith("run") and task_ns.application != "mesh" %}
+    {% if task_values["export_vernier"] %}
+        {% set export_vernier = true %}
+        {% set app_export_vernier_task = "export_vernier_"~
+                                         task_ns.application~"_"~
+                                         task_ns.conf_name~"_"~
+                                         task_ns.platform~"_"~
+                                         task_ns.compiler~"_"~
+                                         task_ns.extras %}
+    {% endif %}
+{% endif %}
+
 {# If running the nrun task, define application, plot, check and phystest #}
 {% if running_nrun and task.startswith("run") %}
     {% if application_run_task %}
@@ -343,6 +357,15 @@
         {% do graph_sections.append([
             application_run_task,
             app_perftools_export_task]) %}
+    {% endif %}
+
+    {% if export_vernier %}
+        {% if app_export_vernier_task not in tasks_to_run %}
+            {% do tasks_to_run.update({app_export_vernier_task: task_values}) %}
+        {% endif %}
+        {% do graph_sections.append([
+            application_run_task,
+            app_export_vernier_task]) %}
     {% endif %}
 
     {% if metadatatest %}

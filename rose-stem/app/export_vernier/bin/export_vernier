@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -e
+
+PREVIOUS_WORKING_DIR="${CYLC_TASK_WORK_DIR}/../${PREVIOUS_JOB}"
+
+echo "Contents of ${PREVIOUS_WORKING_DIR}:"
+ls -l "${PREVIOUS_WORKING_DIR}"

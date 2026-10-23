@@ -47,6 +47,17 @@
         "memory_plot_ex": true,
     }) %}
 
+{% elif task_ns.conf_name == "nwp_gal10_vernier-C48_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["um_dump","test_diags"],
+        "resolution": "C48_MG",
+        "DT": 1800,
+        "tsteps": 36,
+        "mpi_parts": 24,
+        "export_vernier": true,
+    }) %}
+
 {% elif task_ns.conf_name == "nwp_gal10_ragged-C48_MG" %}
 
     {% do task_dict.update({

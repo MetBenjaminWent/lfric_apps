@@ -81,6 +81,16 @@
             crun_perftools_export]) %}
     {% endif %}
 
+    {% if export_vernier %}
+        {% set crun_export_vernier = app_export_vernier_task~"-crun"~restart_no %}
+        {% if crun_export_vernier not in tasks_to_run %}
+            {% do tasks_to_run.update({crun_export_vernier: task_values}) %}
+        {% endif %}
+        {% do graph_sections.append([
+            crun_task,
+            crun_export_vernier]) %}
+    {% endif %}
+
     {# If we're on the final run #}
     {% if restart_no == crun-1 %}
 

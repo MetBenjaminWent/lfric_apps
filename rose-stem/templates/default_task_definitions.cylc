@@ -141,6 +141,10 @@
     {% do task_dict.update({"pert_compare": false}) %}
 {% endif %}
 
+{% if "export_vernier" not in task_dict %}
+    {% do task_dict.update({"export_vernier": false}) %}
+{% endif %}
+
 {# Canned tests don't require resolution defining #}
 {# Enter a placeholder to prevent an Undefined Error #}
 {% if task_dict["app_name"] == "canned_test" %}

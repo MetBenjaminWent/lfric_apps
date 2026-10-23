@@ -45,6 +45,39 @@
             THE_APP_NAME={{task_ns.application}}
             APP_CONFIGURATION_OUTPUT={{task_ns.application}}_{{task_ns.conf_name}}
 
+{% elif task.startswith("export_vernier") %}
+{# Vernier Export Tasks #}
+
+    {# We want to target the previous run task #}
+    {% set previous_job = "run_"~
+                          task_ns.application~"_"~
+                          task_ns.conf_name~"_"~
+                          task_ns.platform~"_"~
+                          task_ns.compiler~"_"~
+                          task_ns.extras %}
+
+    {# Set the family inheritance for this task #}
+    {% for family in task_values["run_families"] %}
+        {% set inherit.str = inherit.str~family|upper~"," %}
+    {% endfor %}
+
+    {# Generate a resource family for the task #}
+    {% set resource_family = task~"_resources" %}
+    {{ set_task_resources(
+        resource_family,
+        inherit.str,
+        task_values["tech-tests_wallclock"],
+        task_values["tech-tests_cpus"],
+        task_values["tech-tests_memory"],
+        task_values["tmpsize"],
+        ) }}
+
+    [[{{task}}]]
+        inherit = {{task_family|upper}}, {{resource_family|upper}}
+        script = rose task-run --app-key=export_vernier
+        [[[environment]]]
+            PREVIOUS_JOB={{previous_job}}
+
 {% endif %}
 
 {% do LOG.debug("Finished in templates/runtime/generate_runtime_other.cylc") %}

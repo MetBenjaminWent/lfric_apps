@@ -165,6 +165,7 @@
         "generate_weights",
         "kgo_compare",
         "perftools-export",
+        "export_vernier",
         "pert_compare"] %}
 
     {# Remove a task prefix if listed above #}

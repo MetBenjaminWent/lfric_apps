@@ -124,6 +124,7 @@
     ],
     "lfric_atm_nwp_ex1a_extra": [
         "lfric_atm_nwp_gal10-C48_MG_ex1a_cce_fast-debug-32bit",
+        "lfric_atm_nwp_gal10_vernier-C48_MG_ex1a_cce_fast-debug-32bit",
         "lfric_atm_nwp_gal10_debug-C48_MG_ex1a_cce_full-debug-32bit",
         "lfric_atm_nwp_gal10_coarse_aero-C48_MG_ex1a_cce_fast-debug-32bit",
         "lfric_atm_nwp_gal10_da-C12_ex1a_cce_fast-debug-32bit",
