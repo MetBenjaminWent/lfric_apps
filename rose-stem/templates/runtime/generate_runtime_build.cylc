@@ -22,7 +22,8 @@
     inherit.str,
     task_values["build_wallclock"],
     task_values["build_cpus"],
-    task_values["build_memory"]
+    task_values["build_memory"],
+    task_values["tmpsize"],
     ) }}
 
 {# Check to see if it is a Perftools compile, as we need to change the Makefile target#}
@@ -61,7 +62,14 @@
             R_PHYS_PRECISION        = {{task_values["precision"]["rphys"]}}
             PRE_PROCESS_MACROS      = {{task_values["pre_process_macros"]}}
             PAT_BUILD_PATH          = {{PAT_BUILD_APP}}
-            {{ set_psyclone_transformation(task_values["psyclone_transformation"]) }}
+{% if 'vernier' in task_ns.compiler %}
+            USE_VERNIER             = true
+{% else %}
+            USE_LEGACY_TIMER        = true
+{% endif %}
+
+{{ set_psyclone_transformation(task_values["psyclone_transformation"]) }}
+
 {% if task_ns.application == "lfricinputs" %}
             PROGRAMS                = {{task_values["app_name"]}}
 {% endif %}
