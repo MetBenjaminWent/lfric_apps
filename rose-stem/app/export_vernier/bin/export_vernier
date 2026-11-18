@@ -4,5 +4,13 @@ set -e
 
 PREVIOUS_WORKING_DIR="${CYLC_TASK_WORK_DIR}/../${PREVIOUS_JOB}"
 
-echo "Contents of ${PREVIOUS_WORKING_DIR}:"
-ls -l "${PREVIOUS_WORKING_DIR}"
+mapfile -t VERNIER_FILES < <(ls -d "${PREVIOUS_WORKING_DIR}"/vernier-output* 2>/dev/null || true)
+
+if [[ ${#VERNIER_FILES[@]} -eq 0 ]]; then
+	echo "No vernier-output files found in ${PREVIOUS_WORKING_DIR}" >&2
+	exit 1
+fi
+
+printf 'Vernier files to export:\n'
+printf '  %s\n' "${VERNIER_FILES[@]}"
+rsync -av --mkpath "${VERNIER_FILES[@]}" "${EXPORT_TARGET%/}/"
