@@ -3,6 +3,11 @@
 set -e
 
 PREVIOUS_WORKING_DIR="${CYLC_TASK_WORK_DIR}/../${PREVIOUS_JOB}"
+OUTPUT_TARGET="${EXPORT_TARGET:-${DATADIR}}"
+
+if [[ -z "${OUTPUT_TARGET}" ]]; then
+	OUTPUT_TARGET="${HOME}"
+fi
 
 mapfile -t VERNIER_FILES < <(ls -d "${PREVIOUS_WORKING_DIR}"/vernier-output* 2>/dev/null || true)
 
@@ -13,4 +18,4 @@ fi
 
 printf 'Vernier files to export:\n'
 printf '  %s\n' "${VERNIER_FILES[@]}"
-rsync -av --mkpath "${VERNIER_FILES[@]}" "${EXPORT_TARGET%/}/"
+rsync -av --mkpath "${VERNIER_FILES[@]}" "${OUTPUT_TARGET%/}/"
