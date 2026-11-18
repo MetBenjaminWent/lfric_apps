@@ -24,6 +24,22 @@
         "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
+{% elif task_ns.conf_name == "nwp_gal10-chebyshev-C12" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["um_dump","chebyshev"],
+        "resolution": "C12",
+        "DT": 1800,
+        "tsteps": 144,
+        "crun": 2,
+        "crun_compare": false,
+        "metadata_test": true,
+        "mpi_parts": 6,
+        "kgo_checks": ["checksum"],
+        "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
+
 {% elif task_ns.conf_name == "nwp_gal10_vernier-C12" %}
 
     {% do task_dict.update({
@@ -98,6 +114,21 @@
         "pert_plot_str": "l2_time_series.py $PERT_ON_TASK/results/ $PERT_OFF_TASK/results/ \
                           $PLOT_DIR T000000:T000001.8:T000003.6:T000005.4:T000007.2:T000009.0:T000010.8:T000012.6:T000014.4:T000016.2:T000018 \
                           theta",
+    }) %}
+
+{% elif task_ns.conf_name == "nwp_gal10-tr_bdf2-C12" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["tr_bdf2", "um_dump"],
+        "resolution": "C12",
+        "DT": 1800,
+        "tsteps": 144,
+        "crun": 2,
+        "crun_compare": false,
+        "metadata_test": true,
+        "mpi_parts": 6,
+        "kgo_checks": ["checksum"],
+        "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
 {% elif task_ns.conf_name == "nwp_gal10_1T-C12" %}
@@ -246,6 +277,21 @@
         "memory_plot_ex": true,
     }) %}
 
+{% elif task_ns.conf_name == "nwp_gal10-chebyshev-C224_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["um_dump","june_case","chebyshev"],
+        "resolution": "C224_MG",
+        "DT": 720,
+        "tsteps": 120,
+        "mpi_parts": 588,
+        "xios_nodes": 1,
+        "mpi_parts_xios" : 64,
+        "log_level": "info",
+        "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+        "memory_plot_ex": true,
+    }) %}
+
 {% elif task_ns.conf_name == "nwp_gal10_oper-C224_MG" %}
 
     {% do task_dict.update({
@@ -260,6 +306,22 @@
         "xios_info_level": 1,
         "xios_print_file": ".true.",
         "memory_plot_ex": true,
+    }) %}
+
+{% elif task_ns.conf_name == "nwp_gal10-tr_bdf2-C224_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["tr_bdf2_big", "um_dump","june_case"],
+        "resolution": "C224_MG",
+        "DT": 1200,
+        "tsteps": 72,
+        "mpi_parts": 588,
+        "xios_nodes": 1,
+        "mpi_parts_xios" : 64,
+        "log_level": "info",
+        "xios_info_level": 1,
+        "xios_print_file": ".true.",
+        "plot_str": "plot_map.py $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
 {% elif task_ns.conf_name == "nwp_gal10_debug-C224_MG" %}
@@ -577,6 +639,20 @@
         "plot_str": "plot_map.py -encorr $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
+{% elif task_ns.conf_name == "clim_casim_ukca-C12" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["climate","reynolds","lowres_stp","casim_ukca","um_dump"],
+        "resolution": "C12",
+        "DT": 1800,
+        "tsteps": 144,
+        "crun": 2,
+        "crun_compare": false,
+        "mpi_parts": 6,
+        "kgo_checks": ["checksum"],
+        "plot_str": "plot_map.py -encorr $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
 {% elif task_ns.conf_name == "clim_gal10-C48_MG" %}
 
     {% do task_dict.update({
@@ -589,6 +665,21 @@
         "mpi_parts": 216,
         "log_level": "info",
         "wallclock": 30,
+        "plot_str": "plot_map.py -encorr $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
+{% elif task_ns.conf_name == "clim_gal10-chebyshev-C48_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["climate", "reynolds", "um_dump", "chebyshev"],
+        "resolution": "C48_MG",
+        "DT": 1800,
+        "tsteps": 1440,
+        "crun": 2,
+        "crun_compare": false,
+        "mpi_parts": 216,
+        "log_level": "info",
+        "wallclock": 60,
         "plot_str": "plot_map.py -encorr $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
@@ -689,6 +780,20 @@
         "plot_str": "plot_map.py -encorr $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
+{% elif task_ns.conf_name == "clim_gal10_chem-tr_bdf2-C12" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["climate","reynolds","chemistry","tr_bdf2","lowres_stp","um_dump"],
+        "resolution": "C12",
+        "DT": 1800,
+        "tsteps": 144,
+        "crun": 2,
+        "crun_compare": false,
+        "mpi_parts": 6,
+        "kgo_checks": ["checksum"],
+        "plot_str": "plot_map.py -encorr $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
 {% elif task_ns.conf_name == "clim_gal10_chem_1T-C12" %}
     {% do task_dict.update({
         "opt_confs": ["climate","reynolds","chemistry", "lowres_stp","physics_segmentation","um_dump","no_diags"],
@@ -725,10 +830,10 @@
 {# Regional jobs #}
 {# ###################################################################### #}
 
-{% elif task_ns.conf_name == "ral3-seuk_MG" %}
+{% elif task_ns.conf_name == "ral4-seuk_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","ral_opts","hh_solve","native_wind_transport"],
+        "opt_confs": ["l70_40km","ral4","ral_opts","hh_solve","native_wind_transport"],
         "resolution": "seuk_MG",
         "DT": 60,
         "tsteps": 120,
@@ -738,10 +843,23 @@
         "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
-{% elif task_ns.conf_name == "ral3-seuk_ls_and_jedi" %}
+{% elif task_ns.conf_name == "ral4-2T-seuk_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","ral_opts","hh_solve","ral_ls_and_jedi","native_wind_transport"],
+        "opt_confs": ["l70_40km","ral4","ral_opts","hh_solve","native_wind_transport"],
+        "resolution": "seuk_MG",
+        "DT": 60,
+        "threads": 2,
+        "tsteps": 120,
+        "mpi_parts": 8,
+        "memory": [12, "GB"],
+        "kgo_checks": ["checksum"],
+    }) %}
+
+{% elif task_ns.conf_name == "ral4-seuk_ls_and_jedi" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["l70_40km","ral4","ral_opts","hh_solve","ral_ls_and_jedi","native_wind_transport"],
         "resolution": "seuk_MG",
         "DT": 60,
         "tsteps": 120,
@@ -751,10 +869,10 @@
         "xios_min_buffer_size": 2097152,
     }) %}
 
-{% elif task_ns.conf_name == "ral3-uk_MG" %}
+{% elif task_ns.conf_name == "ral4-uk_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","ral_opts","murk","hh_solve","native_wind_transport"],
+        "opt_confs": ["l70_40km","ral4","ral_opts","murk","hh_solve","native_wind_transport"],
         "resolution": "uk_MG",
         "DT": 60,
         "tsteps": 360,
@@ -769,10 +887,10 @@
         "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
-{% elif task_ns.conf_name == "ral3-uk_672_MG" %}
+{% elif task_ns.conf_name == "ral4-uk_672_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","ral_opts","hh_solve","native_wind_transport"],
+        "opt_confs": ["l70_40km","ral4","ral_opts","hh_solve","native_wind_transport"],
         "resolution": "uk_672x672_MG",
         "DT": 60,
         "tsteps": 180,
@@ -786,10 +904,10 @@
         "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
-{% elif task_ns.conf_name == "ral3-ukv_MG" %}
+{% elif task_ns.conf_name == "ral4-ukv_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","ral_opts","hh_solve","native_wind_transport"],
+        "opt_confs": ["l70_40km","ral4","ral_opts","hh_solve","native_wind_transport"],
         "resolution": "ukv_MG",
         "DT": 60,
         "tsteps": 360,
@@ -802,10 +920,10 @@
         "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
-{% elif task_ns.conf_name == "ral3-melbourne_MG" %}
+{% elif task_ns.conf_name == "ral4-melbourne_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","ral_opts","hh_solve","native_wind_transport"],
+        "opt_confs": ["l70_40km","ral4","ral_opts","hh_solve","native_wind_transport"],
         "resolution": "melbourne_MG",
         "DT": 60,
         "tsteps": 360,
@@ -819,10 +937,10 @@
         "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
-{% elif task_ns.conf_name == "ral3_ens-seuk_MG" %}
+{% elif task_ns.conf_name == "ral4_ens-seuk_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","ral3_ens","ral_opts","hh_solve","native_wind_transport"],
+        "opt_confs": ["l70_40km","ral4","ral4_ens","ral_opts","hh_solve","native_wind_transport"],
         "resolution": "seuk_MG",
         "DT": 60,
         "tsteps": 120,
@@ -834,10 +952,24 @@
         "xios_min_buffer_size": 2097152,
     }) %}
 
-{% elif task_ns.conf_name == "ral3_mixmol-seuk_MG" %}
+{% elif task_ns.conf_name == "ral_dev-seuk_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","mol","ral_mixmol_opts"],
+        "opt_confs": ["l70_40km","ral4","blendshcu","ral_opts","hh_solve"],
+        "resolution": "seuk_MG",
+        "DT": 60,
+        "tsteps": 120,
+        "crun": 2,
+        "crun_compare": false,
+        "mpi_parts": 16,
+        "kgo_checks": ["checksum"],
+        "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
+{% elif task_ns.conf_name == "ral4_mixmol-seuk_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["l70_40km","ral4","mol","ral_mixmol_opts"],
         "resolution": "seuk_MG",
         "DT": 60,
         "tsteps": 120,
@@ -849,10 +981,22 @@
         "xios_min_buffer_size": 2097152,
     }) %}
 
-{% elif task_ns.conf_name == "ral3_mixmol-uk_MG" %}
+{% elif task_ns.conf_name == "ral4-tr_bdf2-seuk_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","mol","ral_mixmol_opts"],
+        "opt_confs": ["l70_40km","ral4","ral_opts","hh_solve","native_wind_transport","tr_bdf2_big_ral"],
+        "resolution": "seuk_MG",
+        "DT": 150,
+        "tsteps": 48,
+        "mpi_parts": 16,
+        "kgo_checks": ["checksum"],
+        "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
+{% elif task_ns.conf_name == "ral4_mixmol-uk_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["l70_40km","ral4","mol","ral_mixmol_opts"],
         "resolution": "uk_MG",
         "DT": 60,
         "tsteps": 360,
@@ -866,6 +1010,19 @@
         "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
+{% elif task_ns.conf_name == "3dte-seuk_MG" %}
+
+    {% do task_dict.update({
+        "opt_confs": ["l70_40km","3dte","ral_opts","hh_solve"],
+        "resolution": "seuk_MG",
+        "DT": 60,
+        "tsteps": 120,
+        "crun": 2,
+        "mpi_parts": 16,
+        "kgo_checks": ["checksum"],
+        "plot_str": "plot_map.py -ral $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
+    }) %}
+
 {# ###################################################################### #}
 {# Idealised jobs #}
 {# ###################################################################### #}
@@ -873,7 +1030,7 @@
 {% elif task_ns.conf_name == "rce-BiP64x64-1500x1500_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3","native_wind_transport","hh_solve","no_aerosol","rce"],
+        "opt_confs": ["l70_40km","ral4","native_wind_transport","hh_solve","no_aerosol","rce"],
         "resolution": "BiP64x64-1500x1500_MG",
         "DT": 60,
         "tsteps": 120,
@@ -887,7 +1044,7 @@
 {% elif task_ns.conf_name == "comp_tran_ref_3d_l120-BiP64x64-1500x1500_MG" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l120_40km","ral3","native_wind_transport","hh_solve","no_aerosol","comp_tran_ref","3dIdeal"],
+        "opt_confs": ["l120_40km","ral4","native_wind_transport","hh_solve","no_aerosol","comp_tran_ref","3dIdeal"],
         "resolution": "BiP64x64-1500x1500_MG",
         "DT": 60,
         "tsteps": 1440,
@@ -1158,10 +1315,10 @@
         "plot_str": "plot_scm.py $NODAL_DATA_DIR/lfric_diagnostics.nc  $PLOT_DIR",
     }) %}
 
-{% elif task_ns.conf_name == "scm_ral3_comp_tran_ref-BiP2x2-50000x50000" %}
+{% elif task_ns.conf_name == "scm_ral4_comp_tran_ref-BiP2x2-50000x50000" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3_scm","no_aerosol","comp_tran_ref"],
+        "opt_confs": ["l70_40km","ral4_scm","no_aerosol","comp_tran_ref"],
         "resolution": "BiP2x2-50000x50000",
         "DT": 1200,
         "tsteps": 216,
@@ -1170,10 +1327,10 @@
         "xios_min_buffer_size": 2097152,
     }) %}
 
-{% elif task_ns.conf_name == "scm_ral3_constrain-BiP2x2-50000x50000" %}
+{% elif task_ns.conf_name == "scm_ral4_constrain-BiP2x2-50000x50000" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3_scm","no_aerosol","constrain"],
+        "opt_confs": ["l70_40km","ral4_scm","no_aerosol","constrain"],
         "resolution": "BiP2x2-50000x50000",
         "DT": 900,
         "tsteps": 56,
@@ -1183,10 +1340,10 @@
         "xios_min_buffer_size": 2097152,
     }) %}
 
-{% elif task_ns.conf_name == "scm_ral3_dice2-BiP2x2-50000x50000" %}
+{% elif task_ns.conf_name == "scm_ral4_dice2-BiP2x2-50000x50000" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3_scm","no_aerosol","dice2"],
+        "opt_confs": ["l70_40km","ral4_scm","no_aerosol","dice2"],
         "resolution": "BiP2x2-50000x50000",
         "DT": 600,
         "tsteps": 432,
@@ -1195,10 +1352,10 @@
         "xios_min_buffer_size": 2097152,
     }) %}
 
-{% elif task_ns.conf_name == "scm_ral3_moruses-BiP2x2-50000x50000" %}
+{% elif task_ns.conf_name == "scm_ral4_moruses-BiP2x2-50000x50000" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3_scm","no_aerosol","dice2","moruses"],
+        "opt_confs": ["l70_40km","ral4_scm","no_aerosol","dice2","moruses"],
         "resolution": "BiP2x2-50000x50000",
         "DT": 600,
         "tsteps": 432,
@@ -1208,10 +1365,10 @@
         "xios_min_buffer_size": 2097152,
     }) %}
 
-{% elif task_ns.conf_name == "scm_ral3_urban2t-BiP2x2-50000x50000" %}
+{% elif task_ns.conf_name == "scm_ral4_urban2t-BiP2x2-50000x50000" %}
 
     {% do task_dict.update({
-        "opt_confs": ["l70_40km","ral3_scm","no_aerosol","dice2","urban2t"],
+        "opt_confs": ["l70_40km","ral4_scm","no_aerosol","dice2","urban2t"],
         "resolution": "BiP2x2-50000x50000",
         "DT": 600,
         "tsteps": 432,
