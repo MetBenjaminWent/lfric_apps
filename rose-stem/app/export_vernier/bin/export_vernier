@@ -9,6 +9,9 @@ if [[ -z "${OUTPUT_TARGET}" ]]; then
 	OUTPUT_TARGET="${HOME}"
 fi
 
+# Extend the target with the name of the workflow, then a sub folder of the job
+OUTPUT_TARGET="${OUTPUT_TARGET}/${CYLC_WORKFLOW_ID}/${PREVIOUS_JOB}"
+
 mapfile -t VERNIER_FILES < <(ls -d "${PREVIOUS_WORKING_DIR}"/vernier-output* 2>/dev/null || true)
 
 if [[ ${#VERNIER_FILES[@]} -eq 0 ]]; then
